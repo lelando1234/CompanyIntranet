@@ -211,29 +211,99 @@ export const db = new DatabaseService();
 export const DATABASE_SETUP_INSTRUCTIONS = `
 # Database Setup Instructions
 
-## Option 1: Supabase (Recommended)
+## Option 1: MariaDB (Recommended)
+
+### Installation on Ubuntu/Debian:
+\`\`\`bash
+sudo apt update
+sudo apt install mariadb-server mariadb-client
+sudo mysql_secure_installation
+\`\`\`
+
+### Installation on CentOS/RHEL/Fedora:
+\`\`\`bash
+sudo dnf install mariadb-server mariadb
+# or for older versions:
+# sudo yum install mariadb-server mariadb
+sudo systemctl start mariadb
+sudo systemctl enable mariadb
+sudo mysql_secure_installation
+\`\`\`
+
+### Installation on macOS:
+\`\`\`bash
+brew install mariadb
+brew services start mariadb
+mysql_secure_installation
+\`\`\`
+
+### Installation on Windows:
+1. Download MariaDB from https://mariadb.org/download/
+2. Run the installer and follow the setup wizard
+3. Start MariaDB service from Services panel
+
+### Database Setup:
+1. Connect to MariaDB as root:
+   \`\`\`bash
+   mysql -u root -p
+   \`\`\`
+
+2. Create database and user:
+   \`\`\`sql
+   CREATE DATABASE company_portal;
+   CREATE USER 'portal_user'@'localhost' IDENTIFIED BY 'your_secure_password';
+   GRANT ALL PRIVILEGES ON company_portal.* TO 'portal_user'@'localhost';
+   FLUSH PRIVILEGES;
+   USE company_portal;
+   \`\`\`
+
+3. Run the schema from src/types/database.ts:
+   - Copy the DATABASE_SCHEMA content
+   - Paste and execute in the MariaDB console
+
+4. Add environment variables:
+   - DATABASE_HOST=localhost
+   - DATABASE_PORT=3306
+   - DATABASE_NAME=company_portal
+   - DATABASE_USER=portal_user
+   - DATABASE_PASSWORD=your_secure_password
+   - DATABASE_URL=mysql://portal_user:your_secure_password@localhost:3306/company_portal
+
+### Node.js Connection:
+Install MariaDB/MySQL driver:
+\`\`\`bash
+npm install mysql2
+# or
+npm install mariadb
+\`\`\`
+
+## Option 2: Supabase (PostgreSQL)
 1. Go to https://supabase.com and create a new project
-2. In the SQL Editor, run the schema from src/types/database.ts
+2. In the SQL Editor, run the PostgreSQL schema (see PostgreSQL version below)
 3. Get your project URL and anon key from Settings > API
 4. Add environment variables:
    - VITE_SUPABASE_URL=your_project_url
    - VITE_SUPABASE_ANON_KEY=your_anon_key
 
-## Option 2: PostgreSQL
+## Option 3: PostgreSQL
 1. Install PostgreSQL locally or use a cloud provider
 2. Create a new database for the project
-3. Run the schema from src/types/database.ts
+3. Run the PostgreSQL schema (convert MariaDB schema or use original PostgreSQL version)
 4. Add environment variables:
    - DATABASE_URL=postgresql://username:password@localhost:5432/database_name
 
-## Option 3: SQLite (Development)
-1. Install sqlite3
-2. Create a new database file
-3. Run the schema (adapted for SQLite syntax)
+## MariaDB vs PostgreSQL Schema Differences:
+- MariaDB uses CHAR(36) for UUIDs instead of UUID type
+- MariaDB uses ENUM instead of CHECK constraints
+- MariaDB uses JSON instead of JSONB
+- MariaDB uses TIMESTAMP with different syntax
+- Foreign key constraints are defined separately in MariaDB
 
 ## Next Steps
 1. Replace the mock DatabaseService with actual database queries
 2. Implement authentication and authorization
 3. Add data validation and error handling
 4. Set up database migrations for schema changes
+5. Configure connection pooling for production
+6. Set up database backups and monitoring
 `;

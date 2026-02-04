@@ -24,7 +24,7 @@ interface DashboardProps {
 export default function Dashboard({
   userName = "John Doe",
   userAvatar = "",
-  companyLogo = "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=200&q=80",
+  companyLogo = "/logo.png",
 }: DashboardProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);

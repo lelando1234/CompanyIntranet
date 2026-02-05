@@ -50,27 +50,39 @@ async function runMigrations() {
     const schemaPath = path.join(__dirname, 'schema.sql');
     const schema = fs.readFileSync(schemaPath, 'utf8');
     
-    // Split by semicolon and execute each statement
-    const statements = schema
-      .split(';')
+    // Remove comments and split by semicolon properly
+    const cleanSchema = schema
+      .split('\n')
+      .filter(line => !line.trim().startsWith('--'))
+      .join('\n');
+    
+    // Split by semicolon followed by newline or end of file
+    const statements = cleanSchema
+      .split(/;\s*\n/)
       .map(s => s.trim())
-      .filter(s => s.length > 0 && !s.startsWith('--'));
+      .filter(s => s.length > 0);
+    
+    console.log(`📄 Found ${statements.length} SQL statements to execute`);
 
     let successCount = 0;
     let errorCount = 0;
 
-    for (const statement of statements) {
+    for (let i = 0; i < statements.length; i++) {
+      const statement = statements[i];
       try {
         await conn.query(statement);
         const preview = statement.substring(0, 60).replace(/\n/g, ' ');
-        console.log(`✅ Executed: ${preview}...`);
+        console.log(`✅ [${i+1}/${statements.length}] Executed: ${preview}...`);
         successCount++;
       } catch (err) {
         // Ignore "already exists" errors
         if (!err.message.includes('already exists') && !err.message.includes('Duplicate')) {
-          console.error(`❌ Error executing statement: ${err.message}`);
-          console.error(`   SQL: ${statement.substring(0, 100)}...`);
+          console.error(`❌ [${i+1}/${statements.length}] Error: ${err.message}`);
+          console.error(`   SQL: ${statement.substring(0, 200)}`);
           errorCount++;
+        } else {
+          console.log(`⏭️  [${i+1}/${statements.length}] Skipped (already exists)`);
+          successCount++;
         }
       }
     }

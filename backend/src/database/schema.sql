@@ -1,9 +1,6 @@
 -- Company Portal Database Schema
 -- For MariaDB
-
--- Create database if not exists
-CREATE DATABASE IF NOT EXISTS company_portal CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE company_portal;
+-- Note: Database creation and USE commands are handled by migrate.js based on environment variables
 
 -- Users table
 CREATE TABLE IF NOT EXISTS users (

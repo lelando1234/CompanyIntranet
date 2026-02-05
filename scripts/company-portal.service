@@ -1,18 +1,22 @@
 [Unit]
 Description=Company Portal API Server
 After=network.target mariadb.service
+Wants=mariadb.service
 
 [Service]
 Type=simple
 User=www-data
+Group=www-data
 WorkingDirectory=/var/www/company-portal/backend
 ExecStart=/usr/bin/node src/index.js
-Restart=on-failure
+Restart=always
 RestartSec=10
-StandardOutput=syslog
-StandardError=syslog
+StandardOutput=journal
+StandardError=journal
 SyslogIdentifier=company-portal
 Environment=NODE_ENV=production
+# Give the process time to start
+TimeoutStartSec=30
 
 [Install]
 WantedBy=multi-user.target

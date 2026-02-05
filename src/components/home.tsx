@@ -1,5 +1,10 @@
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Card,
   CardContent,
@@ -7,104 +12,164 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { ArrowRight, Users, FileText, Shield } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ArrowRight, AlertCircle, Loader2 } from "lucide-react";
 
 function Home() {
   const navigate = useNavigate();
+  const { login, isAuthenticated, isLoading } = useAuth();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
+  const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Redirect if already authenticated
+  React.useEffect(() => {
+    if (isAuthenticated && !isLoading) {
+      navigate("/dashboard");
+    }
+  }, [isAuthenticated, isLoading, navigate]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setIsSubmitting(true);
+
+    try {
+      const success = await login(email, password, rememberMe);
+      if (success) {
+        navigate("/dashboard");
+      } else {
+        setError("Invalid email or password. Please try again.");
+      }
+    } catch (err) {
+      setError("An error occurred. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-green-50 to-blue-100 flex items-center justify-center p-4">
-      <div className="max-w-4xl w-full">
+      <div className="w-full max-w-md">
         {/* Header */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-8">
           <div className="flex justify-center mb-6">
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-green-400 rounded-full blur-xl opacity-30"></div>
               <img
                 src="/logo.png"
                 alt="Company Logo"
-                className="h-24 w-auto relative"
+                className="h-20 w-auto relative"
                 onError={(e) => {
                   e.currentTarget.style.display = "none";
                 }}
               />
             </div>
           </div>
-          <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent mb-4">
-            Welcome to Company Portal
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent mb-2">
+            Company Portal
           </h1>
-          <p className="text-xl text-gray-700 mb-8">
-            Your centralized hub for company news, resources, and internal tools
+          <p className="text-gray-600">
+            Sign in to access your portal
           </p>
-          <Button
-            onClick={() => navigate("/dashboard")}
-            size="lg"
-            className="bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700 text-white font-semibold"
-          >
-            Enter Portal <ArrowRight className="ml-2 h-5 w-5" />
-          </Button>
         </div>
 
-        {/* Features Grid */}
-        <div className="grid md:grid-cols-3 gap-6 mb-12">
-          <Card className="hover:shadow-xl transition-all border-blue-200 hover:border-blue-400 hover:-translate-y-1">
-            <CardHeader>
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-2">
-                <FileText className="h-6 w-6 text-blue-600" />
-              </div>
-              <CardTitle>Company News</CardTitle>
-              <CardDescription>
-                Stay updated with the latest announcements and company updates
-              </CardDescription>
-            </CardHeader>
-          </Card>
-
-          <Card className="hover:shadow-xl transition-all border-green-200 hover:border-green-400 hover:-translate-y-1">
-            <CardHeader>
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-2">
-                <Users className="h-6 w-6 text-green-600" />
-              </div>
-              <CardTitle>Resource Access</CardTitle>
-              <CardDescription>
-                Quick access to role-specific internal resources and tools
-              </CardDescription>
-            </CardHeader>
-          </Card>
-
-          <Card className="hover:shadow-xl transition-all border-blue-200 hover:border-blue-400 hover:-translate-y-1">
-            <CardHeader>
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-2">
-                <Shield className="h-6 w-6 text-blue-600" />
-              </div>
-              <CardTitle>Admin Controls</CardTitle>
-              <CardDescription>
-                Manage permissions, content, and user access controls
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        </div>
-
-        {/* Quick Actions */}
-        <Card className="bg-gradient-to-r from-blue-50 to-green-50 border-blue-200 shadow-lg">
-          <CardHeader>
-            <CardTitle className="text-blue-900">Quick Actions</CardTitle>
+        {/* Login Card */}
+        <Card className="shadow-xl border-blue-200">
+          <CardHeader className="text-center">
+            <CardTitle>Sign In</CardTitle>
+            <CardDescription>
+              Enter your credentials to continue
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-wrap gap-4">
-              <Button 
-                variant="outline" 
-                onClick={() => navigate("/dashboard")}
-                className="border-blue-300 text-blue-600 hover:bg-blue-50"
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {error && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="you@company.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  disabled={isSubmitting}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  disabled={isSubmitting}
+                />
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="rememberMe"
+                  checked={rememberMe}
+                  onCheckedChange={(checked) => setRememberMe(!!checked)}
+                  disabled={isSubmitting}
+                />
+                <Label
+                  htmlFor="rememberMe"
+                  className="text-sm font-normal cursor-pointer"
+                >
+                  Remember me
+                </Label>
+              </div>
+
+              <Button
+                type="submit"
+                className="w-full bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700 text-white font-semibold"
+                disabled={isSubmitting}
               >
-                View Dashboard
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Signing in...
+                  </>
+                ) : (
+                  <>
+                    Enter Portal <ArrowRight className="ml-2 h-4 w-4" />
+                  </>
+                )}
               </Button>
-              <Button 
-                variant="outline" 
-                onClick={() => navigate("/admin")}
-                className="border-green-300 text-green-600 hover:bg-green-50"
-              >
-                Admin Panel
-              </Button>
+            </form>
+
+            {/* Demo Credentials */}
+            <div className="mt-6 pt-4 border-t">
+              <p className="text-xs text-muted-foreground text-center mb-2">
+                Demo Credentials:
+              </p>
+              <div className="text-xs text-muted-foreground space-y-1">
+                <p><strong>Admin:</strong> admin@company.com / admin123</p>
+                <p><strong>Editor:</strong> editor@company.com / editor123</p>
+                <p><strong>User:</strong> user@company.com / user123</p>
+              </div>
             </div>
           </CardContent>
         </Card>

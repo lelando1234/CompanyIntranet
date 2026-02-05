@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Search, Filter, ChevronDown, ChevronUp } from "lucide-react";
+import { Search, Filter, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Paperclip } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -13,6 +13,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 
+interface Attachment {
+  id: string;
+  name: string;
+  url: string;
+  type: string;
+}
+
 interface NewsArticle {
   id: string;
   title: string;
@@ -21,16 +28,20 @@ interface NewsArticle {
   date: string;
   category: string;
   previewText: string;
+  attachments?: Attachment[];
 }
 
 interface NewsFeedProps {
   articles?: NewsArticle[];
 }
 
+const ARTICLES_PER_PAGE = 4;
+
 const NewsFeed = ({ articles = [] }: NewsFeedProps) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedArticles, setExpandedArticles] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Default articles if none are provided
   const defaultArticles: NewsArticle[] = [
@@ -78,6 +89,28 @@ const NewsFeed = ({ articles = [] }: NewsFeedProps) => {
       previewText:
         "In response to recent industry security incidents, we are implementing enhanced security protocols effective immediately...",
     },
+    {
+      id: "5",
+      title: "Employee Recognition Program",
+      content:
+        "We are pleased to introduce our new Employee Recognition Program! This initiative aims to celebrate and reward outstanding contributions from our team members. Nominations are now open for the monthly spotlight award. Winners will receive a bonus and featured recognition on our internal communications.",
+      author: "HR Department",
+      date: "2023-05-28",
+      category: "HR",
+      previewText:
+        "We are pleased to introduce our new Employee Recognition Program! This initiative aims to celebrate and reward outstanding contributions...",
+    },
+    {
+      id: "6",
+      title: "New Partnership Announcement",
+      content:
+        "We are thrilled to announce a strategic partnership with TechCorp Industries. This collaboration will enable us to expand our service offerings and reach new markets. More details will be shared in the upcoming town hall meeting scheduled for next Friday.",
+      author: "Executive Team",
+      date: "2023-05-20",
+      category: "Announcements",
+      previewText:
+        "We are thrilled to announce a strategic partnership with TechCorp Industries...",
+    },
   ];
 
   const displayArticles = articles.length > 0 ? articles : defaultArticles;
@@ -98,6 +131,16 @@ const NewsFeed = ({ articles = [] }: NewsFeedProps) => {
     return matchesSearch && matchesCategory;
   });
 
+  // Pagination
+  const totalPages = Math.ceil(filteredArticles.length / ARTICLES_PER_PAGE);
+  const startIndex = (currentPage - 1) * ARTICLES_PER_PAGE;
+  const paginatedArticles = filteredArticles.slice(startIndex, startIndex + ARTICLES_PER_PAGE);
+
+  // Reset to page 1 when filters change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedCategory]);
+
   // Toggle article expansion
   const toggleArticleExpansion = (id: string) => {
     setExpandedArticles((prev) =>
@@ -105,6 +148,14 @@ const NewsFeed = ({ articles = [] }: NewsFeedProps) => {
         ? prev.filter((articleId) => articleId !== id)
         : [...prev, id],
     );
+  };
+
+  const goToPage = (page: number) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+      // Scroll to top of news section
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
   };
 
   return (
@@ -155,7 +206,7 @@ const NewsFeed = ({ articles = [] }: NewsFeedProps) => {
         </Card>
       ) : (
         <div className="space-y-4">
-          {filteredArticles.map((article) => {
+          {paginatedArticles.map((article) => {
             const isExpanded = expandedArticles.includes(article.id);
 
             return (
@@ -177,9 +228,35 @@ const NewsFeed = ({ articles = [] }: NewsFeedProps) => {
                 </CardHeader>
 
                 <CardContent>
-                  <p className="text-sm">
-                    {isExpanded ? article.content : article.previewText}
-                  </p>
+                  {isExpanded ? (
+                    <div 
+                      className="prose prose-sm max-w-none"
+                      dangerouslySetInnerHTML={{ __html: article.content }}
+                    />
+                  ) : (
+                    <p className="text-sm">{article.previewText}</p>
+                  )}
+                  
+                  {/* Attachments */}
+                  {article.attachments && article.attachments.length > 0 && isExpanded && (
+                    <div className="mt-4 pt-4 border-t">
+                      <p className="text-sm font-medium mb-2">Attachments:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {article.attachments.map((attachment) => (
+                          <a
+                            key={attachment.id}
+                            href={attachment.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 px-3 py-1.5 bg-muted border rounded-md text-sm hover:bg-muted/80 transition-colors"
+                          >
+                            <Paperclip className="h-3 w-3" />
+                            <span className="truncate max-w-[150px]">{attachment.name}</span>
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
 
                 <CardFooter className="flex justify-between">
@@ -209,12 +286,50 @@ const NewsFeed = ({ articles = [] }: NewsFeedProps) => {
         </div>
       )}
 
+      {/* Pagination */}
+      {filteredArticles.length > ARTICLES_PER_PAGE && (
+        <div className="mt-6 flex items-center justify-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => goToPage(currentPage - 1)}
+            disabled={currentPage === 1}
+          >
+            <ChevronLeft className="h-4 w-4 mr-1" />
+            Previous
+          </Button>
+          
+          <div className="flex items-center gap-1">
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+              <Button
+                key={page}
+                variant={currentPage === page ? "default" : "outline"}
+                size="sm"
+                onClick={() => goToPage(page)}
+                className="w-8 h-8 p-0"
+              >
+                {page}
+              </Button>
+            ))}
+          </div>
+          
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => goToPage(currentPage + 1)}
+            disabled={currentPage === totalPages}
+          >
+            Next
+            <ChevronRight className="h-4 w-4 ml-1" />
+          </Button>
+        </div>
+      )}
+
       {filteredArticles.length > 0 && (
         <div className="mt-6">
           <Separator className="my-4" />
           <p className="text-sm text-muted-foreground text-center">
-            Showing {filteredArticles.length} of {displayArticles.length} news
-            articles
+            Showing {startIndex + 1}-{Math.min(startIndex + ARTICLES_PER_PAGE, filteredArticles.length)} of {filteredArticles.length} news articles
           </p>
         </div>
       )}

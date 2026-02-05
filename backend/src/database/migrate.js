@@ -41,7 +41,7 @@ async function runMigrations() {
     } catch (err) {
       console.error(`❌ Failed to switch to database '${dbName}': ${err.message}`);
       console.error('   Make sure the database user has proper permissions.');
-      console.error('   Run: GRANT ALL PRIVILEGES ON ' + dbName + '.* TO \\'your_user\\'@\\'localhost\\';');
+      console.error('   Run: GRANT ALL PRIVILEGES ON ' + dbName + '.* TO "your_user"@"localhost";');
       migrationFailed = true;
       throw err;
     }

@@ -314,6 +314,7 @@ setup_application() {
         cp -r ./backend ${INSTALL_DIR}/
         cp -r ./src ${INSTALL_DIR}/
         cp -r ./public ${INSTALL_DIR}/ 2>/dev/null || true
+        cp -r ./scripts ${INSTALL_DIR}/ 2>/dev/null || true
         cp ./package.json ${INSTALL_DIR}/
         cp ./package-lock.json ${INSTALL_DIR}/ 2>/dev/null || true
         cp ./vite.config.ts ${INSTALL_DIR}/ 2>/dev/null || true
@@ -325,6 +326,24 @@ setup_application() {
     fi
     
     cd ${INSTALL_DIR}
+    
+    # Create tsconfig.node.json with correct settings to avoid build errors
+    print_info "Creating TypeScript configuration files..."
+    cat > ${INSTALL_DIR}/tsconfig.node.json << 'EOF'
+{
+  "compilerOptions": {
+    "composite": true,
+    "skipLibCheck": true,
+    "noEmitOnError": false,
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowSyntheticDefaultImports": true,
+    "strict": true
+  },
+  "include": ["vite.config.ts"]
+}
+EOF
+    print_success "TypeScript configuration created"
     
     # Create backend .env file
     cat > ${INSTALL_DIR}/backend/.env << EOF
@@ -398,7 +417,10 @@ EOF
     # Create uploads directory
     mkdir -p ${INSTALL_DIR}/backend/uploads/articles
     mkdir -p ${INSTALL_DIR}/backend/uploads/branding
-    chown -R www-data:www-data ${INSTALL_DIR}/backend/uploads
+    
+    # Set correct ownership for the entire application directory
+    print_info "Setting directory ownership..."
+    chown -R www-data:www-data ${INSTALL_DIR}
     
     print_success "Application setup complete"
 }
@@ -407,66 +429,28 @@ EOF
 configure_nginx() {
     print_header "Configuring Nginx"
     
+    # Remove default nginx site first
+    rm -f /etc/nginx/sites-enabled/default
+    
     # Create Nginx configuration
-    cat > /etc/nginx/sites-available/${DOMAIN_NAME} << EOF
+    cat > /etc/nginx/sites-available/company-portal << EOF
 # Company Portal - Nginx Configuration
 
-# Upstream for backend API
-upstream portal_backend {
-    server 127.0.0.1:${API_PORT};
-    keepalive 64;
-}
-
-# HTTP -> HTTPS redirect
 server {
     listen 80;
-    listen [::]:80;
     server_name ${DOMAIN_NAME};
     
-    location /.well-known/acme-challenge/ {
-        root /var/www/certbot;
-    }
-    
-    location / {
-        return 301 https://\$host\$request_uri;
-    }
-}
-
-# Main HTTPS server
-server {
-    listen 443 ssl http2;
-    listen [::]:443 ssl http2;
-    server_name ${DOMAIN_NAME};
-    
-    # SSL configuration (will be updated by certbot)
-    ssl_certificate /etc/ssl/certs/ssl-cert-snakeoil.pem;
-    ssl_certificate_key /etc/ssl/private/ssl-cert-snakeoil.key;
-    
-    # SSL settings
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_prefer_server_ciphers on;
-    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384;
-    
-    # Security headers
-    add_header X-Frame-Options "SAMEORIGIN" always;
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header X-XSS-Protection "1; mode=block" always;
-    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-    
-    # Root directory for frontend
     root ${INSTALL_DIR}/dist;
     index index.html;
     
-    # Gzip compression
-    gzip on;
-    gzip_vary on;
-    gzip_min_length 1024;
-    gzip_proxied expired no-cache no-store private auth;
-    gzip_types text/plain text/css text/xml text/javascript application/x-javascript application/xml application/javascript application/json;
+    # Frontend - serve static files
+    location / {
+        try_files \$uri \$uri/ /index.html;
+    }
     
-    # API proxy
-    location /api/ {
-        proxy_pass http://portal_backend/api/;
+    # Backend API proxy
+    location /api {
+        proxy_pass http://127.0.0.1:${API_PORT};
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -475,14 +459,6 @@ server {
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
         proxy_cache_bypass \$http_upgrade;
-        proxy_read_timeout 300s;
-        proxy_connect_timeout 75s;
-        
-        # CORS headers
-        add_header 'Access-Control-Allow-Origin' 'https://${DOMAIN_NAME}' always;
-        add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELETE, PATCH, OPTIONS' always;
-        add_header 'Access-Control-Allow-Headers' 'Authorization, Content-Type' always;
-        add_header 'Access-Control-Allow-Credentials' 'true' always;
     }
     
     # Uploads
@@ -491,48 +467,6 @@ server {
         expires 30d;
         add_header Cache-Control "public, immutable";
     }
-    
-    # Frontend assets
-    location /assets/ {
-        expires 1y;
-        add_header Cache-Control "public, immutable";
-    }
-    
-    # Frontend routes (SPA)
-    location / {
-        try_files \$uri \$uri/ /index.html;
-    }
-    
-    # Deny access to sensitive files
-    location ~ /\. {
-        deny all;
-    }
-    
-    location ~ \.env$ {
-        deny all;
-    }
-}
-
-# Adminer configuration
-server {
-    listen 443 ssl http2;
-    listen [::]:443 ssl http2;
-    server_name adminer.${DOMAIN_NAME};
-    
-    ssl_certificate /etc/ssl/certs/ssl-cert-snakeoil.pem;
-    ssl_certificate_key /etc/ssl/private/ssl-cert-snakeoil.key;
-    
-    root /var/www/adminer;
-    index index.php;
-    
-    # Restrict access (change this IP or add authentication)
-    # allow YOUR_IP;
-    # deny all;
-    
-    location ~ \.php$ {
-        include snippets/fastcgi-php.conf;
-        fastcgi_pass unix:/var/run/php/php-fpm.sock;
-    }
 }
 EOF
     
@@ -540,12 +474,11 @@ EOF
     apt-get install -y php-fpm php-mysql
     
     # Enable site
-    ln -sf /etc/nginx/sites-available/${DOMAIN_NAME} /etc/nginx/sites-enabled/
-    rm -f /etc/nginx/sites-enabled/default
+    ln -sf /etc/nginx/sites-available/company-portal /etc/nginx/sites-enabled/
     
     # Test and reload Nginx
     nginx -t
-    systemctl reload nginx
+    systemctl restart nginx
     
     print_success "Nginx configured"
 }
@@ -557,9 +490,13 @@ setup_ssl() {
     # Create certbot webroot
     mkdir -p /var/www/certbot
     
-    # Obtain certificate
+    # Obtain certificate using nginx plugin
     print_info "Obtaining SSL certificate from Let's Encrypt..."
-    certbot --nginx -d ${DOMAIN_NAME} --non-interactive --agree-tos --email ${ADMIN_EMAIL} --redirect
+    certbot --nginx -d ${DOMAIN_NAME} --non-interactive --agree-tos --email ${ADMIN_EMAIL}
+    
+    # Test nginx config after certbot modifications
+    nginx -t
+    systemctl restart nginx
     
     # Setup auto-renewal
     systemctl enable certbot.timer
@@ -601,6 +538,29 @@ EOF
     print_success "PM2 configured and application started"
 }
 
+# Setup systemd service (alternative to PM2)
+setup_systemd_service() {
+    print_header "Setting Up Systemd Service"
+    
+    # Copy service file
+    cp ${INSTALL_DIR}/scripts/company-portal.service /etc/systemd/system/
+    
+    # Update service file with correct paths
+    sed -i "s|/var/www/company-portal|${INSTALL_DIR}|g" /etc/systemd/system/company-portal.service
+    
+    # Reload systemd
+    systemctl daemon-reload
+    
+    # Enable and start service
+    systemctl enable company-portal
+    systemctl start company-portal
+    
+    # Check status
+    systemctl status company-portal --no-pager || true
+    
+    print_success "Systemd service configured"
+}
+
 # Configure firewall
 configure_firewall() {
     print_header "Configuring Firewall"
@@ -609,10 +569,12 @@ configure_firewall() {
     ufw default deny incoming
     ufw default allow outgoing
     ufw allow ssh
+    ufw allow 80
+    ufw allow 443
     ufw allow 'Nginx Full'
     ufw reload
     
-    print_success "Firewall configured"
+    print_success "Firewall configured (ports 80, 443, SSH open)"
 }
 
 # Show completion message
@@ -696,9 +658,9 @@ main() {
     install_adminer
     setup_application
     configure_nginx
-    setup_ssl
-    setup_pm2
     configure_firewall
+    setup_ssl
+    setup_systemd_service
     
     show_completion
 }

@@ -371,11 +371,24 @@ EOF
     
     # Run database migrations
     print_info "Running database migrations..."
-    npm run migrate
+    if ! npm run migrate; then
+        print_error "Database migration failed!"
+        print_info "Please check your database credentials and permissions."
+        print_info "Make sure the database user '${DB_USER}' has proper permissions:"
+        print_info "  GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${DB_USER}'@'localhost';"
+        print_info "  FLUSH PRIVILEGES;"
+        exit 1
+    fi
+    print_success "Database migration completed"
     
     # Seed database
     print_info "Seeding database..."
-    npm run seed
+    if ! npm run seed; then
+        print_error "Database seeding failed!"
+        print_info "Tables may not have been created properly. Check migration logs."
+        exit 1
+    fi
+    print_success "Database seeding completed"
     
     # Build frontend
     print_info "Building frontend..."

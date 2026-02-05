@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Search, Filter, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Paperclip } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Search, Filter, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Paperclip, Loader2 } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { articlesAPI, categoriesAPI, Article, Category } from "@/lib/api";
 
 interface Attachment {
   id: string;
@@ -33,15 +34,76 @@ interface NewsArticle {
 
 interface NewsFeedProps {
   articles?: NewsArticle[];
+  useApi?: boolean;
 }
 
 const ARTICLES_PER_PAGE = 4;
 
-const NewsFeed = ({ articles = [] }: NewsFeedProps) => {
+const NewsFeed = ({ articles = [], useApi = false }: NewsFeedProps) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedArticles, setExpandedArticles] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
+  const [apiArticles, setApiArticles] = useState<NewsArticle[]>([]);
+  const [apiCategories, setApiCategories] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [totalPages, setTotalPages] = useState(1);
+
+  // Fetch articles from API if useApi is true
+  useEffect(() => {
+    if (useApi) {
+      fetchArticlesFromApi();
+      fetchCategoriesFromApi();
+    }
+  }, [useApi, currentPage, selectedCategory, searchTerm]);
+
+  const fetchArticlesFromApi = async () => {
+    setLoading(true);
+    try {
+      const result = await articlesAPI.getAll({
+        page: currentPage,
+        limit: ARTICLES_PER_PAGE,
+        category: selectedCategory !== 'all' ? selectedCategory : undefined,
+        search: searchTerm || undefined,
+        status: 'published'
+      });
+      
+      if (result.success && result.data) {
+        const mappedArticles: NewsArticle[] = result.data.articles.map((article: Article) => ({
+          id: article.id,
+          title: article.title,
+          content: article.content,
+          author: article.author_name || 'Unknown',
+          date: article.published_at ? new Date(article.published_at).toISOString().split('T')[0] : article.created_at.split('T')[0],
+          category: article.category_name || 'General',
+          previewText: article.excerpt || article.content.substring(0, 150) + '...',
+          attachments: article.attachments?.map(att => ({
+            id: att.id,
+            name: att.original_name,
+            url: att.url,
+            type: att.mime_type
+          }))
+        }));
+        setApiArticles(mappedArticles);
+        setTotalPages(result.data.pagination.pages || 1);
+      }
+    } catch (error) {
+      console.error('Error fetching articles:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchCategoriesFromApi = async () => {
+    try {
+      const result = await categoriesAPI.getAll();
+      if (result.success && result.data) {
+        setApiCategories(result.data.map((cat: Category) => cat.name));
+      }
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+    }
+  };
 
   // Default articles if none are provided
   const defaultArticles: NewsArticle[] = [
@@ -113,33 +175,39 @@ const NewsFeed = ({ articles = [] }: NewsFeedProps) => {
     },
   ];
 
-  const displayArticles = articles.length > 0 ? articles : defaultArticles;
+  // Determine which articles to display
+  const displayArticles = useApi && apiArticles.length > 0 
+    ? apiArticles 
+    : (articles.length > 0 ? articles : defaultArticles);
 
   // Get unique categories for filter
-  const categories = [
-    "all",
-    ...new Set(displayArticles.map((article) => article.category)),
-  ];
+  const categories = useApi && apiCategories.length > 0
+    ? ["all", ...apiCategories]
+    : ["all", ...new Set(displayArticles.map((article) => article.category))];
 
-  // Filter articles based on search term and category
-  const filteredArticles = displayArticles.filter((article) => {
-    const matchesSearch =
-      article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      article.content.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory =
-      selectedCategory === "all" || article.category === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
+  // Filter articles based on search term and category (client-side if not using API)
+  const filteredArticles = useApi 
+    ? displayArticles 
+    : displayArticles.filter((article) => {
+        const matchesSearch =
+          article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          article.content.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesCategory =
+          selectedCategory === "all" || article.category === selectedCategory;
+        return matchesSearch && matchesCategory;
+      });
 
-  // Pagination
-  const totalPages = Math.ceil(filteredArticles.length / ARTICLES_PER_PAGE);
+  // Pagination (client-side if not using API)
+  const clientTotalPages = useApi ? totalPages : Math.ceil(filteredArticles.length / ARTICLES_PER_PAGE);
   const startIndex = (currentPage - 1) * ARTICLES_PER_PAGE;
-  const paginatedArticles = filteredArticles.slice(startIndex, startIndex + ARTICLES_PER_PAGE);
+  const paginatedArticles = useApi ? filteredArticles : filteredArticles.slice(startIndex, startIndex + ARTICLES_PER_PAGE);
 
   // Reset to page 1 when filters change
   React.useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, selectedCategory]);
+    if (!useApi) {
+      setCurrentPage(1);
+    }
+  }, [searchTerm, selectedCategory, useApi]);
 
   // Toggle article expansion
   const toggleArticleExpansion = (id: string) => {
@@ -151,12 +219,21 @@ const NewsFeed = ({ articles = [] }: NewsFeedProps) => {
   };
 
   const goToPage = (page: number) => {
-    if (page >= 1 && page <= totalPages) {
+    const maxPages = useApi ? totalPages : clientTotalPages;
+    if (page >= 1 && page <= maxPages) {
       setCurrentPage(page);
       // Scroll to top of news section
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
+
+  if (loading) {
+    return (
+      <div className="w-full bg-background p-4 md:p-6 flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="w-full bg-background p-4 md:p-6">
@@ -287,7 +364,7 @@ const NewsFeed = ({ articles = [] }: NewsFeedProps) => {
       )}
 
       {/* Pagination */}
-      {filteredArticles.length > ARTICLES_PER_PAGE && (
+      {(useApi ? totalPages > 1 : filteredArticles.length > ARTICLES_PER_PAGE) && (
         <div className="mt-6 flex items-center justify-center gap-2">
           <Button
             variant="outline"
@@ -300,7 +377,7 @@ const NewsFeed = ({ articles = [] }: NewsFeedProps) => {
           </Button>
           
           <div className="flex items-center gap-1">
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+            {Array.from({ length: useApi ? totalPages : clientTotalPages }, (_, i) => i + 1).map((page) => (
               <Button
                 key={page}
                 variant={currentPage === page ? "default" : "outline"}
@@ -317,7 +394,7 @@ const NewsFeed = ({ articles = [] }: NewsFeedProps) => {
             variant="outline"
             size="sm"
             onClick={() => goToPage(currentPage + 1)}
-            disabled={currentPage === totalPages}
+            disabled={currentPage === (useApi ? totalPages : clientTotalPages)}
           >
             Next
             <ChevronRight className="h-4 w-4 ml-1" />

@@ -11,7 +11,7 @@ When you see "Server error" in the admin panel, it means the frontend cannot con
 ### 1. Run the Automated Troubleshooting Script
 
 ```bash
-cd /var/www/test.zoqila.com
+cd /var/www/company-portal
 sudo bash troubleshoot.sh
 ```
 
@@ -45,7 +45,7 @@ sudo systemctl status company-portal
 **If not running:**
 ```bash
 # Using PM2 (recommended)
-cd /var/www/test.zoqila.com/backend
+cd /var/www/company-portal/backend
 pm2 start src/index.js --name company-portal
 
 # Or using systemd
@@ -80,7 +80,7 @@ pm2 logs company-portal
 sudo journalctl -u company-portal -n 50 -f
 
 # Or check log files directly
-tail -f /var/www/test.zoqila.com/backend/logs/*.log
+tail -f /var/www/company-portal/backend/logs/*.log
 ```
 
 **Common errors to look for:**
@@ -108,7 +108,7 @@ mysql -u portal_user -p -e "USE company_portal; SELECT COUNT(*) FROM users;"
 sudo systemctl restart mariadb
 
 # Check backend .env has correct credentials
-cat /var/www/test.zoqila.com/backend/.env | grep DB_
+cat /var/www/company-portal/backend/.env | grep DB_
 ```
 
 ---
@@ -177,7 +177,7 @@ FRONTEND_URL=https://test.zoqila.com
 
 **To fix:**
 ```bash
-cd /var/www/test.zoqila.com/backend
+cd /var/www/company-portal/backend
 nano .env
 # Change FRONTEND_URL to: https://test.zoqila.com
 
@@ -197,13 +197,13 @@ console.log(import.meta.env.VITE_API_URL)
 
 Or check the file:
 ```bash
-cat /var/www/test.zoqila.com/.env
+cat /var/www/company-portal/.env
 # Should have: VITE_API_URL=https://test.zoqila.com/api
 ```
 
 **If wrong, update and rebuild:**
 ```bash
-cd /var/www/test.zoqila.com
+cd /var/www/company-portal
 nano .env
 # Set: VITE_API_URL=https://test.zoqila.com/api
 
@@ -237,7 +237,7 @@ sudo systemctl restart nginx
 
 **Fix:** Update backend `.env`:
 ```bash
-# In /var/www/test.zoqila.com/backend/.env
+# In /var/www/company-portal/backend/.env
 FRONTEND_URL=https://test.zoqila.com
 
 # Then restart
@@ -260,7 +260,7 @@ netstat -tuln | grep 3001
 
 **Fix:**
 ```bash
-cd /var/www/test.zoqila.com/backend
+cd /var/www/company-portal/backend
 pm2 restart company-portal
 # Wait 5 seconds
 curl http://localhost:3001/api/health
@@ -278,7 +278,7 @@ curl http://localhost:3001/api/health
 sudo systemctl start mariadb
 
 # Verify credentials in backend/.env
-cd /var/www/test.zoqila.com/backend
+cd /var/www/company-portal/backend
 cat .env | grep DB_
 
 # Test connection manually
@@ -305,7 +305,7 @@ pm2 logs company-portal --lines 100
 
 # Restart with verbose logs
 pm2 delete company-portal
-cd /var/www/test.zoqila.com/backend
+cd /var/www/company-portal/backend
 NODE_ENV=development pm2 start src/index.js --name company-portal
 pm2 logs company-portal
 ```
@@ -345,7 +345,7 @@ curl -I https://test.zoqila.com
 ### Enable Backend Debug Mode
 
 ```bash
-cd /var/www/test.zoqila.com/backend
+cd /var/www/company-portal/backend
 nano .env
 # Set: NODE_ENV=development
 
@@ -378,7 +378,7 @@ watch -n 1 'pm2 list'
 ### Check Backend Package Dependencies
 
 ```bash
-cd /var/www/test.zoqila.com/backend
+cd /var/www/company-portal/backend
 
 # Verify all dependencies are installed
 npm list --depth=0
@@ -416,15 +416,19 @@ Then share `troubleshoot-output.txt` for further assistance.
 ## Quick Reference: File Locations
 
 ```
-/var/www/test.zoqila.com/
+/var/www/company-portal/           # Default installation directory
 ├── .env                           # Frontend environment
 ├── backend/
 │   ├── .env                       # Backend environment (CRITICAL)
 │   ├── src/index.js              # Backend entry point
 │   └── src/routes/               # API routes
+├── dist/                          # Built frontend files
 ├── /etc/nginx/sites-enabled/
-│   └── test.zoqila.com           # Nginx config
+│   └── company-portal            # Nginx config (may vary by domain)
 └── troubleshoot.sh                # This diagnostic script
+
+NOTE: Your actual paths may differ based on installation.
+Run: sudo bash troubleshoot.sh to auto-detect all paths.
 ```
 
 ---

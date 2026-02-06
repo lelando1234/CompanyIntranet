@@ -94,6 +94,13 @@ router.get('/', optionalAuth, async (req, res) => {
         [article.id]
       );
       article.attachments = attachments;
+
+      // Get target groups
+      const targetGroups = await query(
+        'SELECT g.id, g.name FROM article_groups ag JOIN `groups` g ON ag.group_id = g.id WHERE ag.article_id = ?',
+        [article.id]
+      );
+      article.target_groups = targetGroups;
     }
 
     res.json({
@@ -146,12 +153,18 @@ router.get('/:id', optionalAuth, async (req, res) => {
       [req.params.id]
     );
 
+    // Get target groups
+    const targetGroups = await query(
+      'SELECT g.id, g.name FROM article_groups ag JOIN `groups` g ON ag.group_id = g.id WHERE ag.article_id = ?',
+      [req.params.id]
+    );
+
     // Increment views
     await query('UPDATE articles SET views = views + 1 WHERE id = ?', [req.params.id]);
 
     res.json({
       success: true,
-      data: { ...articles[0], attachments }
+      data: { ...articles[0], attachments, target_groups: targetGroups }
     });
   } catch (error) {
     console.error('Get article error:', error);
@@ -170,7 +183,7 @@ router.post('/', verifyToken, requireRole('admin', 'editor'), [
       return res.status(400).json({ success: false, errors: errors.array() });
     }
 
-    const { title, content, excerpt, category_id, status = 'draft', featured_image } = req.body;
+    const { title, content, excerpt, category_id, status = 'draft', featured_image, target_groups } = req.body;
 
     const articleId = uuidv4();
     const publishedAt = status === 'published' ? new Date() : null;
@@ -179,6 +192,13 @@ router.post('/', verifyToken, requireRole('admin', 'editor'), [
       INSERT INTO articles (id, title, content, excerpt, category_id, author_id, status, featured_image, published_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [articleId, title, content, excerpt || null, category_id || null, req.user.id, status, featured_image || null, publishedAt]);
+
+    // Insert target groups if specified
+    if (target_groups && target_groups.length > 0) {
+      for (const groupId of target_groups) {
+        await query('INSERT INTO article_groups (article_id, group_id) VALUES (?, ?)', [articleId, groupId]);
+      }
+    }
 
     // Log audit
     await logAudit(req.user.id, 'CREATE_ARTICLE', 'article', articleId, null, { title, status }, req);
@@ -205,7 +225,7 @@ router.put('/:id', verifyToken, requireRole('admin', 'editor'), [
     }
 
     const { id } = req.params;
-    const { title, content, excerpt, category_id, status, featured_image } = req.body;
+    const { title, content, excerpt, category_id, status, featured_image, target_groups } = req.body;
 
     // Get existing article
     const existing = await query('SELECT * FROM articles WHERE id = ?', [id]);
@@ -234,6 +254,16 @@ router.put('/:id', verifyToken, requireRole('admin', 'editor'), [
     if (updates.length > 0) {
       params.push(id);
       await query(`UPDATE articles SET ${updates.join(', ')} WHERE id = ?`, params);
+    }
+
+    // Update target groups if specified
+    if (target_groups !== undefined) {
+      await query('DELETE FROM article_groups WHERE article_id = ?', [id]);
+      if (target_groups && target_groups.length > 0) {
+        for (const groupId of target_groups) {
+          await query('INSERT INTO article_groups (article_id, group_id) VALUES (?, ?)', [id, groupId]);
+        }
+      }
     }
 
     // Log audit

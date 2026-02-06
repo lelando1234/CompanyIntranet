@@ -229,6 +229,7 @@ export interface Article {
   featured_image?: string;
   views: number;
   attachments?: ArticleAttachment[];
+  target_groups?: { id: string; name: string }[];
   published_at?: string;
   created_at: string;
   updated_at: string;
@@ -250,6 +251,7 @@ export interface CreateArticleData {
   category_id?: string;
   status?: 'draft' | 'published';
   featured_image?: string;
+  target_groups?: string[];
 }
 
 export interface UpdateArticleData {
@@ -259,6 +261,7 @@ export interface UpdateArticleData {
   category_id?: string;
   status?: 'draft' | 'published' | 'archived';
   featured_image?: string;
+  target_groups?: string[];
 }
 
 export const articlesAPI = {
@@ -433,6 +436,7 @@ export interface ThemeSettings {
   background_type: 'solid' | 'gradient' | 'image';
   background_value: string;
   logo_url?: string;
+  logo_size?: number;
   favicon_url?: string;
 }
 

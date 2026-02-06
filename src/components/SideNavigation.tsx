@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Accordion,
   AccordionContent,
@@ -7,7 +7,8 @@ import {
 } from "@/components/ui/accordion";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
+import { ChevronLeft, ChevronRight, ExternalLink, Loader2 } from "lucide-react";
+import { urlCategoriesAPI } from "@/lib/api";
 
 interface LinkItem {
   id: string;
@@ -28,88 +29,47 @@ interface SideNavigationProps {
 }
 
 const SideNavigation = ({
-  categories = [
-    {
-      id: "1",
-      name: "Human Resources",
-      links: [
-        {
-          id: "1-1",
-          title: "Employee Handbook",
-          url: "https://example.com/handbook",
-        },
-        {
-          id: "1-2",
-          title: "Benefits Portal",
-          url: "https://example.com/benefits",
-        },
-        {
-          id: "1-3",
-          title: "Time Off Request",
-          url: "https://example.com/timeoff",
-        },
-      ],
-    },
-    {
-      id: "2",
-      name: "IT Resources",
-      links: [
-        { id: "2-1", title: "Help Desk", url: "https://example.com/helpdesk" },
-        {
-          id: "2-2",
-          title: "Software Requests",
-          url: "https://example.com/software",
-        },
-        {
-          id: "2-3",
-          title: "Password Reset",
-          url: "https://example.com/password",
-        },
-      ],
-    },
-    {
-      id: "3",
-      name: "Finance",
-      links: [
-        {
-          id: "3-1",
-          title: "Expense Reports",
-          url: "https://example.com/expenses",
-        },
-        {
-          id: "3-2",
-          title: "Payroll Portal",
-          url: "https://example.com/payroll",
-        },
-        { id: "3-3", title: "Budget Tools", url: "https://example.com/budget" },
-      ],
-    },
-    {
-      id: "4",
-      name: "Marketing",
-      links: [
-        {
-          id: "4-1",
-          title: "Brand Guidelines",
-          url: "https://example.com/brand",
-        },
-        {
-          id: "4-2",
-          title: "Asset Library",
-          url: "https://example.com/assets",
-        },
-        {
-          id: "4-3",
-          title: "Campaign Calendar",
-          url: "https://example.com/campaigns",
-        },
-      ],
-    },
-  ],
+  categories: propCategories,
   isCollapsed = false,
   onToggleCollapse = () => {},
 }: SideNavigationProps) => {
   const [collapsed, setCollapsed] = useState(isCollapsed);
+  const [apiCategories, setApiCategories] = useState<LinkCategory[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch categories from API
+  useEffect(() => {
+    if (propCategories) {
+      setLoading(false);
+      return;
+    }
+
+    const fetchCategories = async () => {
+      try {
+        const result = await urlCategoriesAPI.getAll();
+        if (result.success && result.data) {
+          const mapped: LinkCategory[] = (result.data as any[]).map((cat) => ({
+            id: cat.id,
+            name: cat.name,
+            links: (cat.links || []).map((link: any) => ({
+              id: link.id,
+              title: link.title,
+              url: link.url,
+            })),
+          }));
+          setApiCategories(mapped);
+        }
+      } catch {
+        // Use empty array if API fails
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCategories();
+  }, [propCategories]);
+
+  const categories = propCategories || apiCategories;
 
   const handleToggleCollapse = () => {
     setCollapsed(!collapsed);
@@ -137,7 +97,15 @@ const SideNavigation = ({
       </div>
 
       <ScrollArea className="flex-1">
-        {collapsed ? (
+        {loading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          </div>
+        ) : categories.length === 0 ? (
+          <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+            No resource categories available.
+          </div>
+        ) : collapsed ? (
           <div className="py-2">
             {categories.map((category) => (
               <div

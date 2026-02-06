@@ -1183,11 +1183,14 @@ module.exports = {
     name: 'company-portal-api',
     script: 'src/index.js',
     cwd: '${INSTALL_DIR}/backend',
-    instances: 'max',
-    exec_mode: 'cluster',
+    instances: 1,
+    exec_mode: 'fork',
     autorestart: true,
     watch: false,
     max_memory_restart: '1G',
+    restart_delay: 5000,
+    max_restarts: 10,
+    min_uptime: '10s',
     env: { NODE_ENV: 'production' }
   }]
 };

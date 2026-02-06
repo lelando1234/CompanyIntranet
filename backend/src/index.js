@@ -89,6 +89,9 @@ app.use((req, res) => {
   res.status(404).json({ success: false, message: 'Route not found' });
 });
 
+// Import pool for graceful shutdown
+const { pool } = require('./database/connection');
+
 // Start server
 async function startServer() {
   try {
@@ -96,10 +99,35 @@ async function startServer() {
     await testConnection();
     console.log('✅ Database connection successful');
 
-    app.listen(PORT, '0.0.0.0', () => {
+    const server = app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`📍 API available at http://localhost:${PORT}/api`);
     });
+
+    // Graceful shutdown handler
+    const gracefulShutdown = (signal) => {
+      console.log(`\n📴 Received ${signal}. Shutting down gracefully...`);
+      server.close(async () => {
+        console.log('🔌 HTTP server closed');
+        try {
+          await pool.end();
+          console.log('🗄️ Database pool closed');
+        } catch (err) {
+          console.error('Error closing database pool:', err);
+        }
+        process.exit(0);
+      });
+
+      // Force close after 10 seconds
+      setTimeout(() => {
+        console.error('⚠️ Forced shutdown after timeout');
+        process.exit(1);
+      }, 10000);
+    };
+
+    process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+    process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
   } catch (error) {
     console.error('❌ Failed to start server:', error);
     process.exit(1);

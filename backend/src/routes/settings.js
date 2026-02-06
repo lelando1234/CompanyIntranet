@@ -332,8 +332,8 @@ router.get('/audit/log', verifyToken, requireRole('admin'), async (req, res) => 
       params.push(user_id);
     }
 
-    const countResult = await query(`SELECT COUNT(*) as total FROM audit_log WHERE ${whereClause}`, params);
-    const total = countResult[0].total;
+    const countResult = await query(`SELECT CAST(COUNT(*) AS SIGNED) as total FROM audit_log WHERE ${whereClause}`, params);
+    const total = Number(countResult[0].total);
 
     const logs = await query(`
       SELECT al.*, u.name as user_name, u.email as user_email

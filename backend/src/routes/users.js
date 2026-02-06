@@ -33,8 +33,8 @@ router.get('/', verifyToken, requireRole('admin', 'editor'), async (req, res) =>
     }
 
     // Get total count
-    const countResult = await query(`SELECT COUNT(*) as total FROM users WHERE ${whereClause}`, params);
-    const total = countResult[0].total;
+    const countResult = await query(`SELECT CAST(COUNT(*) AS SIGNED) as total FROM users WHERE ${whereClause}`, params);
+    const total = Number(countResult[0].total);
 
     // Get users
     const users = await query(`

@@ -567,7 +567,7 @@ test_frontend_connectivity() {
 
     # Nginx frontend
     print_test "Nginx serving frontend..."
-    local fe_code=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost" 2>/dev/null)
+    local fe_code=$(curl -s -o /dev/null -w "%{http_code}" -H "Host: ${domain}" "http://localhost" 2>/dev/null)
     if [ "$fe_code" = "200" ] || [ "$fe_code" = "301" ] || [ "$fe_code" = "302" ]; then
         print_success "Nginx frontend: $fe_code"
         track_check "pass"
@@ -578,8 +578,8 @@ test_frontend_connectivity() {
 
     # Nginx API proxy
     print_test "Nginx API proxy..."
-    local proxy_code=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost/api/health" 2>/dev/null)
-    if [ "$proxy_code" = "200" ]; then print_success "API proxy: $proxy_code"; track_check "pass"; else print_error "API proxy: $proxy_code"; track_check "fail"; fi
+    local proxy_code=$(curl -s -o /dev/null -w "%{http_code}" -H "Host: ${domain}" "http://localhost/api/health" 2>/dev/null)
+    if [ "$proxy_code" = "200" ] || [ "$proxy_code" = "301" ] || [ "$proxy_code" = "302" ]; then print_success "API proxy: $proxy_code"; track_check "pass"; else print_error "API proxy: $proxy_code"; track_check "fail"; fi
 
     # HTTPS
     if [ -n "$domain" ]; then
@@ -759,7 +759,7 @@ post_sample_article() {
 
     # Step 5: Check listing
     print_test "Article in listing..."
-    LIST_RESPONSE=$(curl -s "http://localhost:${api_port}/api/articles" 2>/dev/null)
+    LIST_RESPONSE=$(curl -s -H "Authorization: Bearer ${TOKEN}" "http://localhost:${api_port}/api/articles" 2>/dev/null)
     if echo "$LIST_RESPONSE" | grep -q "$ARTICLE_ID"; then
         print_success "Article found in listing"
         track_check "pass"

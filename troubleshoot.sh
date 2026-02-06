@@ -16,12 +16,20 @@ NC='\033[0m' # No Color
 
 # 1. Check if backend is running
 echo "1. Checking if backend process is running..."
-if pgrep -f "node.*backend" > /dev/null; then
-    echo -e "${GREEN}✓ Backend process is running${NC}"
-    ps aux | grep "node.*backend" | grep -v grep
+echo "   Searching for Node.js processes on port 3001..."
+BACKEND_PID=$(lsof -ti:3001 2>/dev/null || fuser 3001/tcp 2>/dev/null | awk '{print $1}')
+if [ -n "$BACKEND_PID" ]; then
+    echo -e "${GREEN}✓ Backend process found (PID: $BACKEND_PID)${NC}"
+    ps aux | grep "$BACKEND_PID" | grep -v grep
+    echo ""
+    echo "   Process details:"
+    ls -l /proc/$BACKEND_PID/cwd 2>/dev/null | awk '{print "   Working directory: " $NF}'
+    cat /proc/$BACKEND_PID/cmdline 2>/dev/null | tr '\0' ' ' | sed 's/^/   Command: /'
+    echo ""
 else
     echo -e "${RED}✗ Backend process is NOT running${NC}"
-    echo "   Start it with: cd /var/www/test.zoqila.com/backend && pm2 start src/index.js --name company-portal"
+    echo "   But port 3001 is listening - checking what's using it..."
+    lsof -i:3001 2>/dev/null || ss -tlnp | grep 3001
 fi
 echo ""
 
@@ -58,16 +66,42 @@ echo ""
 
 # 5. Check backend .env file
 echo "5. Checking backend .env configuration..."
-BACKEND_ENV="/var/www/test.zoqila.com/backend/.env"
-if [ -f "$BACKEND_ENV" ]; then
-    echo -e "${GREEN}✓ Backend .env file exists${NC}"
+echo "   Searching for backend .env files..."
+POSSIBLE_PATHS=(
+    "/var/www/test.zoqila.com/backend/.env"
+    "/root/test.zoqila.com/backend/.env"
+    "/home/*/test.zoqila.com/backend/.env"
+    "$(pwd)/backend/.env"
+)
+
+BACKEND_ENV=""
+for path in "${POSSIBLE_PATHS[@]}"; do
+    EXPANDED=$(eval echo "$path")
+    if [ -f "$EXPANDED" ]; then
+        BACKEND_ENV="$EXPANDED"
+        echo -e "${GREEN}✓ Backend .env file found at: $BACKEND_ENV${NC}"
+        break
+    fi
+done
+
+if [ -n "$BACKEND_ENV" ]; then
     echo "   DB Configuration:"
     grep -E "^DB_" "$BACKEND_ENV" | sed 's/DB_PASSWORD=.*/DB_PASSWORD=***/' || echo "   No DB config found"
     echo ""
     echo "   Server Configuration:"
     grep -E "^PORT=|^NODE_ENV=|^FRONTEND_URL=" "$BACKEND_ENV" || echo "   No server config found"
 else
-    echo -e "${RED}✗ Backend .env file NOT found at $BACKEND_ENV${NC}"
+    echo -e "${RED}✗ Backend .env file NOT found in any common location${NC}"
+    echo "   Checking if backend process has working directory..."
+    if [ -n "$BACKEND_PID" ]; then
+        BACKEND_DIR=$(ls -l /proc/$BACKEND_PID/cwd 2>/dev/null | awk '{print $NF}')
+        echo "   Backend running from: $BACKEND_DIR"
+        if [ -f "$BACKEND_DIR/.env" ]; then
+            echo -e "${GREEN}✓ Found .env at: $BACKEND_DIR/.env${NC}"
+            BACKEND_ENV="$BACKEND_DIR/.env"
+            grep -E "^DB_|^PORT=|^NODE_ENV=|^FRONTEND_URL=" "$BACKEND_ENV" | sed 's/DB_PASSWORD=.*/DB_PASSWORD=***/'
+        fi
+    fi
 fi
 echo ""
 

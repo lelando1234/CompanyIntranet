@@ -69,10 +69,10 @@ router.get('/', optionalAuth, async (req, res) => {
 
     // Get total count
     const countResult = await query(
-      `SELECT COUNT(*) as total FROM articles a WHERE ${whereClause}`,
+      `SELECT CAST(COUNT(*) AS SIGNED) as total FROM articles a WHERE ${whereClause}`,
       params
     );
-    const total = countResult[0].total;
+    const total = Number(countResult[0].total);
 
     // Get articles
     const articles = await query(`

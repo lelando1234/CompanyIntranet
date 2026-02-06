@@ -12,12 +12,18 @@ router.get('/', async (req, res) => {
   try {
     const categories = await query(`
       SELECT c.*, 
-        (SELECT COUNT(*) FROM articles WHERE category_id = c.id) as article_count
+        CAST((SELECT COUNT(*) FROM articles WHERE category_id = c.id) AS SIGNED) as article_count
       FROM news_categories c
       ORDER BY c.name ASC
     `);
 
-    res.json({ success: true, data: categories });
+    // Ensure article_count is a regular number for JSON serialization
+    const sanitized = categories.map(cat => ({
+      ...cat,
+      article_count: Number(cat.article_count || 0)
+    }));
+
+    res.json({ success: true, data: sanitized });
   } catch (error) {
     console.error('Get categories error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
@@ -141,8 +147,8 @@ router.delete('/:id', verifyToken, requireRole('admin', 'editor'), async (req, r
     }
 
     // Check if category has articles
-    const articles = await query('SELECT COUNT(*) as count FROM articles WHERE category_id = ?', [id]);
-    if (articles[0].count > 0) {
+    const articles = await query('SELECT CAST(COUNT(*) AS SIGNED) as count FROM articles WHERE category_id = ?', [id]);
+    if (Number(articles[0].count) > 0) {
       // Set articles category to null instead of deleting
       await query('UPDATE articles SET category_id = NULL WHERE category_id = ?', [id]);
     }

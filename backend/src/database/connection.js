@@ -8,7 +8,9 @@ const pool = mariadb.createPool({
   database: process.env.DB_NAME || 'company_portal',
   connectionLimit: 10,
   acquireTimeout: 30000,
-  connectTimeout: 30000
+  connectTimeout: 30000,
+  bigIntAsNumber: true,
+  insertIdAsNumber: true
 });
 
 async function getConnection() {

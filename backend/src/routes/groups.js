@@ -12,7 +12,7 @@ router.get('/', verifyToken, async (req, res) => {
   try {
     const groups = await query(`
       SELECT g.*, 
-        (SELECT COUNT(*) FROM user_groups WHERE group_id = g.id) as member_count
+        CAST((SELECT COUNT(*) FROM user_groups WHERE group_id = g.id) AS SIGNED) as member_count
       FROM \`groups\` g
       ORDER BY g.name ASC
     `);

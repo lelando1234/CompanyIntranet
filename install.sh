@@ -912,7 +912,7 @@ collect_config() {
     echo ""
     
     read -p "Is this configuration correct? (y/n): " CONFIRM
-    [[ ! "$CONFIRM" =~ ^[Yy]$ ]] && { print_warning "Installation cancelled"; exit 0; }
+    [[ "$CONFIRM" =~ ^[Yy]$ ]] || { print_warning "Installation cancelled"; exit 0; }
 }
 
 update_system() {

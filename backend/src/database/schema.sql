@@ -83,6 +83,15 @@ CREATE TABLE IF NOT EXISTS articles (
     FULLTEXT INDEX idx_search (title, content)
 ) ENGINE=InnoDB;
 
+-- Article-Group targeting (many-to-many)
+CREATE TABLE IF NOT EXISTS article_groups (
+    article_id VARCHAR(36) NOT NULL,
+    group_id VARCHAR(36) NOT NULL,
+    PRIMARY KEY (article_id, group_id),
+    FOREIGN KEY (article_id) REFERENCES articles(id) ON DELETE CASCADE,
+    FOREIGN KEY (group_id) REFERENCES `groups`(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
 -- Article attachments
 CREATE TABLE IF NOT EXISTS article_attachments (
     id VARCHAR(36) PRIMARY KEY,

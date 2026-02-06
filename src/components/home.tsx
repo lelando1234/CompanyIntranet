@@ -13,11 +13,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ArrowRight, AlertCircle, Loader2 } from "lucide-react";
+import { ArrowRight, AlertCircle, Loader2, WifiOff } from "lucide-react";
 
 function Home() {
   const navigate = useNavigate();
-  const { login, isAuthenticated, isLoading } = useAuth();
+  const { login, isAuthenticated, isLoading, backendAvailable } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
@@ -83,6 +83,17 @@ function Home() {
             Sign in to access your portal
           </p>
         </div>
+
+        {/* Backend Status Warning */}
+        {!backendAvailable && (
+          <Alert variant="destructive" className="mb-4">
+            <WifiOff className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Backend server is not reachable.</strong> Login requires a running backend.
+              Check that the server is running at {import.meta.env.VITE_API_URL || "http://localhost:3001/api"}.
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* Login Card */}
         <Card className="shadow-xl border-blue-200">
@@ -159,18 +170,6 @@ function Home() {
                 )}
               </Button>
             </form>
-
-            {/* Demo Credentials */}
-            <div className="mt-6 pt-4 border-t">
-              <p className="text-xs text-muted-foreground text-center mb-2">
-                Demo Credentials:
-              </p>
-              <div className="text-xs text-muted-foreground space-y-1">
-                <p><strong>Admin:</strong> admin@company.com / admin123</p>
-                <p><strong>Editor:</strong> editor@company.com / editor123</p>
-                <p><strong>User:</strong> user@company.com / user123</p>
-              </div>
-            </div>
           </CardContent>
         </Card>
       </div>

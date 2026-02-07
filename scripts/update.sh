@@ -46,7 +46,7 @@ if [ -d ".git" ]; then
     if ! git remote | grep -q "origin"; then
         git remote add origin https://github.com/lelando1234/CompanyIntranet.git
     fi
-    git pull origin main
+    git pull origin Com-5
 fi
 
 # Update frontend dependencies

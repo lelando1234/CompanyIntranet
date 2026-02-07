@@ -82,7 +82,8 @@ const SideNavigation = ({
 
   return (
     <div
-      className={`h-full flex flex-col border-r bg-background transition-all duration-300 ${collapsed ? "w-16" : "w-64 md:w-72"}`}
+      className={`h-full flex flex-col border-r transition-all duration-300 ${collapsed ? "w-16" : "w-64 md:w-72"}`}
+      style={{ backgroundColor: 'var(--sidebar-bg, hsl(var(--background)))', color: 'var(--sidebar-text, inherit)' }}
     >
       <div className="flex items-center justify-between p-4 border-b">
         {!collapsed && <h2 className="text-lg font-semibold">Resources</h2>}

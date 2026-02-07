@@ -42,6 +42,10 @@ pm2 stop company-portal-api
 # Pull latest changes (if using git)
 if [ -d ".git" ]; then
     echo "Pulling latest changes..."
+    # Ensure remote is set
+    if ! git remote | grep -q "origin"; then
+        git remote add origin https://github.com/lelando1234/CompanyIntranet.git
+    fi
     git pull origin main
 fi
 

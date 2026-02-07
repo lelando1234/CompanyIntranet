@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ArrowRight, AlertCircle, Loader2, WifiOff } from "lucide-react";
+import { settingsAPI } from "@/lib/api";
 
 function Home() {
   const navigate = useNavigate();
@@ -23,6 +24,39 @@ function Home() {
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [portalName, setPortalName] = useState("Company Portal");
+
+  // Load portal name from settings
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const result = await settingsAPI.getAll();
+        if (result.success && result.data?.site_name) {
+          setPortalName(result.data.site_name);
+          document.title = result.data.site_name;
+        }
+      } catch { /* use default */ }
+    };
+    loadSettings();
+  }, []);
+
+  // Load theme colors from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem("theme-palette");
+    if (saved) {
+      try {
+        const palette = JSON.parse(saved);
+        const root = document.documentElement;
+        if (palette.loginBg1) root.style.setProperty("--login-bg-1", palette.loginBg1);
+        if (palette.loginBg2) root.style.setProperty("--login-bg-2", palette.loginBg2);
+        if (palette.loginCardBorder) root.style.setProperty("--login-card-border", palette.loginCardBorder);
+        if (palette.loginButtonBg1) root.style.setProperty("--login-button-bg-1", palette.loginButtonBg1);
+        if (palette.loginButtonBg2) root.style.setProperty("--login-button-bg-2", palette.loginButtonBg2);
+        if (palette.loginTitleColor1) root.style.setProperty("--login-title-color-1", palette.loginTitleColor1);
+        if (palette.loginTitleColor2) root.style.setProperty("--login-title-color-2", palette.loginTitleColor2);
+      } catch { /* ignore */ }
+    }
+  }, []);
 
   // Redirect if already authenticated
   React.useEffect(() => {
@@ -59,13 +93,23 @@ function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-green-50 to-blue-100 flex items-center justify-center p-4">
+    <div
+      className="min-h-screen flex items-center justify-center p-4"
+      style={{
+        background: `linear-gradient(to bottom right, var(--login-bg-1, #eff6ff), var(--login-bg-2, #dcfce7), var(--login-bg-1, #eff6ff))`,
+      }}
+    >
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex justify-center mb-6">
             <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-green-400 rounded-full blur-xl opacity-30"></div>
+              <div
+                className="absolute inset-0 rounded-full blur-xl opacity-30"
+                style={{
+                  background: `linear-gradient(to right, var(--login-button-bg-1, #60a5fa), var(--login-button-bg-2, #4ade80))`,
+                }}
+              />
               <img
                 src="/logo.png"
                 alt="Company Logo"
@@ -76,8 +120,13 @@ function Home() {
               />
             </div>
           </div>
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent mb-2">
-            Company Portal
+          <h1
+            className="text-4xl font-bold bg-clip-text text-transparent mb-2"
+            style={{
+              backgroundImage: `linear-gradient(to right, var(--login-title-color-1, #2563eb), var(--login-title-color-2, #16a34a))`,
+            }}
+          >
+            {portalName}
           </h1>
           <p className="text-gray-600">
             Sign in to access your portal
@@ -96,7 +145,10 @@ function Home() {
         )}
 
         {/* Login Card */}
-        <Card className="shadow-xl border-blue-200">
+        <Card
+          className="shadow-xl"
+          style={{ borderColor: 'var(--login-card-border, #bfdbfe)' }}
+        >
           <CardHeader className="text-center">
             <CardTitle>Sign In</CardTitle>
             <CardDescription>
@@ -155,7 +207,10 @@ function Home() {
 
               <Button
                 type="submit"
-                className="w-full bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700 text-white font-semibold"
+                className="w-full text-white font-semibold"
+                style={{
+                  background: `linear-gradient(to right, var(--login-button-bg-1, #2563eb), var(--login-button-bg-2, #16a34a))`,
+                }}
                 disabled={isSubmitting}
               >
                 {isSubmitting ? (

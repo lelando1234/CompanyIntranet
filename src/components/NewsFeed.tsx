@@ -287,7 +287,14 @@ const NewsFeed = ({ articles = [], useApi = false }: NewsFeedProps) => {
             const isExpanded = expandedArticles.includes(article.id);
 
             return (
-              <Card key={article.id} className="w-full">
+              <Card
+                key={article.id}
+                className="w-full"
+                style={{
+                  backgroundColor: 'var(--article-card-bg, hsl(var(--card)))',
+                  borderColor: 'var(--article-card-border, hsl(var(--border)))',
+                }}
+              >
                 <CardHeader>
                   <div className="flex justify-between items-start">
                     <div>

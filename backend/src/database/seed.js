@@ -128,9 +128,13 @@ async function seed() {
     const settings = [
       { key: 'site_name', value: 'Company Portal', type: 'string' },
       { key: 'site_description', value: 'Internal company communication portal', type: 'string' },
+      { key: 'admin_email', value: 'admin@company.com', type: 'string' },
       { key: 'allow_registration', value: 'false', type: 'boolean' },
       { key: 'maintenance_mode', value: 'false', type: 'boolean' },
-      { key: 'articles_per_page', value: '10', type: 'number' }
+      { key: 'articles_per_page', value: '10', type: 'number' },
+      { key: 'welcome_message', value: 'Welcome to the Company Portal', type: 'string' },
+      { key: 'welcome_subtext', value: 'Stay updated with the latest company news and access your personalized resources.', type: 'string' },
+      { key: 'show_welcome', value: 'true', type: 'boolean' },
     ];
 
     for (const setting of settings) {

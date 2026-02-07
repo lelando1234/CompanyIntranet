@@ -170,6 +170,14 @@ const AdminPanel = () => {
   const [logoSize, setLogoSize] = useState<number>(40);
   const logoFileRef = useRef<HTMLInputElement>(null);
 
+  // Settings form state
+  const [portalName, setPortalName] = useState("Company Portal");
+  const [adminEmail, setAdminEmail] = useState(authUser?.email || "admin@company.com");
+  const [welcomeMessage, setWelcomeMessage] = useState("Welcome to the Company Portal");
+  const [welcomeSubtext, setWelcomeSubtext] = useState("Stay updated with the latest company news and access your personalized resources.");
+  const [showWelcome, setShowWelcome] = useState(true);
+  const [settingsSaving, setSettingsSaving] = useState(false);
+
   // Search & submitting
   const [searchTerm, setSearchTerm] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -182,11 +190,39 @@ const AdminPanel = () => {
         if (result.success && result.data) {
           if (result.data.logo_url) setLogoUrl(result.data.logo_url);
           if (result.data.logo_size) setLogoSize(parseInt(result.data.logo_size));
+          if (result.data.site_name) {
+            setPortalName(result.data.site_name);
+            document.title = result.data.site_name;
+          }
+          if (result.data.admin_email) setAdminEmail(result.data.admin_email);
+          if (result.data.welcome_message) setWelcomeMessage(result.data.welcome_message);
+          if (result.data.welcome_subtext) setWelcomeSubtext(result.data.welcome_subtext);
+          if (result.data.show_welcome !== undefined) setShowWelcome(result.data.show_welcome === true || result.data.show_welcome === 'true');
         }
       } catch { /* use defaults */ }
     };
     if (backendAvailable) loadSettings();
   }, [backendAvailable]);
+
+  // Save settings handler
+  const handleSaveSettings = async () => {
+    setSettingsSaving(true);
+    try {
+      await settingsAPI.bulkUpdate({
+        site_name: portalName,
+        admin_email: adminEmail,
+        welcome_message: welcomeMessage,
+        welcome_subtext: welcomeSubtext,
+        show_welcome: showWelcome.toString(),
+      });
+      document.title = portalName;
+      showSuccess("Settings saved successfully");
+      setIsSettingsDialogOpen(false);
+    } catch {
+      showError("Failed to save settings");
+    }
+    setSettingsSaving(false);
+  };
 
   // Helpers
   const showSuccess = (msg: string) => toast({ title: "Success", description: msg });
@@ -407,11 +443,11 @@ const AdminPanel = () => {
     <div className="flex h-screen bg-background">
       <Toaster />
       {/* Side Navigation */}
-      <div className="hidden md:block w-64 border-r bg-card">
+      <div className="hidden md:block w-64 border-r" style={{ backgroundColor: 'var(--sidebar-bg, hsl(var(--card)))', color: 'var(--sidebar-text, inherit)' }}>
         <div className="p-4 space-y-4 h-full flex flex-col">
           <div className="flex items-center space-x-2 mb-6">
             <img src={logoUrl} alt="Logo" style={{ height: logoSize }} className="w-auto" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-            <h2 className="text-lg font-bold">Company Portal</h2>
+            <h2 className="text-lg font-bold">{portalName}</h2>
           </div>
           <div className="space-y-1 flex-1">
             <Button variant="ghost" className="w-full justify-start" onClick={() => navigate("/")}>
@@ -447,7 +483,7 @@ const AdminPanel = () => {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="border-b bg-card p-4">
+        <header className="border-b p-4" style={{ backgroundColor: 'var(--header-bg, hsl(var(--card)))', color: 'var(--header-text, inherit)' }}>
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold">Admin Panel</h1>
             <div className="flex items-center space-x-4">
@@ -927,12 +963,41 @@ const AdminPanel = () => {
         <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>Settings</DialogTitle><DialogDescription>Configure your portal settings.</DialogDescription></DialogHeader>
           <div className="py-4 space-y-4">
-            <div className="grid gap-2"><Label>Portal Name</Label><Input defaultValue="Company Portal" /></div>
-            <div className="grid gap-2"><Label>Admin Email</Label><Input type="email" defaultValue={authUser?.email || "admin@company.com"} /></div>
+            <div className="grid gap-2">
+              <Label>Portal Name</Label>
+              <Input value={portalName} onChange={(e) => setPortalName(e.target.value)} placeholder="Company Portal" />
+              <p className="text-xs text-muted-foreground">This name appears in the browser tab and throughout the portal.</p>
+            </div>
+            <div className="grid gap-2">
+              <Label>Admin Email</Label>
+              <Input type="email" value={adminEmail} onChange={(e) => setAdminEmail(e.target.value)} placeholder="admin@company.com" />
+            </div>
+            <div className="border-t pt-4 space-y-4">
+              <h4 className="font-medium text-sm">Welcome Banner</h4>
+              <div className="flex items-center space-x-2">
+                <Checkbox id="showWelcome" checked={showWelcome} onCheckedChange={(checked) => setShowWelcome(!!checked)} />
+                <Label htmlFor="showWelcome" className="cursor-pointer">Show welcome message on dashboard</Label>
+              </div>
+              {showWelcome && (
+                <>
+                  <div className="grid gap-2">
+                    <Label>Welcome Message</Label>
+                    <Input value={welcomeMessage} onChange={(e) => setWelcomeMessage(e.target.value)} placeholder="Welcome to the Company Portal" />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>Welcome Subtext</Label>
+                    <Textarea value={welcomeSubtext} onChange={(e) => setWelcomeSubtext(e.target.value)} rows={2} placeholder="Stay updated with the latest..." />
+                  </div>
+                </>
+              )}
+            </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsSettingsDialogOpen(false)}>Cancel</Button>
-            <Button onClick={() => setIsSettingsDialogOpen(false)}>Save</Button>
+            <Button variant="outline" onClick={() => setIsSettingsDialogOpen(false)} disabled={settingsSaving}>Cancel</Button>
+            <Button onClick={handleSaveSettings} disabled={settingsSaving}>
+              {settingsSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

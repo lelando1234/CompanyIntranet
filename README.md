@@ -105,7 +105,7 @@ The automated installer handles everything:
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/company-portal.git
+git clone https://github.com/lelando1234/CompanyIntranet.git
 cd company-portal
 
 # Make installer executable
@@ -393,6 +393,129 @@ sudo certbot certificates
 pm2 logs company-portal-api
 sudo tail -f /var/log/nginx/error.log
 ```
+
+## 🔄 Updating the Application
+
+Follow these steps to update the Company Portal to the latest version on your server.
+
+### Automatic Update (Recommended)
+
+An update script is included in the project:
+
+```bash
+cd /var/www/company-portal
+sudo bash scripts/update.sh
+```
+
+### Manual Update
+
+#### 1. Backup First
+
+Always backup before updating:
+
+```bash
+# Backup database
+cd /var/www/company-portal
+sudo bash scripts/backup-db.sh
+
+# Backup current files
+sudo cp -r /var/www/company-portal /var/www/company-portal.backup.$(date +%Y%m%d)
+```
+
+#### 2. Pull Latest Code
+
+```bash
+cd /var/www/company-portal
+git pull https://github.com/lelando1234/CompanyIntranet.git main
+```
+
+Or if you've set up the remote:
+
+```bash
+cd /var/www/company-portal
+git fetch origin
+git pull origin main
+```
+
+#### 3. Install Dependencies
+
+```bash
+# Frontend dependencies
+npm install
+
+# Backend dependencies
+cd backend
+npm install
+cd ..
+```
+
+#### 4. Run Database Migrations
+
+```bash
+cd backend
+npm run migrate
+cd ..
+```
+
+#### 5. Build Frontend
+
+```bash
+npm run build
+```
+
+#### 6. Restart Backend
+
+```bash
+cd backend
+pm2 restart company-portal-api
+```
+
+#### 7. Verify
+
+```bash
+# Check backend status
+pm2 status
+pm2 logs company-portal-api --lines 20
+
+# Test the API
+curl -s http://localhost:3001/api/health
+
+# Check Nginx
+sudo systemctl status nginx
+```
+
+### Rollback
+
+If something goes wrong:
+
+```bash
+# Stop the service
+pm2 stop company-portal-api
+
+# Restore backup
+sudo rm -rf /var/www/company-portal
+sudo cp -r /var/www/company-portal.backup.YYYYMMDD /var/www/company-portal
+
+# Restore database
+cd /var/www/company-portal
+sudo bash scripts/restore-db.sh /path/to/backup.sql
+
+# Restart
+cd backend
+pm2 start ecosystem.config.js
+```
+
+### Setting Up Git Remote (First Time)
+
+If you haven't configured the remote repository:
+
+```bash
+cd /var/www/company-portal
+git remote add origin https://github.com/lelando1234/CompanyIntranet.git
+git fetch origin
+```
+
+After that, you can simply run `git pull origin main` for future updates.
 
 ## 📄 Default Credentials
 

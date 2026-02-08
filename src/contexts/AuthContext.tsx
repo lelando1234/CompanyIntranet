@@ -29,8 +29,11 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Check if backend is available
 const checkBackendAvailable = async (): Promise<boolean> => {
+  const apiUrl = import.meta.env.VITE_API_URL;
+  // If no API URL is configured, backend is not available
+  if (!apiUrl) return false;
   try {
-    const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/health`, {
+    const response = await fetch(`${apiUrl}/health`, {
       method: 'GET',
       signal: AbortSignal.timeout(3000)
     });

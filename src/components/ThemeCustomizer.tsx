@@ -114,17 +114,38 @@ const ThemeCustomizer = () => {
     localStorage.setItem("theme-palette", JSON.stringify(palette));
   };
 
-  // Load saved colors on mount
+  // Load saved colors on mount - try backend first, then localStorage
   useEffect(() => {
-    const saved = localStorage.getItem("theme-palette");
-    if (saved) {
+    const loadColors = async () => {
+      // Try loading from API first
       try {
-        const palette = JSON.parse(saved);
-        const merged = { ...defaultColors, ...palette };
-        setColors(merged);
-        applyColors(merged);
-      } catch { /* use defaults */ }
-    }
+        const result = await settingsAPI.getAll();
+        if (result.success && result.data && result.data.theme_palette) {
+          let palette: ColorPalette;
+          if (typeof result.data.theme_palette === 'string') {
+            palette = JSON.parse(result.data.theme_palette);
+          } else {
+            palette = result.data.theme_palette;
+          }
+          const merged = { ...defaultColors, ...palette };
+          setColors(merged);
+          applyColors(merged);
+          return;
+        }
+      } catch { /* fall through to localStorage */ }
+      
+      // Fallback: localStorage
+      const saved = localStorage.getItem("theme-palette");
+      if (saved) {
+        try {
+          const palette = JSON.parse(saved);
+          const merged = { ...defaultColors, ...palette };
+          setColors(merged);
+          applyColors(merged);
+        } catch { /* use defaults */ }
+      }
+    };
+    loadColors();
   }, []);
 
   const handleColorChange = (key: keyof ColorPalette, value: string) => {

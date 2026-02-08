@@ -1,5 +1,7 @@
 // API Configuration
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+// In the Tempo canvas environment there is no backend running, so any real fetch will fail.
+// Default to an empty base URL and allow the app to gracefully fall back to local/default UI.
+const API_BASE_URL = import.meta.env.VITE_API_URL || "";
 
 // Token management
 let authToken: string | null = null;
@@ -36,14 +38,21 @@ async function apiFetch<T>(
     (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
   }
 
+  // If no API base URL is configured, treat the backend as unavailable.
+  // This prevents noisy "Failed to fetch" errors in environments without the server.
+  if (!API_BASE_URL) {
+    return { success: false, message: "Backend not configured" };
+  }
+
   try {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       ...options,
       headers,
-      credentials: 'include',
+      credentials: "include",
     });
 
-    const data = await response.json();
+    const text = await response.text();
+    const data = text ? JSON.parse(text) : { success: true };
 
     if (!response.ok) {
       // Handle 401 - token expired
@@ -505,6 +514,21 @@ export const settingsAPI = {
 
 export const healthCheck = () => apiFetch<{ status: string; timestamp: string }>('/health');
 
+// ============ NOTIFICATIONS API ============
+
+export const notificationsAPI = {
+  getReadIds: () => apiFetch<string[]>('/notifications/read'),
+
+  markAsRead: (articleId: string) =>
+    apiFetch('/notifications/read/' + articleId, { method: 'POST' }),
+
+  markAllRead: (articleIds: string[]) =>
+    apiFetch('/notifications/read-all', {
+      method: 'POST',
+      body: JSON.stringify({ articleIds }),
+    }),
+};
+
 export default {
   auth: authAPI,
   users: usersAPI,
@@ -513,5 +537,6 @@ export default {
   categories: categoriesAPI,
   urlCategories: urlCategoriesAPI,
   settings: settingsAPI,
+  notifications: notificationsAPI,
   healthCheck,
 };

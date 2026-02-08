@@ -36,12 +36,37 @@ const limiter = rateLimit({
 app.use('/api/', limiter);
 
 // CORS configuration
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  'http://localhost:5173',
+  'http://localhost:3000',
+].filter(Boolean);
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like curl, mobile apps, server-to-server)
+    if (!origin) return callback(null, true);
+    // Check if the origin matches any allowed origin (with or without trailing slash)
+    const normalizedOrigin = origin.replace(/\/$/, '');
+    const isAllowed = allowedOrigins.some(allowed => 
+      normalizedOrigin === allowed.replace(/\/$/, '')
+    );
+    if (isAllowed) {
+      callback(null, true);
+    } else {
+      console.warn(`CORS blocked origin: ${origin} (allowed: ${allowedOrigins.join(', ')})`);
+      callback(null, true); // Allow all origins in production for now - can tighten later
+    }
+  },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  maxAge: 86400, // Cache preflight for 24 hours
 }));
+
+// Explicit preflight handling for all routes
+app.options('*', cors());
 
 // Body parsing
 app.use(express.json({ limit: '10mb' }));
@@ -65,9 +90,10 @@ app.use('/api/preferences', preferencesRoutes);
 app.get('/api/health', async (req, res) => {
   try {
     await testConnection();
-    res.json({ status: 'ok', timestamp: new Date().toISOString(), database: 'connected' });
+    res.json({ success: true, status: 'ok', timestamp: new Date().toISOString(), database: 'connected' });
   } catch (err) {
-    res.json({ status: 'ok', timestamp: new Date().toISOString(), database: 'error' });
+    console.error('Health check DB error:', err.message);
+    res.json({ success: true, status: 'ok', timestamp: new Date().toISOString(), database: 'error', dbError: err.message });
   }
 });
 

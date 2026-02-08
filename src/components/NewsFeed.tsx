@@ -48,6 +48,7 @@ const NewsFeed = ({ articles = [], useApi = false }: NewsFeedProps) => {
   const [apiCategories, setApiCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalArticles, setTotalArticles] = useState(0);
 
   // Fetch articles from API if useApi is true
   useEffect(() => {
@@ -86,6 +87,7 @@ const NewsFeed = ({ articles = [], useApi = false }: NewsFeedProps) => {
         }));
         setApiArticles(mappedArticles);
         setTotalPages(result.data.pagination.pages || 1);
+        setTotalArticles(result.data.pagination.total || mappedArticles.length);
       }
     } catch (error) {
       console.error('Error fetching articles:', error);
@@ -176,7 +178,7 @@ const NewsFeed = ({ articles = [], useApi = false }: NewsFeedProps) => {
   ];
 
   // Determine which articles to display
-  const displayArticles = useApi && apiArticles.length > 0 
+  const displayArticles = useApi 
     ? apiArticles 
     : (articles.length > 0 ? articles : defaultArticles);
 
@@ -413,7 +415,10 @@ const NewsFeed = ({ articles = [], useApi = false }: NewsFeedProps) => {
         <div className="mt-6">
           <Separator className="my-4" />
           <p className="text-sm text-muted-foreground text-center">
-            Showing {startIndex + 1}-{Math.min(startIndex + ARTICLES_PER_PAGE, filteredArticles.length)} of {filteredArticles.length} news articles
+            {useApi 
+              ? `Showing ${(currentPage - 1) * ARTICLES_PER_PAGE + 1}-${Math.min(currentPage * ARTICLES_PER_PAGE, totalArticles)} of ${totalArticles} news articles`
+              : `Showing ${startIndex + 1}-${Math.min(startIndex + ARTICLES_PER_PAGE, filteredArticles.length)} of ${filteredArticles.length} news articles`
+            }
           </p>
         </div>
       )}

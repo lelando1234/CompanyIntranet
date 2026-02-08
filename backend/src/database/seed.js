@@ -135,6 +135,7 @@ async function seed() {
       { key: 'welcome_message', value: 'Welcome to the Company Portal', type: 'string' },
       { key: 'welcome_subtext', value: 'Stay updated with the latest company news and access your personalized resources.', type: 'string' },
       { key: 'show_welcome', value: 'true', type: 'boolean' },
+      { key: 'copyright_text', value: '© 2024 Company Portal. All rights reserved.', type: 'string' },
     ];
 
     for (const setting of settings) {

@@ -24,12 +24,15 @@ import {
   HelpCircle,
   Palette,
   ChevronRight,
+  ChevronDown,
   Home,
   Loader2,
   AlertTriangle,
   Image as ImageIcon,
   Eye,
   EyeOff,
+  User,
+  LogOut,
 } from "lucide-react";
 import {
   Dialog,
@@ -46,6 +49,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -59,6 +70,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import ThemeCustomizer from "@/components/ThemeCustomizer";
 import RichTextEditor from "@/components/RichTextEditor";
 import { useNavigate } from "react-router-dom";
@@ -89,7 +101,7 @@ import {
 
 const AdminPanel = () => {
   const navigate = useNavigate();
-  const { user: authUser } = useAuth();
+  const { user: authUser, logout } = useAuth();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("news");
   const [sidebarTab, setSidebarTab] = useState("news");
@@ -176,6 +188,7 @@ const AdminPanel = () => {
   const [welcomeMessage, setWelcomeMessage] = useState("Welcome to the Company Portal");
   const [welcomeSubtext, setWelcomeSubtext] = useState("Stay updated with the latest company news and access your personalized resources.");
   const [showWelcome, setShowWelcome] = useState(true);
+  const [copyrightText, setCopyrightText] = useState("");
   const [settingsSaving, setSettingsSaving] = useState(false);
 
   // Search & submitting
@@ -198,6 +211,7 @@ const AdminPanel = () => {
           if (result.data.welcome_message) setWelcomeMessage(result.data.welcome_message);
           if (result.data.welcome_subtext) setWelcomeSubtext(result.data.welcome_subtext);
           if (result.data.show_welcome !== undefined) setShowWelcome(result.data.show_welcome === true || result.data.show_welcome === 'true');
+          if (result.data.copyright_text !== undefined) setCopyrightText(result.data.copyright_text || '');
         }
       } catch { /* use defaults */ }
     };
@@ -214,6 +228,7 @@ const AdminPanel = () => {
         welcome_message: welcomeMessage,
         welcome_subtext: welcomeSubtext,
         show_welcome: showWelcome.toString(),
+        copyright_text: copyrightText,
       });
       document.title = portalName;
       showSuccess("Settings saved successfully");
@@ -434,7 +449,7 @@ const AdminPanel = () => {
       <AlertTitle>Backend Not Connected</AlertTitle>
       <AlertDescription>
         The backend server is not reachable. Changes will NOT be saved.
-        <br />API URL: <code className="font-mono text-xs">{import.meta.env.VITE_API_URL || "http://localhost:3001/api"}</code>
+        <br />API URL: <code className="font-mono text-xs">{import.meta.env.VITE_API_URL || "(not configured)"}</code>
       </AlertDescription>
     </Alert>
   );
@@ -491,6 +506,47 @@ const AdminPanel = () => {
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input type="search" placeholder="Search..." className="w-[200px] pl-8 md:w-[300px] bg-background" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
               </div>
+              
+              {/* User Profile Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="flex items-center gap-2">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={authUser?.avatar || ""} alt={authUser?.name || "User"} />
+                      <AvatarFallback>
+                        {(authUser?.name || "U")
+                          .split(" ")
+                          .map((n) => n[0])
+                          .join("")}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="hidden md:inline-block">{authUser?.name || "User"}</span>
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>
+                    <div>
+                      <p>{authUser?.name || "User"}</p>
+                      <p className="text-xs text-muted-foreground capitalize">{authUser?.role}</p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate("/dashboard")}>
+                    <Home className="mr-2 h-4 w-4" />
+                    <span>Dashboard</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Profile</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => { logout(); navigate("/"); }}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Log out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </header>
@@ -991,6 +1047,14 @@ const AdminPanel = () => {
                 </>
               )}
             </div>
+            <div className="border-t pt-4 space-y-4">
+              <h4 className="font-medium text-sm">Copyright Footer</h4>
+              <div className="grid gap-2">
+                <Label>Copyright Text</Label>
+                <Input value={copyrightText} onChange={(e) => setCopyrightText(e.target.value)} placeholder="© 2024 Company Name. All rights reserved." />
+                <p className="text-xs text-muted-foreground">This text appears at the bottom of the dashboard. Leave empty to hide.</p>
+              </div>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsSettingsDialogOpen(false)} disabled={settingsSaving}>Cancel</Button>
@@ -1013,8 +1077,18 @@ const AdminPanel = () => {
                 <p className="text-sm text-muted-foreground">
                   Status: {backendAvailable ? <Badge variant="default" className="ml-1">Connected</Badge> : <Badge variant="destructive" className="ml-1">Not Connected</Badge>}
                 </p>
-                <p className="text-sm text-muted-foreground mt-2">API: <code className="font-mono text-xs bg-muted px-1 py-0.5 rounded">{import.meta.env.VITE_API_URL || "http://localhost:3001/api"}</code></p>
-                <p className="text-sm text-muted-foreground mt-2">Open browser console (F12) to see API call logs and errors.</p>
+                <p className="text-sm text-muted-foreground mt-2">API: <code className="font-mono text-xs bg-muted px-1 py-0.5 rounded">{import.meta.env.VITE_API_URL || "(not configured)"}</code></p>
+                {!backendAvailable && (
+                  <div className="mt-3 text-sm space-y-1">
+                    <p className="font-medium text-destructive">Troubleshooting:</p>
+                    <ul className="list-disc pl-5 text-muted-foreground space-y-1">
+                      <li>Check if backend is running: <code className="text-xs bg-muted px-1 rounded">pm2 status</code></li>
+                      <li>If port conflict (EADDRINUSE): <code className="text-xs bg-muted px-1 rounded">fuser -k 3001/tcp && pm2 restart all</code></li>
+                      <li>Check logs: <code className="text-xs bg-muted px-1 rounded">pm2 logs</code></li>
+                      <li>Ensure MariaDB is running: <code className="text-xs bg-muted px-1 rounded">systemctl status mariadb</code></li>
+                    </ul>
+                  </div>
+                )}
               </CardContent>
             </Card>
             <Card>
@@ -1024,6 +1098,7 @@ const AdminPanel = () => {
                   <div><p className="font-medium">How do I add a new user?</p><p className="text-muted-foreground">Users tab → "Add User". Password is required.</p></div>
                   <div><p className="font-medium">How do I publish articles to specific groups?</p><p className="text-muted-foreground">When creating/editing, select target groups. Empty = all users.</p></div>
                   <div><p className="font-medium">How do I change the logo?</p><p className="text-muted-foreground">Theme & Logo tab → upload and adjust size.</p></div>
+                  <div><p className="font-medium">How do I set the copyright text?</p><p className="text-muted-foreground">Settings → Copyright Footer section. Text appears at the bottom of the dashboard.</p></div>
                 </div>
               </CardContent>
             </Card>

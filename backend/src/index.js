@@ -14,6 +14,7 @@ const articlesRoutes = require('./routes/articles');
 const categoriesRoutes = require('./routes/categories');
 const settingsRoutes = require('./routes/settings');
 const urlCategoriesRoutes = require('./routes/urlCategories');
+const notificationsRoutes = require('./routes/notifications');
 
 // Import database
 const { testConnection } = require('./database/connection');
@@ -68,6 +69,7 @@ app.use('/api/articles', articlesRoutes);
 app.use('/api/categories', categoriesRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/url-categories', urlCategoriesRoutes);
+app.use('/api/notifications', notificationsRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -92,7 +94,7 @@ app.use((req, res) => {
 // Import pool for graceful shutdown
 const { pool } = require('./database/connection');
 
-// Start server
+// Start server with EADDRINUSE handling
 async function startServer() {
   try {
     // Test database connection
@@ -102,6 +104,18 @@ async function startServer() {
     const server = app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`📍 API available at http://localhost:${PORT}/api`);
+    });
+
+    // Handle EADDRINUSE - port already in use
+    server.on('error', (err) => {
+      if (err.code === 'EADDRINUSE') {
+        console.error(`⚠️ Port ${PORT} is already in use.`);
+        console.error(`   To fix: run "fuser -k ${PORT}/tcp" or "lsof -ti:${PORT} | xargs kill -9"`);
+        console.error('   Then restart the backend.');
+        process.exit(1);
+      } else {
+        throw err;
+      }
     });
 
     // Graceful shutdown handler

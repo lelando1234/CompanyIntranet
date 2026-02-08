@@ -268,6 +268,48 @@ curl http://localhost:3001/api/health
 
 ---
 
+### Issue 3b: EADDRINUSE - Port 3001 Already in Use
+
+**Backend logs show:** `Error: bind EADDRINUSE 0.0.0.0:3001` or `Error: listen EADDRINUSE: address already in use 0.0.0.0:3001`
+
+**Cause:** Another process (or a stuck previous instance) is already bound to port 3001. PM2 restart loops compound this because each restart attempt fails immediately.
+
+**Fix:**
+```bash
+# Step 1: Kill ALL processes on port 3001
+sudo fuser -k 3001/tcp
+
+# Step 2: Stop PM2 processes
+pm2 stop all
+
+# Step 3: Wait a moment then restart
+sleep 2
+pm2 start all
+
+# Step 4: Verify
+curl http://localhost:3001/api/health
+```
+
+**If PM2 keeps restarting in a loop:**
+```bash
+pm2 stop all
+pm2 delete all
+sudo fuser -k 3001/tcp
+sleep 2
+cd /var/www/company-portal/backend
+pm2 start src/index.js --name company-portal
+pm2 save
+```
+
+**Permanent fix (systemd):**
+The service file now includes `ExecStartPre` to automatically kill stale processes:
+```bash
+sudo systemctl daemon-reload
+sudo systemctl restart company-portal
+```
+
+---
+
 ### Issue 4: Database Connection Error
 
 **Backend logs show:** `ER_ACCESS_DENIED_ERROR` or `ECONNREFUSED`

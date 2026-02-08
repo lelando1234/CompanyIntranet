@@ -23,7 +23,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import NewsFeed from "@/components/NewsFeed";
 import SideNavigation from "@/components/SideNavigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { settingsAPI, articlesAPI, type Article } from "@/lib/api";
+import { settingsAPI, articlesAPI, notificationsAPI, type Article } from "@/lib/api";
 
 export default function Dashboard() {
   const { user, logout } = useAuth();
@@ -36,6 +36,7 @@ export default function Dashboard() {
   const [welcomeMessage, setWelcomeMessage] = useState("Welcome to the Company Portal");
   const [welcomeSubtext, setWelcomeSubtext] = useState("Stay updated with the latest company news and access your personalized resources.");
   const [showWelcome, setShowWelcome] = useState(true);
+  const [copyrightText, setCopyrightText] = useState("");
 
   // Notification state
   const [notifications, setNotifications] = useState<{ id: string; title: string; date: string; read: boolean }[]>([]);
@@ -58,6 +59,7 @@ export default function Dashboard() {
           if (result.data.welcome_message) setWelcomeMessage(result.data.welcome_message);
           if (result.data.welcome_subtext) setWelcomeSubtext(result.data.welcome_subtext);
           if (result.data.show_welcome !== undefined) setShowWelcome(result.data.show_welcome === true || result.data.show_welcome === 'true');
+          if (result.data.copyright_text !== undefined) setCopyrightText(result.data.copyright_text);
         }
       } catch { /* use defaults */ }
     };
@@ -70,7 +72,17 @@ export default function Dashboard() {
       try {
         const result = await articlesAPI.getAll({ limit: 10, status: 'published' });
         if (result.success && result.data) {
-          const readIds = JSON.parse(localStorage.getItem('read_notifications') || '[]');
+          // Try to get read IDs from backend first, fall back to localStorage
+          let readIds: string[] = [];
+          try {
+            const readResult = await notificationsAPI.getReadIds();
+            if (readResult.success && readResult.data) {
+              readIds = readResult.data;
+            }
+          } catch {
+            // Fallback to localStorage if backend endpoint unavailable
+            readIds = JSON.parse(localStorage.getItem('read_notifications') || '[]');
+          }
           const notifs = result.data.articles.map((article: Article) => ({
             id: article.id,
             title: article.title,
@@ -86,18 +98,30 @@ export default function Dashboard() {
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  const markAsRead = (id: string) => {
-    const readIds = JSON.parse(localStorage.getItem('read_notifications') || '[]');
-    if (!readIds.includes(id)) {
-      readIds.push(id);
-      localStorage.setItem('read_notifications', JSON.stringify(readIds));
+  const markAsRead = async (id: string) => {
+    // Save to backend
+    try {
+      await notificationsAPI.markAsRead(id);
+    } catch {
+      // Fallback: save to localStorage
+      const readIds = JSON.parse(localStorage.getItem('read_notifications') || '[]');
+      if (!readIds.includes(id)) {
+        readIds.push(id);
+        localStorage.setItem('read_notifications', JSON.stringify(readIds));
+      }
     }
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
   };
 
-  const markAllRead = () => {
-    const readIds = notifications.map(n => n.id);
-    localStorage.setItem('read_notifications', JSON.stringify(readIds));
+  const markAllRead = async () => {
+    const allIds = notifications.map(n => n.id);
+    // Save to backend
+    try {
+      await notificationsAPI.markAllRead(allIds);
+    } catch {
+      // Fallback: save to localStorage
+      localStorage.setItem('read_notifications', JSON.stringify(allIds));
+    }
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
   };
 
@@ -356,6 +380,15 @@ export default function Dashboard() {
               <NewsFeed useApi={true} />
             </div>
           </div>
+
+          {/* Copyright Footer */}
+          {copyrightText && (
+            <footer className="mt-8 py-4 border-t">
+              <div className="container mx-auto text-center text-sm text-muted-foreground">
+                {copyrightText}
+              </div>
+            </footer>
+          )}
         </main>
       </div>
     </div>

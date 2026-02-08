@@ -188,6 +188,19 @@ CREATE TABLE IF NOT EXISTS audit_log (
     INDEX idx_created_at (created_at)
 ) ENGINE=InnoDB;
 
+-- User notification read state
+CREATE TABLE IF NOT EXISTS user_notification_reads (
+    user_id VARCHAR(36) NOT NULL,
+    article_id VARCHAR(36) NOT NULL,
+    read_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, article_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (article_id) REFERENCES articles(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- User theme preferences (per-user override, not used yet; global theme stored in settings)
+-- We'll use the settings table with key 'theme_palette' for global theme
+
 -- Sessions table (for persistent sessions)
 CREATE TABLE IF NOT EXISTS sessions (
     id VARCHAR(36) PRIMARY KEY,

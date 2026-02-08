@@ -272,37 +272,34 @@ curl http://localhost:3001/api/health
 
 **Backend logs show:** `Error: bind EADDRINUSE 0.0.0.0:3001` or `Error: listen EADDRINUSE: address already in use 0.0.0.0:3001`
 
-**Cause:** Another process (or a stuck previous instance) is already bound to port 3001. PM2 restart loops compound this because each restart attempt fails immediately.
+**Cause:** Another process (or a stuck previous instance) is already bound to port 3001. PM2 in **cluster mode** causes this because it spawns multiple instances that all try to bind the same port. The `connect.session() MemoryStore` warning is a separate issue from the old session middleware (now removed).
 
-**Fix:**
+**Immediate Fix:**
 ```bash
-# Step 1: Kill ALL processes on port 3001
-sudo fuser -k 3001/tcp
-
-# Step 2: Stop PM2 processes
+# Step 1: Stop ALL PM2 processes  
 pm2 stop all
+pm2 delete all
 
-# Step 3: Wait a moment then restart
-sleep 2
-pm2 start all
+# Step 2: Kill ALL processes on port 3001
+sudo fuser -k 3001/tcp
+sleep 3
+
+# Step 3: Restart with the ecosystem config (uses fork mode, 1 instance only)
+cd /var/www/company-portal/backend
+pm2 start ecosystem.config.js
+pm2 save
 
 # Step 4: Verify
 curl http://localhost:3001/api/health
 ```
 
-**If PM2 keeps restarting in a loop:**
-```bash
-pm2 stop all
-pm2 delete all
-sudo fuser -k 3001/tcp
-sleep 2
-cd /var/www/company-portal/backend
-pm2 start src/index.js --name company-portal
-pm2 save
-```
+**Root Cause Prevention:**
+- The backend now uses **fork mode** (not cluster) with **1 instance** only
+- The backend startup code auto-kills any stale process on the port before binding
+- The `express-session` MemoryStore middleware has been removed (JWT tokens are used instead)
+- PM2 ecosystem config has `restart_delay: 5000` and `max_restarts: 10` to prevent rapid restart loops
 
-**Permanent fix (systemd):**
-The service file now includes `ExecStartPre` to automatically kill stale processes:
+**If using systemd instead of PM2:**
 ```bash
 sudo systemctl daemon-reload
 sudo systemctl restart company-portal
@@ -499,5 +496,4 @@ FRONTEND_URL=https://test.zoqila.com
 
 # Security
 JWT_SECRET=your_jwt_secret
-SESSION_SECRET=your_session_secret
 ```

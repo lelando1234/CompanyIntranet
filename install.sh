@@ -202,7 +202,7 @@ remediate_tables() {
     local db_host="$1" db_user="$2" db_pass="$3" db_name="$4" install_dir="$5"
 
     print_remediate "Checking database tables..."
-    EXPECTED_TABLES=("users" "groups" "user_groups" "group_permissions" "news_categories" "articles" "article_groups" "article_attachments" "url_categories" "url_links" "settings" "theme_settings" "audit_log" "sessions")
+    EXPECTED_TABLES=("users" "groups" "user_groups" "group_permissions" "news_categories" "articles" "article_groups" "article_attachments" "url_categories" "url_links" "settings" "theme_settings" "audit_log" "user_notification_reads" "user_preferences" "sessions")
     MISSING_TABLES=()
 
     for table in "${EXPECTED_TABLES[@]}"; do
@@ -1191,6 +1191,8 @@ module.exports = {
     restart_delay: 5000,
     max_restarts: 10,
     min_uptime: '10s',
+    kill_timeout: 10000,
+    listen_timeout: 15000,
     env: { NODE_ENV: 'production' }
   }]
 };

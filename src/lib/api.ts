@@ -529,6 +529,27 @@ export const notificationsAPI = {
     }),
 };
 
+// ============ USER PREFERENCES API ============
+// Per-user persistent preferences (stored in DB, works across browsers)
+
+export const preferencesAPI = {
+  getAll: () => apiFetch<Record<string, any>>('/preferences'),
+
+  get: (key: string) => apiFetch<any>(`/preferences/${key}`),
+
+  set: (key: string, value: any) =>
+    apiFetch(`/preferences/${key}`, {
+      method: 'PUT',
+      body: JSON.stringify({ value }),
+    }),
+
+  bulkSet: (preferences: Record<string, any>) =>
+    apiFetch('/preferences/bulk', {
+      method: 'POST',
+      body: JSON.stringify({ preferences }),
+    }),
+};
+
 export default {
   auth: authAPI,
   users: usersAPI,
@@ -538,5 +559,6 @@ export default {
   urlCategories: urlCategoriesAPI,
   settings: settingsAPI,
   notifications: notificationsAPI,
+  preferences: preferencesAPI,
   healthCheck,
 };

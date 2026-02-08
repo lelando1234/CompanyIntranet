@@ -201,6 +201,16 @@ CREATE TABLE IF NOT EXISTS user_notification_reads (
 -- User theme preferences (per-user override, not used yet; global theme stored in settings)
 -- We'll use the settings table with key 'theme_palette' for global theme
 
+-- User preferences table (per-user settings that persist across browsers)
+CREATE TABLE IF NOT EXISTS user_preferences (
+    user_id VARCHAR(36) NOT NULL,
+    pref_key VARCHAR(100) NOT NULL,
+    pref_value LONGTEXT,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, pref_key),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
 -- Sessions table (for persistent sessions)
 CREATE TABLE IF NOT EXISTS sessions (
     id VARCHAR(36) PRIMARY KEY,

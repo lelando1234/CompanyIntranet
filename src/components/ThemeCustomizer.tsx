@@ -90,7 +90,7 @@ const ThemeCustomizer = () => {
     return `${h} ${s}% ${l}%`;
   };
 
-  // Apply colors to CSS variables and localStorage
+  // Apply colors to CSS variables and sync localStorage for quick load
   const applyColors = (palette: ColorPalette) => {
     const root = document.documentElement;
     root.style.setProperty("--primary", hexToHSL(palette.primary));
@@ -111,13 +111,14 @@ const ThemeCustomizer = () => {
     root.style.setProperty("--login-button-bg-2", palette.loginButtonBg2);
     root.style.setProperty("--login-title-color-1", palette.loginTitleColor1);
     root.style.setProperty("--login-title-color-2", palette.loginTitleColor2);
+    // Sync to localStorage as a cache for instant load on next visit
     localStorage.setItem("theme-palette", JSON.stringify(palette));
   };
 
-  // Load saved colors on mount - try backend first, then localStorage
+  // Load saved colors on mount - backend is the source of truth
   useEffect(() => {
     const loadColors = async () => {
-      // Try loading from API first
+      // Try loading from API first (source of truth)
       try {
         const result = await settingsAPI.getAll();
         if (result.success && result.data && result.data.theme_palette) {
@@ -156,8 +157,9 @@ const ThemeCustomizer = () => {
     setSaving(true);
     applyColors(colors);
     try {
+      // Save to database - this is the source of truth that persists across browsers
       await settingsAPI.bulkUpdate({ theme_palette: JSON.stringify(colors) });
-      toast({ title: "Success", description: "Theme applied and saved." });
+      toast({ title: "Success", description: "Theme applied and saved to database." });
     } catch {
       toast({ title: "Applied Locally", description: "Colors applied. Backend save may have failed." });
     }

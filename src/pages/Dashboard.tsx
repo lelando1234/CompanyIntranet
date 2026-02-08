@@ -72,7 +72,7 @@ export default function Dashboard() {
       try {
         const result = await articlesAPI.getAll({ limit: 10, status: 'published' });
         if (result.success && result.data) {
-          // Try to get read IDs from backend first, fall back to localStorage
+          // Get read IDs from backend (per-user, persists across browsers)
           let readIds: string[] = [];
           try {
             const readResult = await notificationsAPI.getReadIds();
@@ -80,8 +80,8 @@ export default function Dashboard() {
               readIds = readResult.data;
             }
           } catch {
-            // Fallback to localStorage if backend endpoint unavailable
-            readIds = JSON.parse(localStorage.getItem('read_notifications') || '[]');
+            // Backend unavailable - notifications won't persist across browsers
+            readIds = [];
           }
           const notifs = result.data.articles.map((article: Article) => ({
             id: article.id,
@@ -99,28 +99,22 @@ export default function Dashboard() {
   const unreadCount = notifications.filter(n => !n.read).length;
 
   const markAsRead = async (id: string) => {
-    // Save to backend
+    // Save to backend (persists across browsers per user)
     try {
       await notificationsAPI.markAsRead(id);
     } catch {
-      // Fallback: save to localStorage
-      const readIds = JSON.parse(localStorage.getItem('read_notifications') || '[]');
-      if (!readIds.includes(id)) {
-        readIds.push(id);
-        localStorage.setItem('read_notifications', JSON.stringify(readIds));
-      }
+      // Backend unavailable - still update local UI state
     }
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
   };
 
   const markAllRead = async () => {
     const allIds = notifications.map(n => n.id);
-    // Save to backend
+    // Save to backend (persists across browsers per user)
     try {
       await notificationsAPI.markAllRead(allIds);
     } catch {
-      // Fallback: save to localStorage
-      localStorage.setItem('read_notifications', JSON.stringify(allIds));
+      // Backend unavailable - still update local UI state
     }
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
   };

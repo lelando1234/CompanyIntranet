@@ -8,16 +8,21 @@ Type=simple
 User=www-data
 Group=www-data
 WorkingDirectory=/var/www/company-portal/backend
-ExecStartPre=/bin/bash -c 'fuser -k 3001/tcp 2>/dev/null || true'
+# Kill any existing process on port, wait, then start
+ExecStartPre=/bin/bash -c 'fuser -k 3001/tcp 2>/dev/null || true; sleep 2'
 ExecStart=/usr/bin/node src/index.js
-Restart=always
-RestartSec=10
+Restart=on-failure
+RestartSec=15
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=company-portal
 Environment=NODE_ENV=production
+# Prevent rapid restart loops
+StartLimitIntervalSec=120
+StartLimitBurst=5
 # Give the process time to start
 TimeoutStartSec=30
+TimeoutStopSec=15
 
 [Install]
 WantedBy=multi-user.target

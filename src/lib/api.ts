@@ -48,7 +48,6 @@ async function apiFetch<T>(
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       ...options,
       headers,
-      credentials: "include",
     });
 
     const text = await response.text();

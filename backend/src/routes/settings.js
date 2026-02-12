@@ -57,6 +57,21 @@ router.get('/', async (req, res) => {
       settingsObj[setting.setting_key] = value;
     }
 
+    // Also include favicon_url from theme_settings if available
+    try {
+      const themeSettings = await query('SELECT favicon_url, logo_url FROM theme_settings WHERE is_active = TRUE LIMIT 1');
+      if (themeSettings.length > 0) {
+        if (themeSettings[0].favicon_url) {
+          settingsObj.favicon_url = themeSettings[0].favicon_url;
+        }
+        if (themeSettings[0].logo_url && !settingsObj.logo_url) {
+          settingsObj.logo_url = themeSettings[0].logo_url;
+        }
+      }
+    } catch (e) {
+      // theme_settings table might not exist yet - ignore
+    }
+
     res.json({ success: true, data: settingsObj });
   } catch (error) {
     console.error('Get settings error:', error);

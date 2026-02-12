@@ -9,6 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, ExternalLink, Loader2 } from "lucide-react";
 import { urlCategoriesAPI } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface LinkItem {
   id: string;
@@ -36,8 +37,9 @@ const SideNavigation = ({
   const [collapsed, setCollapsed] = useState(isCollapsed);
   const [apiCategories, setApiCategories] = useState<LinkCategory[]>([]);
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
-  // Fetch categories from API
+  // Fetch categories from API (filtered by user's groups)
   useEffect(() => {
     if (propCategories) {
       setLoading(false);
@@ -46,7 +48,13 @@ const SideNavigation = ({
 
     const fetchCategories = async () => {
       try {
-        const result = await urlCategoriesAPI.getAll();
+        // Get user's group IDs for filtering
+        const userGroupIds = user?.groups?.map(g => g.id) || [];
+        
+        const result = await urlCategoriesAPI.getAll({
+          filterByUser: true,
+          userGroups: userGroupIds
+        });
         if (result.success && result.data) {
           const mapped: LinkCategory[] = (result.data as any[]).map((cat) => ({
             id: cat.id,
@@ -67,7 +75,7 @@ const SideNavigation = ({
     };
 
     fetchCategories();
-  }, [propCategories]);
+  }, [propCategories, user?.groups]);
 
   const categories = propCategories || apiCategories;
 

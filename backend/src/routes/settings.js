@@ -24,6 +24,36 @@ const storage = multer.diskStorage({
   }
 });
 
+// Storage for article images
+const imageStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = path.join(__dirname, '../../uploads/images');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+// Storage for article attachments
+const attachmentStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = path.join(__dirname, '../../uploads/attachments');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
 const upload = multer({
   storage,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
@@ -34,6 +64,32 @@ const upload = multer({
       return cb(null, true);
     }
     cb(new Error('Invalid file type. Only images allowed.'));
+  }
+});
+
+const imageUpload = multer({
+  storage: imageStorage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|gif|webp|svg/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    if (extname) {
+      return cb(null, true);
+    }
+    cb(new Error('Invalid file type. Only images allowed (JPG, PNG, GIF, WebP, SVG).'));
+  }
+});
+
+const attachmentUpload = multer({
+  storage: attachmentStorage,
+  limits: { fileSize: 25 * 1024 * 1024 }, // 25MB
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|gif|webp|pdf|doc|docx|xls|xlsx|ppt|pptx|txt|csv|zip|rar/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    if (extname) {
+      return cb(null, true);
+    }
+    cb(new Error('Invalid file type. Allowed: images, PDF, Office documents, text, zip files.'));
   }
 });
 
@@ -324,6 +380,60 @@ router.post('/upload/favicon', verifyToken, requireRole('admin'), upload.single(
     });
   } catch (error) {
     console.error('Upload favicon error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Upload image for articles (any authenticated user)
+router.post('/upload/image', verifyToken, imageUpload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No file uploaded' });
+    }
+
+    const imageUrl = `/uploads/images/${req.file.filename}`;
+
+    res.json({
+      success: true,
+      message: 'Image uploaded successfully',
+      data: { 
+        url: imageUrl,
+        filename: req.file.filename,
+        original_name: req.file.originalname,
+        mime_type: req.file.mimetype,
+        size: req.file.size
+      }
+    });
+  } catch (error) {
+    console.error('Upload image error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Upload attachment for articles (any authenticated user)
+router.post('/upload/attachment', verifyToken, attachmentUpload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No file uploaded' });
+    }
+
+    const attachmentId = uuidv4();
+    const attachmentUrl = `/uploads/attachments/${req.file.filename}`;
+
+    res.json({
+      success: true,
+      message: 'Attachment uploaded successfully',
+      data: { 
+        id: attachmentId,
+        url: attachmentUrl,
+        filename: req.file.filename,
+        original_name: req.file.originalname,
+        mime_type: req.file.mimetype,
+        size: req.file.size
+      }
+    });
+  } catch (error) {
+    console.error('Upload attachment error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });

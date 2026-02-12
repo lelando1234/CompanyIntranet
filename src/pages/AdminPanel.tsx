@@ -182,6 +182,10 @@ const AdminPanel = () => {
   const [logoSize, setLogoSize] = useState<number>(40);
   const logoFileRef = useRef<HTMLInputElement>(null);
 
+  // Favicon settings
+  const [faviconUrl, setFaviconUrl] = useState<string>("/vite.svg");
+  const faviconFileRef = useRef<HTMLInputElement>(null);
+
   // Settings form state
   const [portalName, setPortalName] = useState("Company Portal");
   const [adminEmail, setAdminEmail] = useState(authUser?.email || "admin@company.com");
@@ -203,6 +207,11 @@ const AdminPanel = () => {
         if (result.success && result.data) {
           if (result.data.logo_url) setLogoUrl(result.data.logo_url);
           if (result.data.logo_size) setLogoSize(parseInt(result.data.logo_size));
+          if (result.data.favicon_url) {
+            setFaviconUrl(result.data.favicon_url);
+            // Update the actual favicon in the browser
+            updateBrowserFavicon(result.data.favicon_url);
+          }
           if (result.data.site_name) {
             setPortalName(result.data.site_name);
             document.title = result.data.site_name;
@@ -421,6 +430,38 @@ const AdminPanel = () => {
   const handleLogoSizeChange = async (val: number[]) => {
     setLogoSize(val[0]);
     try { await settingsAPI.update("logo_size", val[0].toString()); } catch { /* silent */ }
+  };
+
+  // --- FAVICON ---
+  const updateBrowserFavicon = (url: string) => {
+    // Update the favicon in the browser
+    const link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
+    if (link) {
+      link.href = url;
+    } else {
+      const newLink = document.createElement('link');
+      newLink.rel = 'icon';
+      newLink.href = url;
+      document.head.appendChild(newLink);
+    }
+  };
+
+  const handleFaviconUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const result = await settingsAPI.uploadFavicon(file);
+      if (result.success && result.data) {
+        const newFaviconUrl = result.data.url || result.data.favicon_url;
+        setFaviconUrl(newFaviconUrl);
+        updateBrowserFavicon(newFaviconUrl);
+        showSuccess("Favicon uploaded and applied");
+      } else {
+        showError(result.message || "Upload failed");
+      }
+    } catch {
+      showError("Upload failed");
+    }
   };
 
   // Filtered data
@@ -799,6 +840,34 @@ const AdminPanel = () => {
                       </div>
                     </CardContent>
                   </Card>
+                  
+                  {/* Favicon Management Card */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2"><ImageIcon className="h-5 w-5" />Favicon Management</CardTitle>
+                      <CardDescription>Upload a favicon (browser tab icon) for your portal. Recommended size: 32x32 or 64x64 pixels.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      <div className="flex items-start gap-6">
+                        <div className="border rounded-lg p-4 bg-muted/30 min-w-[100px] min-h-[100px] flex items-center justify-center">
+                          <img src={faviconUrl} alt="Current Favicon" className="w-16 h-16 object-contain" onError={(e) => { (e.target as HTMLImageElement).src = "/vite.svg"; }} />
+                        </div>
+                        <div className="flex-1 space-y-4">
+                          <div>
+                            <Label>Upload New Favicon</Label>
+                            <Input ref={faviconFileRef} type="file" accept="image/png,image/x-icon,image/svg+xml,image/ico,.ico" onChange={handleFaviconUpload} className="mt-1" />
+                            <p className="text-xs text-muted-foreground mt-1">Supported formats: PNG, ICO, SVG. Recommended: 32x32px or 64x64px</p>
+                          </div>
+                          <div className="p-3 bg-muted/50 rounded-lg">
+                            <p className="text-sm text-muted-foreground">
+                              <strong>Preview:</strong> The favicon will appear in browser tabs, bookmarks, and shortcuts after upload.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
                   <ThemeCustomizer />
                 </TabsContent>
               </Tabs>

@@ -60,6 +60,19 @@ export default function Dashboard() {
           if (result.data.welcome_subtext) setWelcomeSubtext(result.data.welcome_subtext);
           if (result.data.show_welcome !== undefined) setShowWelcome(result.data.show_welcome === true || result.data.show_welcome === 'true');
           if (result.data.copyright_text !== undefined) setCopyrightText(result.data.copyright_text);
+          
+          // Load and apply favicon
+          if (result.data.favicon_url) {
+            const link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
+            if (link) {
+              link.href = result.data.favicon_url;
+            } else {
+              const newLink = document.createElement('link');
+              newLink.rel = 'icon';
+              newLink.href = result.data.favicon_url;
+              document.head.appendChild(newLink);
+            }
+          }
         }
       } catch { /* use defaults */ }
     };
@@ -161,19 +174,6 @@ export default function Dashboard() {
           </div>
 
           <div className="flex items-center gap-4">
-            {/* Admin Panel Button */}
-            {canAccessAdmin && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigate("/admin")}
-                className="hidden md:flex"
-              >
-                <Settings className="mr-2 h-4 w-4" />
-                Admin Panel
-              </Button>
-            )}
-
             {/* Notifications */}
             <Popover open={notifOpen} onOpenChange={setNotifOpen}>
               <PopoverTrigger asChild>
@@ -332,20 +332,7 @@ export default function Dashboard() {
         {isMobileMenuOpen && (
           <div className="fixed inset-0 z-20 bg-background md:hidden">
             <div className="p-4 h-full overflow-y-auto">
-              <div className="flex justify-between items-center mb-4">
-                {canAccessAdmin && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      navigate("/admin");
-                      toggleMobileMenu();
-                    }}
-                  >
-                    <Settings className="mr-2 h-4 w-4" />
-                    Admin Panel
-                  </Button>
-                )}
+              <div className="flex justify-end items-center mb-4">
                 <Button variant="ghost" size="icon" onClick={toggleMobileMenu}>
                   <X className="h-5 w-5" />
                 </Button>

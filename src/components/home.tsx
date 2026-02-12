@@ -35,6 +35,18 @@ function Home() {
           setPortalName(result.data.site_name);
           document.title = result.data.site_name;
         }
+        // Load and apply favicon
+        if (result.success && result.data?.favicon_url) {
+          const link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
+          if (link) {
+            link.href = result.data.favicon_url;
+          } else {
+            const newLink = document.createElement('link');
+            newLink.rel = 'icon';
+            newLink.href = result.data.favicon_url;
+            document.head.appendChild(newLink);
+          }
+        }
       } catch { /* use default */ }
     };
     loadSettings();

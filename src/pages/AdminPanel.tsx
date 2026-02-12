@@ -33,6 +33,7 @@ import {
   EyeOff,
   User,
   LogOut,
+  MessageCircleQuestion,
 } from "lucide-react";
 import {
   Dialog,
@@ -88,6 +89,7 @@ import {
 import {
   articlesAPI,
   settingsAPI,
+  faqsAPI,
   type CreateUserData,
   type UpdateUserData,
   type CreateArticleData,
@@ -135,6 +137,7 @@ const AdminPanel = () => {
   const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false);
   const [isHelpDialogOpen, setIsHelpDialogOpen] = useState(false);
   const [isUrlCatDialogOpen, setIsUrlCatDialogOpen] = useState(false);
+  const [isFAQDialogOpen, setIsFAQDialogOpen] = useState(false);
 
   // Edit IDs
   const [editingArticleId, setEditingArticleId] = useState<string | null>(null);
@@ -143,6 +146,7 @@ const AdminPanel = () => {
   const [editingUrlCatId, setEditingUrlCatId] = useState<string | null>(null);
   const [editingUrlLinkId, setEditingUrlLinkId] = useState<string | null>(null);
   const [editingUrlCatForLink, setEditingUrlCatForLink] = useState<string | null>(null);
+  const [editingFAQId, setEditingFAQId] = useState<string | null>(null);
 
   // Form states
   const [articleForm, setArticleForm] = useState({
@@ -176,6 +180,16 @@ const AdminPanel = () => {
 
   const [urlCatForm, setUrlCatForm] = useState({ name: "", description: "", icon: "Link" });
   const [urlLinkForm, setUrlLinkForm] = useState({ title: "", url: "", description: "", is_external: true });
+
+  const [faqForm, setFaqForm] = useState({
+    question: "",
+    answer: "",
+    category: "",
+    display_order: 0,
+    is_active: true,
+  });
+  const [faqs, setFaqs] = useState<any[]>([]);
+  const [faqsLoading, setFaqsLoading] = useState(false);
 
   // Logo settings
   const [logoUrl, setLogoUrl] = useState<string>("/logo.png");
@@ -226,6 +240,13 @@ const AdminPanel = () => {
     };
     if (backendAvailable) loadSettings();
   }, [backendAvailable]);
+
+  // Load FAQs when tab is opened
+  useEffect(() => {
+    if (activeTab === "faqs" && backendAvailable) {
+      fetchFAQs();
+    }
+  }, [activeTab, backendAvailable]);
 
   // Save settings handler
   const handleSaveSettings = async () => {
@@ -416,6 +437,76 @@ const AdminPanel = () => {
     if (result.success) showSuccess("Deleted"); else showError(result.message || "Failed");
   };
 
+  // --- FAQs CRUD ---
+  const fetchFAQs = async () => {
+    setFaqsLoading(true);
+    try {
+      const result = await faqsAPI.getAll({ active_only: false });
+      if (result.success && result.data) {
+        setFaqs(result.data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch FAQs:", error);
+    } finally {
+      setFaqsLoading(false);
+    }
+  };
+
+  const openNewFAQ = () => {
+    setEditingFAQId(null);
+    setFaqForm({ question: "", answer: "", category: "", display_order: 0, is_active: true });
+    setIsFAQDialogOpen(true);
+  };
+
+  const openEditFAQ = (faq: any) => {
+    setEditingFAQId(faq.id);
+    setFaqForm({
+      question: faq.question,
+      answer: faq.answer,
+      category: faq.category || "",
+      display_order: faq.display_order || 0,
+      is_active: faq.is_active !== false,
+    });
+    setIsFAQDialogOpen(true);
+  };
+
+  const handleSaveFAQ = async () => {
+    if (!faqForm.question.trim()) { showError("Question required"); return; }
+    if (!faqForm.answer.trim()) { showError("Answer required"); return; }
+    setSubmitting(true);
+    try {
+      const result = editingFAQId
+        ? await faqsAPI.update(editingFAQId, faqForm)
+        : await faqsAPI.create(faqForm);
+      if (result.success) {
+        showSuccess(editingFAQId ? "FAQ updated" : "FAQ created");
+        setIsFAQDialogOpen(false);
+        await fetchFAQs();
+      } else {
+        showError(result.message || "Failed");
+      }
+    } catch {
+      showError("Error");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDeleteFAQ = async (id: string) => {
+    if (!confirm("Delete this FAQ?")) return;
+    try {
+      const result = await faqsAPI.delete(id);
+      if (result.success) {
+        showSuccess("Deleted");
+        await fetchFAQs();
+      } else {
+        showError(result.message || "Failed");
+      }
+    } catch {
+      showError("Error");
+    }
+  };
+
   // --- LOGO ---
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -518,6 +609,7 @@ const AdminPanel = () => {
               { key: "urls", icon: Link2, label: "URL Categories" },
               { key: "users", icon: Users, label: "Users" },
               { key: "groups", icon: UserPlus, label: "Groups" },
+              { key: "faqs", icon: MessageCircleQuestion, label: "FAQs" },
               { key: "theme", icon: Palette, label: "Theme & Logo" },
             ].map(({ key, icon: Icon, label }) => (
               <Button key={key} variant={sidebarTab === key ? "secondary" : "ghost"} className="w-full justify-start"
@@ -577,7 +669,7 @@ const AdminPanel = () => {
                     <Home className="mr-2 h-4 w-4" />
                     <span>Dashboard</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate("/profile")}>
                     <User className="mr-2 h-4 w-4" />
                     <span>Profile</span>
                   </DropdownMenuItem>
@@ -603,12 +695,14 @@ const AdminPanel = () => {
                     <TabsTrigger value="urls">URL Categories</TabsTrigger>
                     <TabsTrigger value="users">Users</TabsTrigger>
                     <TabsTrigger value="groups">Groups</TabsTrigger>
+                    <TabsTrigger value="faqs">FAQs</TabsTrigger>
                     <TabsTrigger value="theme">Theme & Logo</TabsTrigger>
                   </TabsList>
                   {activeTab === "news" && <Button onClick={openNewArticle}><Plus className="mr-2 h-4 w-4" />Add Article</Button>}
                   {activeTab === "urls" && <Button onClick={openNewUrlCat}><Plus className="mr-2 h-4 w-4" />Add Category</Button>}
                   {activeTab === "users" && <Button onClick={openNewUser}><Plus className="mr-2 h-4 w-4" />Add User</Button>}
                   {activeTab === "groups" && <Button onClick={openNewGroup}><Plus className="mr-2 h-4 w-4" />Add Group</Button>}
+                  {activeTab === "faqs" && <Button onClick={openNewFAQ}><Plus className="mr-2 h-4 w-4" />Add FAQ</Button>}
                 </div>
 
                 {/* NEWS TAB */}
@@ -870,6 +964,61 @@ const AdminPanel = () => {
                   
                   <ThemeCustomizer />
                 </TabsContent>
+
+                {/* FAQs TAB */}
+                <TabsContent value="faqs" className="space-y-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Manage FAQs</CardTitle>
+                      <CardDescription>Create and manage frequently asked questions for users.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {faqsLoading ? (
+                        <LoadingSection />
+                      ) : (
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Question</TableHead>
+                              <TableHead>Category</TableHead>
+                              <TableHead className="w-20">Order</TableHead>
+                              <TableHead className="w-20">Active</TableHead>
+                              <TableHead className="w-24">Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {faqs.length === 0 ? (
+                              <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">No FAQs yet.</TableCell></TableRow>
+                            ) : (
+                              faqs.map((faq) => (
+                                <TableRow key={faq.id}>
+                                  <TableCell className="font-medium">{faq.question}</TableCell>
+                                  <TableCell>
+                                    {faq.category && <Badge variant="outline">{faq.category}</Badge>}
+                                  </TableCell>
+                                  <TableCell>{faq.display_order}</TableCell>
+                                  <TableCell>
+                                    {faq.is_active ? (
+                                      <Badge variant="default">Active</Badge>
+                                    ) : (
+                                      <Badge variant="secondary">Inactive</Badge>
+                                    )}
+                                  </TableCell>
+                                  <TableCell>
+                                    <div className="flex gap-2">
+                                      <Button variant="ghost" size="sm" onClick={() => openEditFAQ(faq)}><Edit2 className="h-4 w-4" /></Button>
+                                      <Button variant="ghost" size="sm" onClick={() => handleDeleteFAQ(faq.id)}><Trash2 className="h-4 w-4" /></Button>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              ))
+                            )}
+                          </TableBody>
+                        </Table>
+                      )}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
               </Tabs>
             </>
           )}
@@ -1083,6 +1232,72 @@ const AdminPanel = () => {
         </DialogContent>
       </Dialog>
 
+      {/* FAQ DIALOG */}
+      <Dialog open={isFAQDialogOpen} onOpenChange={setIsFAQDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{editingFAQId ? "Edit FAQ" : "New FAQ"}</DialogTitle>
+            <DialogDescription>
+              {editingFAQId ? "Update the FAQ details." : "Create a new frequently asked question."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label>Question *</Label>
+              <Input
+                value={faqForm.question}
+                onChange={(e) => setFaqForm({ ...faqForm, question: e.target.value })}
+                placeholder="Enter the question"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>Answer *</Label>
+              <Textarea
+                value={faqForm.answer}
+                onChange={(e) => setFaqForm({ ...faqForm, answer: e.target.value })}
+                placeholder="Enter the answer"
+                rows={5}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label>Category (Optional)</Label>
+                <Input
+                  value={faqForm.category}
+                  onChange={(e) => setFaqForm({ ...faqForm, category: e.target.value })}
+                  placeholder="e.g., General, Account, Billing"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>Display Order</Label>
+                <Input
+                  type="number"
+                  value={faqForm.display_order}
+                  onChange={(e) => setFaqForm({ ...faqForm, display_order: parseInt(e.target.value) || 0 })}
+                />
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="faq-active"
+                checked={faqForm.is_active}
+                onCheckedChange={(checked) => setFaqForm({ ...faqForm, is_active: checked as boolean })}
+              />
+              <Label htmlFor="faq-active" className="cursor-pointer">Active (visible to users)</Label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsFAQDialogOpen(false)} disabled={submitting}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveFAQ} disabled={submitting}>
+              {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {editingFAQId ? "Save Changes" : "Create FAQ"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* SETTINGS DIALOG */}
       <Dialog open={isSettingsDialogOpen} onOpenChange={setIsSettingsDialogOpen}>
         <DialogContent className="max-w-lg">
@@ -1161,14 +1376,11 @@ const AdminPanel = () => {
               </CardContent>
             </Card>
             <Card>
-              <CardHeader className="pb-2"><CardTitle className="text-base">FAQs</CardTitle></CardHeader>
+              <CardHeader className="pb-2"><CardTitle className="text-base">Contact Support</CardTitle></CardHeader>
               <CardContent>
-                <div className="space-y-2 text-sm">
-                  <div><p className="font-medium">How do I add a new user?</p><p className="text-muted-foreground">Users tab → "Add User". Password is required.</p></div>
-                  <div><p className="font-medium">How do I publish articles to specific groups?</p><p className="text-muted-foreground">When creating/editing, select target groups. Empty = all users.</p></div>
-                  <div><p className="font-medium">How do I change the logo?</p><p className="text-muted-foreground">Theme & Logo tab → upload and adjust size.</p></div>
-                  <div><p className="font-medium">How do I set the copyright text?</p><p className="text-muted-foreground">Settings → Copyright Footer section. Text appears at the bottom of the dashboard.</p></div>
-                </div>
+                <p className="text-sm text-muted-foreground">
+                  For technical assistance, contact your system administrator at: <code className="font-mono text-xs bg-muted px-1 py-0.5 rounded">{adminEmail}</code>
+                </p>
               </CardContent>
             </Card>
           </div>

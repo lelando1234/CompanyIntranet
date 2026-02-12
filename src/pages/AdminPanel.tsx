@@ -174,7 +174,7 @@ const AdminPanel = () => {
     permissions: [] as string[],
   });
 
-  const [urlCatForm, setUrlCatForm] = useState({ name: "", description: "", icon: "Link" });
+  const [urlCatForm, setUrlCatForm] = useState({ name: "", description: "", icon: "Link", target_groups: [] as string[] });
   const [urlLinkForm, setUrlLinkForm] = useState({ title: "", url: "", description: "", is_external: true });
 
   // Logo settings
@@ -307,14 +307,15 @@ const AdminPanel = () => {
   };
 
   // --- URL CATEGORIES CRUD ---
-  const openNewUrlCat = () => { setEditingUrlCatId(null); setUrlCatForm({ name: "", description: "", icon: "Link" }); setIsUrlCatDialogOpen(true); };
-  const openEditUrlCat = (cat: URLCategory) => { setEditingUrlCatId(cat.id); setUrlCatForm({ name: cat.name, description: cat.description || "", icon: cat.icon || "Link" }); setIsUrlCatDialogOpen(true); };
+  const openNewUrlCat = () => { setEditingUrlCatId(null); setUrlCatForm({ name: "", description: "", icon: "Link", target_groups: [] }); setIsUrlCatDialogOpen(true); };
+  const openEditUrlCat = (cat: URLCategory) => { setEditingUrlCatId(cat.id); setUrlCatForm({ name: cat.name, description: cat.description || "", icon: cat.icon || "Link", target_groups: cat.target_groups?.map(g => g.id) || [] }); setIsUrlCatDialogOpen(true); };
 
   const handleSaveUrlCat = async () => {
     if (!urlCatForm.name.trim()) { showError("Name is required"); return; }
     setSubmitting(true);
     try {
-      const result = editingUrlCatId ? await updateURLCategory(editingUrlCatId, urlCatForm) : await createURLCategory(urlCatForm);
+      const data = { name: urlCatForm.name, description: urlCatForm.description, icon: urlCatForm.icon, target_groups: urlCatForm.target_groups };
+      const result = editingUrlCatId ? await updateURLCategory(editingUrlCatId, data) : await createURLCategory(data);
       if (result.success) { showSuccess(editingUrlCatId ? "Category updated" : "Category created"); setIsUrlCatDialogOpen(false); }
       else showError(result.message || "Failed to save");
     } catch { showError("An error occurred"); }
@@ -680,10 +681,18 @@ const AdminPanel = () => {
                         <div className="space-y-6">
                           {urlCategories.map((cat) => (
                             <div key={cat.id} className="border rounded-md p-4">
-                              <div className="flex justify-between items-center mb-4">
+                              <div className="flex justify-between items-start mb-4">
                                 <div>
                                   <h3 className="text-lg font-medium">{cat.name}</h3>
                                   <p className="text-sm text-muted-foreground">{cat.description}</p>
+                                  <div className="mt-2">
+                                    {cat.target_groups && cat.target_groups.length > 0 ? (
+                                      <div className="flex flex-wrap gap-1">
+                                        <span className="text-xs text-muted-foreground mr-1">Visible to:</span>
+                                        {cat.target_groups.map((g) => <Badge key={g.id} variant="outline" className="text-xs">{g.name}</Badge>)}
+                                      </div>
+                                    ) : <span className="text-xs text-muted-foreground">Visible to: All users</span>}
+                                  </div>
                                 </div>
                                 <div className="flex space-x-2">
                                   <Button variant="outline" size="sm" onClick={() => openEditUrlCat(cat)}><Edit2 className="mr-2 h-4 w-4" />Edit</Button>
@@ -914,6 +923,17 @@ const AdminPanel = () => {
               <Label>Publish to Groups (leave empty for all users)</Label>
               <ScrollArea className="h-[120px] border rounded-md p-3">
                 <div className="space-y-2">
+                  {/* Select/Deselect All Toggle */}
+                  <div className="flex items-center space-x-2 pb-2 border-b mb-2">
+                    <Checkbox 
+                      id="article-toggle-all"
+                      checked={groups.length > 0 && articleForm.target_groups.length === groups.length}
+                      onCheckedChange={(checked) => setArticleForm({ ...articleForm, target_groups: checked ? groups.map(g => g.id) : [] })}
+                    />
+                    <Label htmlFor="article-toggle-all" className="cursor-pointer font-medium">
+                      {articleForm.target_groups.length === groups.length ? "Deselect All" : "Select All Groups"}
+                    </Label>
+                  </div>
                   {groups.map((group) => (
                     <div key={group.id} className="flex items-center space-x-2">
                       <Checkbox id={`article-group-${group.id}`} checked={articleForm.target_groups.includes(group.id)}
@@ -948,11 +968,40 @@ const AdminPanel = () => {
 
       {/* URL CAT DIALOG */}
       <Dialog open={isUrlCatDialogOpen} onOpenChange={setIsUrlCatDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader><DialogTitle>{editingUrlCatId ? "Edit Category" : "New URL Category"}</DialogTitle></DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2"><Label>Name *</Label><Input value={urlCatForm.name} onChange={(e) => setUrlCatForm({ ...urlCatForm, name: e.target.value })} /></div>
             <div className="grid gap-2"><Label>Description</Label><Input value={urlCatForm.description} onChange={(e) => setUrlCatForm({ ...urlCatForm, description: e.target.value })} /></div>
+            <div className="grid gap-2">
+              <Label>Visible to Groups (leave empty for all users)</Label>
+              <ScrollArea className="h-[120px] border rounded-md p-3">
+                <div className="space-y-2">
+                  {/* Select/Deselect All */}
+                  <div className="flex items-center space-x-2 pb-2 border-b mb-2">
+                    <Checkbox 
+                      id="url-cat-toggle-all"
+                      checked={groups.length > 0 && urlCatForm.target_groups.length === groups.length}
+                      onCheckedChange={(checked) => setUrlCatForm({ ...urlCatForm, target_groups: checked ? groups.map(g => g.id) : [] })}
+                    />
+                    <Label htmlFor="url-cat-toggle-all" className="cursor-pointer font-medium">
+                      {urlCatForm.target_groups.length === groups.length ? "Deselect All" : "Select All Groups"}
+                    </Label>
+                  </div>
+                  {groups.map((group) => (
+                    <div key={group.id} className="flex items-center space-x-2">
+                      <Checkbox id={`url-cat-group-${group.id}`} checked={urlCatForm.target_groups.includes(group.id)}
+                        onCheckedChange={(checked) => setUrlCatForm({ ...urlCatForm, target_groups: checked ? [...urlCatForm.target_groups, group.id] : urlCatForm.target_groups.filter((id) => id !== group.id) })} />
+                      <Label htmlFor={`url-cat-group-${group.id}`} className="cursor-pointer flex items-center gap-2">
+                        <div className="h-3 w-3 rounded-full" style={{ backgroundColor: group.color }} />{group.name}
+                      </Label>
+                    </div>
+                  ))}
+                  {groups.length === 0 && <p className="text-sm text-muted-foreground">No groups available.</p>}
+                </div>
+              </ScrollArea>
+              <p className="text-xs text-muted-foreground">If no groups are selected, this category will be visible to all users.</p>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsUrlCatDialogOpen(false)} disabled={submitting}>Cancel</Button>

@@ -7,20 +7,56 @@ const { logAudit } = require('../middleware/audit');
 
 const router = express.Router();
 
-// Get all URL categories with their links
+// Get all URL categories with their links (optionally filtered by user's groups)
 router.get('/', async (req, res) => {
   try {
-    const categories = await query(`
-      SELECT * FROM url_categories ORDER BY sort_order ASC, name ASC
-    `);
+    const userId = req.headers.authorization ? null : null; // Will be set by verifyToken if used
+    let categories;
+    
+    // Check if user is authenticated and filter by their groups
+    if (req.query.filterByUser === 'true' && req.query.userGroups) {
+      const userGroupIds = JSON.parse(req.query.userGroups);
+      if (userGroupIds && userGroupIds.length > 0) {
+        // Get categories that are either visible to everyone (no groups assigned) or visible to user's groups
+        const placeholders = userGroupIds.map(() => '?').join(',');
+        categories = await query(`
+          SELECT DISTINCT uc.* FROM url_categories uc
+          LEFT JOIN url_category_groups ucg ON uc.id = ucg.url_category_id
+          WHERE ucg.url_category_id IS NULL 
+             OR ucg.group_id IN (${placeholders})
+          ORDER BY uc.sort_order ASC, uc.name ASC
+        `, userGroupIds);
+      } else {
+        // User has no groups, only show categories visible to everyone
+        categories = await query(`
+          SELECT uc.* FROM url_categories uc
+          LEFT JOIN url_category_groups ucg ON uc.id = ucg.url_category_id
+          WHERE ucg.url_category_id IS NULL
+          ORDER BY uc.sort_order ASC, uc.name ASC
+        `);
+      }
+    } else {
+      // No filtering, return all categories (for admin view)
+      categories = await query(`
+        SELECT * FROM url_categories ORDER BY sort_order ASC, name ASC
+      `);
+    }
 
-    // Get links for each category
+    // Get links and target groups for each category
     for (const category of categories) {
       const links = await query(
         'SELECT * FROM url_links WHERE category_id = ? ORDER BY sort_order ASC, title ASC',
         [category.id]
       );
       category.links = links;
+      
+      // Get target groups for this category
+      const targetGroups = await query(`
+        SELECT g.id, g.name, g.color FROM \`groups\` g
+        INNER JOIN url_category_groups ucg ON g.id = ucg.group_id
+        WHERE ucg.url_category_id = ?
+      `, [category.id]);
+      category.target_groups = targetGroups;
     }
 
     res.json({ success: true, data: categories });
@@ -64,7 +100,7 @@ router.post('/', verifyToken, requireRole('admin', 'editor'), [
       return res.status(400).json({ success: false, errors: errors.array() });
     }
 
-    const { name, description, icon, sort_order } = req.body;
+    const { name, description, icon, sort_order, target_groups } = req.body;
 
     const categoryId = uuidv4();
 
@@ -73,8 +109,15 @@ router.post('/', verifyToken, requireRole('admin', 'editor'), [
       VALUES (?, ?, ?, ?, ?)
     `, [categoryId, name, description || null, icon || 'Link', sort_order || 0]);
 
+    // Insert target groups if specified
+    if (target_groups && target_groups.length > 0) {
+      for (const groupId of target_groups) {
+        await query('INSERT INTO url_category_groups (url_category_id, group_id) VALUES (?, ?)', [categoryId, groupId]);
+      }
+    }
+
     // Log audit
-    await logAudit(req.user.id, 'CREATE_URL_CATEGORY', 'url_category', categoryId, null, { name }, req);
+    await logAudit(req.user.id, 'CREATE_URL_CATEGORY', 'url_category', categoryId, null, { name, target_groups }, req);
 
     res.status(201).json({
       success: true,
@@ -91,7 +134,7 @@ router.post('/', verifyToken, requireRole('admin', 'editor'), [
 router.put('/:id', verifyToken, requireRole('admin', 'editor'), async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, description, icon, sort_order } = req.body;
+    const { name, description, icon, sort_order, target_groups } = req.body;
 
     const existing = await query('SELECT * FROM url_categories WHERE id = ?', [id]);
     if (existing.length === 0) {
@@ -111,8 +154,18 @@ router.put('/:id', verifyToken, requireRole('admin', 'editor'), async (req, res)
       await query(`UPDATE url_categories SET ${updates.join(', ')} WHERE id = ?`, params);
     }
 
+    // Update target groups if specified
+    if (target_groups !== undefined) {
+      await query('DELETE FROM url_category_groups WHERE url_category_id = ?', [id]);
+      if (target_groups && target_groups.length > 0) {
+        for (const groupId of target_groups) {
+          await query('INSERT INTO url_category_groups (url_category_id, group_id) VALUES (?, ?)', [id, groupId]);
+        }
+      }
+    }
+
     // Log audit
-    await logAudit(req.user.id, 'UPDATE_URL_CATEGORY', 'url_category', id, existing[0], req.body, req);
+    await logAudit(req.user.id, 'UPDATE_URL_CATEGORY', 'url_category', id, existing[0], { ...req.body, target_groups }, req);
 
     res.json({ success: true, message: 'URL category updated successfully' });
   } catch (error) {

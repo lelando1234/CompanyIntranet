@@ -379,6 +379,7 @@ export interface URLCategory {
   icon: string;
   sort_order: number;
   links?: URLLink[];
+  target_groups?: { id: string; name: string; color?: string }[];
   created_at: string;
 }
 
@@ -387,6 +388,7 @@ export interface CreateURLCategoryData {
   description?: string;
   icon?: string;
   sort_order?: number;
+  target_groups?: string[];
 }
 
 export interface CreateURLLinkData {
@@ -399,7 +401,17 @@ export interface CreateURLLinkData {
 }
 
 export const urlCategoriesAPI = {
-  getAll: () => apiFetch<URLCategory[]>('/url-categories'),
+  getAll: (params?: { filterByUser?: boolean; userGroups?: string[] }) => {
+    const queryParams = new URLSearchParams();
+    if (params?.filterByUser) {
+      queryParams.set('filterByUser', 'true');
+      if (params?.userGroups) {
+        queryParams.set('userGroups', JSON.stringify(params.userGroups));
+      }
+    }
+    const queryString = queryParams.toString() ? `?${queryParams.toString()}` : '';
+    return apiFetch<URLCategory[]>(`/url-categories${queryString}`);
+  },
 
   getById: (id: string) => apiFetch<URLCategory>(`/url-categories/${id}`),
 

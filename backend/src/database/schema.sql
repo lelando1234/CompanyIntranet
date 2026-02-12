@@ -116,6 +116,15 @@ CREATE TABLE IF NOT EXISTS url_categories (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
+-- URL Category-Group visibility (many-to-many)
+CREATE TABLE IF NOT EXISTS url_category_groups (
+    url_category_id VARCHAR(36) NOT NULL,
+    group_id VARCHAR(36) NOT NULL,
+    PRIMARY KEY (url_category_id, group_id),
+    FOREIGN KEY (url_category_id) REFERENCES url_categories(id) ON DELETE CASCADE,
+    FOREIGN KEY (group_id) REFERENCES `groups`(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
 -- URL Links
 CREATE TABLE IF NOT EXISTS url_links (
     id VARCHAR(36) PRIMARY KEY,

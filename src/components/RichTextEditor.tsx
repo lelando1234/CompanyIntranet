@@ -1,4 +1,4 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useRef } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
@@ -21,6 +21,7 @@ import {
   Undo,
   Redo,
   Paperclip,
+  Upload,
 } from "lucide-react";
 import {
   Select,
@@ -38,6 +39,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { settingsAPI } from "@/lib/api";
 
 interface Attachment {
   id: string;
@@ -61,9 +64,15 @@ const RichTextEditor = ({
 }: RichTextEditorProps) => {
   const [isImageDialogOpen, setIsImageDialogOpen] = React.useState(false);
   const [isLinkDialogOpen, setIsLinkDialogOpen] = React.useState(false);
+  const [isAttachmentDialogOpen, setIsAttachmentDialogOpen] = React.useState(false);
   const [imageUrl, setImageUrl] = React.useState("");
   const [linkUrl, setLinkUrl] = React.useState("");
   const [linkText, setLinkText] = React.useState("");
+  const [imageUploading, setImageUploading] = React.useState(false);
+  const [attachmentUploading, setAttachmentUploading] = React.useState(false);
+  
+  const imageFileRef = useRef<HTMLInputElement>(null);
+  const attachmentFileRef = useRef<HTMLInputElement>(null);
 
   const editor = useEditor({
     extensions: [
@@ -105,6 +114,115 @@ const RichTextEditor = ({
     }
   }, [editor, imageUrl]);
 
+  const handleImageUpload = useCallback(async (file: File) => {
+    if (!file || !editor) return;
+    
+    setImageUploading(true);
+    try {
+      // Use the settings API to upload the file
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const API_BASE_URL = import.meta.env.VITE_API_URL || "";
+      if (!API_BASE_URL) {
+        // Fallback: create a local blob URL for preview (won't persist)
+        const url = URL.createObjectURL(file);
+        editor.chain().focus().setImage({ src: url }).run();
+        setIsImageDialogOpen(false);
+        return;
+      }
+      
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`${API_BASE_URL}/settings/upload/image`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData,
+      });
+      
+      const result = await response.json();
+      if (result.success && result.data?.url) {
+        editor.chain().focus().setImage({ src: result.data.url }).run();
+        setIsImageDialogOpen(false);
+      } else {
+        console.error('Image upload failed:', result.message);
+        alert('Failed to upload image. Please try again or use a URL.');
+      }
+    } catch (error) {
+      console.error('Image upload error:', error);
+      // Fallback to blob URL
+      const url = URL.createObjectURL(file);
+      editor.chain().focus().setImage({ src: url }).run();
+      setIsImageDialogOpen(false);
+    } finally {
+      setImageUploading(false);
+    }
+  }, [editor]);
+
+  const handleAttachmentUpload = useCallback(async (file: File) => {
+    if (!file) return;
+    
+    setAttachmentUploading(true);
+    try {
+      const API_BASE_URL = import.meta.env.VITE_API_URL || "";
+      if (!API_BASE_URL) {
+        // Fallback: create a local attachment object
+        const newAttachment: Attachment = {
+          id: Date.now().toString(),
+          name: file.name,
+          url: URL.createObjectURL(file),
+          type: file.type,
+        };
+        if (onAttachmentsChange) {
+          onAttachmentsChange([...attachments, newAttachment]);
+        }
+        setIsAttachmentDialogOpen(false);
+        return;
+      }
+      
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`${API_BASE_URL}/settings/upload/attachment`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData,
+      });
+      
+      const result = await response.json();
+      if (result.success && result.data) {
+        const newAttachment: Attachment = {
+          id: result.data.id || Date.now().toString(),
+          name: result.data.original_name || file.name,
+          url: result.data.url,
+          type: result.data.mime_type || file.type,
+        };
+        if (onAttachmentsChange) {
+          onAttachmentsChange([...attachments, newAttachment]);
+        }
+        setIsAttachmentDialogOpen(false);
+      } else {
+        console.error('Attachment upload failed:', result.message);
+        alert('Failed to upload attachment. Please try again.');
+      }
+    } catch (error) {
+      console.error('Attachment upload error:', error);
+      // Fallback to local blob
+      const newAttachment: Attachment = {
+        id: Date.now().toString(),
+        name: file.name,
+        url: URL.createObjectURL(file),
+        type: file.type,
+      };
+      if (onAttachmentsChange) {
+        onAttachmentsChange([...attachments, newAttachment]);
+      }
+      setIsAttachmentDialogOpen(false);
+    } finally {
+      setAttachmentUploading(false);
+    }
+  }, [attachments, onAttachmentsChange]);
+
   const addLink = useCallback(() => {
     if (linkUrl && editor) {
       if (linkText) {
@@ -122,17 +240,8 @@ const RichTextEditor = ({
     }
   }, [editor, linkUrl, linkText]);
 
-  const handleFileAttachment = () => {
-    // Simulate file upload - in production, this would upload to server
-    const mockFile: Attachment = {
-      id: Date.now().toString(),
-      name: `Document_${Date.now()}.pdf`,
-      url: "#",
-      type: "application/pdf",
-    };
-    if (onAttachmentsChange) {
-      onAttachmentsChange([...attachments, mockFile]);
-    }
+  const openAttachmentDialog = () => {
+    setIsAttachmentDialogOpen(true);
   };
 
   const removeAttachment = (id: string) => {
@@ -258,7 +367,7 @@ const RichTextEditor = ({
         <Button
           variant="ghost"
           size="sm"
-          onClick={handleFileAttachment}
+          onClick={openAttachmentDialog}
           className="h-8 w-8 p-0"
         >
           <Paperclip className="h-4 w-4" />
@@ -320,23 +429,62 @@ const RichTextEditor = ({
           <DialogHeader>
             <DialogTitle>Insert Image</DialogTitle>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="imageUrl">Image URL</Label>
-              <Input
-                id="imageUrl"
-                value={imageUrl}
-                onChange={(e) => setImageUrl(e.target.value)}
-                placeholder="https://example.com/image.jpg"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsImageDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={addImage}>Insert Image</Button>
-          </DialogFooter>
+          <Tabs defaultValue="upload" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="upload">Upload File</TabsTrigger>
+              <TabsTrigger value="url">Image URL</TabsTrigger>
+            </TabsList>
+            <TabsContent value="upload" className="space-y-4">
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label>Select Image File</Label>
+                  <Input
+                    ref={imageFileRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleImageUpload(file);
+                    }}
+                    disabled={imageUploading}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Supported formats: JPG, PNG, GIF, WebP
+                  </p>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsImageDialogOpen(false)} disabled={imageUploading}>
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={() => imageFileRef.current?.click()}
+                  disabled={imageUploading}
+                >
+                  {imageUploading ? "Uploading..." : "Select File"}
+                </Button>
+              </DialogFooter>
+            </TabsContent>
+            <TabsContent value="url" className="space-y-4">
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="imageUrl">Image URL</Label>
+                  <Input
+                    id="imageUrl"
+                    value={imageUrl}
+                    onChange={(e) => setImageUrl(e.target.value)}
+                    placeholder="https://example.com/image.jpg"
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsImageDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={addImage}>Insert Image</Button>
+              </DialogFooter>
+            </TabsContent>
+          </Tabs>
         </DialogContent>
       </Dialog>
 
@@ -371,6 +519,45 @@ const RichTextEditor = ({
               Cancel
             </Button>
             <Button onClick={addLink}>Insert Link</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Attachment Dialog */}
+      <Dialog open={isAttachmentDialogOpen} onOpenChange={setIsAttachmentDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Attachment</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label>Select File to Attach</Label>
+              <Input
+                ref={attachmentFileRef}
+                type="file"
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar,.csv,image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleAttachmentUpload(file);
+                }}
+                disabled={attachmentUploading}
+              />
+              <p className="text-xs text-muted-foreground">
+                Supported: PDF, Word, Excel, PowerPoint, Images, ZIP, CSV, Text files
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAttachmentDialogOpen(false)} disabled={attachmentUploading}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => attachmentFileRef.current?.click()}
+              disabled={attachmentUploading}
+            >
+              <Upload className="mr-2 h-4 w-4" />
+              {attachmentUploading ? "Uploading..." : "Select File"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

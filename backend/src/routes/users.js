@@ -5,8 +5,41 @@ const { body, validationResult, param } = require('express-validator');
 const { query } = require('../database/connection');
 const { verifyToken, requireRole } = require('../middleware/auth');
 const { logAudit } = require('../middleware/audit');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 
 const router = express.Router();
+
+// Configure multer for avatar uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = path.join(__dirname, '../../uploads/avatars');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|gif/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+    if (extname && mimetype) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'));
+    }
+  }
+});
 
 // Get all users (admin/editor only)
 router.get('/', verifyToken, requireRole('admin', 'editor'), async (req, res) => {
@@ -248,6 +281,86 @@ router.delete('/:id', verifyToken, requireRole('admin'), async (req, res) => {
     res.json({ success: true, message: 'User deleted successfully' });
   } catch (error) {
     console.error('Delete user error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Upload avatar for current user
+router.post('/me/avatar', verifyToken, upload.single('avatar'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No file uploaded' });
+    }
+
+    const avatarUrl = `/uploads/avatars/${req.file.filename}`;
+
+    // Update user's avatar
+    await query('UPDATE users SET avatar = ? WHERE id = ?', [avatarUrl, req.user.id]);
+
+    // Log audit
+    await logAudit(req.user.id, 'UPDATE_AVATAR', 'user', req.user.id, null, { avatar: avatarUrl }, req);
+
+    res.json({
+      success: true,
+      message: 'Avatar uploaded successfully',
+      data: { avatar: avatarUrl }
+    });
+  } catch (error) {
+    console.error('Upload avatar error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Update current user's profile
+router.put('/me', verifyToken, [
+  body('name').optional().notEmpty().trim(),
+  body('email').optional().isEmail().normalizeEmail(),
+  body('department').optional().trim(),
+  body('phone').optional().trim()
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, errors: errors.array() });
+    }
+
+    const { name, email, department, phone } = req.body;
+    const userId = req.user.id;
+
+    // Get existing user
+    const existing = await query('SELECT * FROM users WHERE id = ?', [userId]);
+    if (existing.length === 0) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Check email uniqueness if changing
+    if (email && email !== existing[0].email) {
+      const emailExists = await query('SELECT id FROM users WHERE email = ? AND id != ?', [email, userId]);
+      if (emailExists.length > 0) {
+        return res.status(400).json({ success: false, message: 'Email already exists' });
+      }
+    }
+
+    // Build update query
+    const updates = [];
+    const params = [];
+
+    if (name) { updates.push('name = ?'); params.push(name); }
+    if (email) { updates.push('email = ?'); params.push(email); }
+    if (department !== undefined) { updates.push('department = ?'); params.push(department); }
+    if (phone !== undefined) { updates.push('phone = ?'); params.push(phone); }
+
+    if (updates.length > 0) {
+      params.push(userId);
+      await query(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`, params);
+    }
+
+    // Log audit
+    await logAudit(userId, 'UPDATE_PROFILE', 'user', userId, existing[0], req.body, req);
+
+    res.json({ success: true, message: 'Profile updated successfully' });
+  } catch (error) {
+    console.error('Update profile error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });

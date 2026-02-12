@@ -3,6 +3,7 @@ import { useRoutes, Routes, Route, Navigate } from "react-router-dom";
 import Home from "@/components/home";
 import Dashboard from "@/pages/Dashboard";
 import AdminPanel from "@/pages/AdminPanel";
+import UserProfile from "@/pages/UserProfile";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { settingsAPI } from "@/lib/api";
 import routes from "tempo-routes";
@@ -121,6 +122,14 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <UserProfile />
             </ProtectedRoute>
           }
         />

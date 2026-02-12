@@ -160,6 +160,27 @@ export const usersAPI = {
     }),
 
   delete: (id: string) => apiFetch(`/users/${id}`, { method: 'DELETE' }),
+
+  // Current user profile endpoints
+  updateProfile: (data: { name?: string; email?: string; department?: string; phone?: string }) =>
+    apiFetch('/users/me', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  uploadAvatar: async (file: File) => {
+    const token = getAuthToken();
+    const formData = new FormData();
+    formData.append('avatar', file);
+
+    const response = await fetch(`${API_BASE_URL}/users/me/avatar`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    });
+
+    return response.json();
+  },
 };
 
 // ============ GROUPS API ============
@@ -561,6 +582,53 @@ export const preferencesAPI = {
     }),
 };
 
+// ============ FAQs API ============
+
+export interface FAQ {
+  id: string;
+  question: string;
+  answer: string;
+  category?: string;
+  display_order: number;
+  is_active: boolean;
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateFAQData {
+  question: string;
+  answer: string;
+  category?: string;
+  display_order?: number;
+  is_active?: boolean;
+}
+
+// ============ FAQs API ============
+
+export const faqsAPI = {
+  getAll: (params?: { category?: string; active_only?: boolean }) => {
+    const queryString = params ? '?' + new URLSearchParams(params as any).toString() : '';
+    return apiFetch<FAQ[]>(`/faqs${queryString}`);
+  },
+
+  getById: (id: string) => apiFetch<FAQ>(`/faqs/${id}`),
+
+  create: (data: CreateFAQData) =>
+    apiFetch<{ id: string }>('/faqs', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  update: (id: string, data: Partial<CreateFAQData>) =>
+    apiFetch(`/faqs/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  delete: (id: string) => apiFetch(`/faqs/${id}`, { method: 'DELETE' }),
+};
+
 export default {
   auth: authAPI,
   users: usersAPI,
@@ -571,5 +639,6 @@ export default {
   settings: settingsAPI,
   notifications: notificationsAPI,
   preferences: preferencesAPI,
+  faqs: faqsAPI,
   healthCheck,
 };

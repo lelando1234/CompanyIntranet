@@ -100,6 +100,18 @@ export const authAPI = {
     }),
 
   refreshToken: () => apiFetch<{ token: string }>('/auth/refresh', { method: 'POST' }),
+
+  forgotPassword: (email: string) =>
+    apiFetch('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
+
+  resetPassword: (token: string, newPassword: string) =>
+    apiFetch('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ token, newPassword }),
+    }),
 };
 
 // ============ USERS API ============
@@ -481,6 +493,17 @@ export interface ThemeSettings {
   favicon_url?: string;
 }
 
+export interface EmailSettings {
+  smtp_host: string;
+  smtp_port: number;
+  smtp_secure: boolean;
+  smtp_user: string;
+  smtp_password: string;
+  from_email: string;
+  from_name: string;
+  email_enabled: boolean;
+}
+
 export const settingsAPI = {
   getAll: () => apiFetch<Record<string, any>>('/settings'),
 
@@ -534,6 +557,24 @@ export const settingsAPI = {
 
     return response.json();
   },
+
+  // Email settings
+  getEmailSettings: () => apiFetch<EmailSettings>('/settings/email'),
+
+  updateEmailSettings: (data: Partial<EmailSettings>) =>
+    apiFetch('/settings/email', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  testEmailConnection: () =>
+    apiFetch('/settings/email/test', { method: 'POST' }),
+
+  sendTestEmail: (toEmail: string) =>
+    apiFetch('/settings/email/send-test', {
+      method: 'POST',
+      body: JSON.stringify({ to: toEmail }),
+    }),
 
   // Audit log
   getAuditLog: (params?: { page?: number; limit?: number; action?: string; user_id?: string }) => {

@@ -34,6 +34,11 @@ import {
   User,
   LogOut,
   MessageCircleQuestion,
+  Tag,
+  Mail,
+  Send,
+  CheckCircle,
+  XCircle,
 } from "lucide-react";
 import {
   Dialog,
@@ -62,6 +67,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
 import {
   Table,
   TableBody,
@@ -90,6 +96,7 @@ import {
   articlesAPI,
   settingsAPI,
   faqsAPI,
+  categoriesAPI,
   type CreateUserData,
   type UpdateUserData,
   type CreateArticleData,
@@ -99,6 +106,10 @@ import {
   type Group,
   type URLCategory,
   type URLLink,
+  type Category,
+  type CreateCategoryData,
+  type UpdateCategoryData,
+  type EmailSettings,
 } from "@/lib/api";
 
 const AdminPanel = () => {
@@ -138,6 +149,7 @@ const AdminPanel = () => {
   const [isHelpDialogOpen, setIsHelpDialogOpen] = useState(false);
   const [isUrlCatDialogOpen, setIsUrlCatDialogOpen] = useState(false);
   const [isFAQDialogOpen, setIsFAQDialogOpen] = useState(false);
+  const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
 
   // Edit IDs
   const [editingArticleId, setEditingArticleId] = useState<string | null>(null);
@@ -147,6 +159,7 @@ const AdminPanel = () => {
   const [editingUrlLinkId, setEditingUrlLinkId] = useState<string | null>(null);
   const [editingUrlCatForLink, setEditingUrlCatForLink] = useState<string | null>(null);
   const [editingFAQId, setEditingFAQId] = useState<string | null>(null);
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
 
   // Form states
   const [articleForm, setArticleForm] = useState({
@@ -190,6 +203,33 @@ const AdminPanel = () => {
   });
   const [faqs, setFaqs] = useState<any[]>([]);
   const [faqsLoading, setFaqsLoading] = useState(false);
+
+  // News Category form state
+  const [categoryForm, setCategoryForm] = useState({
+    name: "",
+    slug: "",
+    description: "",
+    color: "#3B82F6",
+  });
+  const [newsCategoriesData, setNewsCategoriesData] = useState<Category[]>([]);
+  const [newsCategoriesLoading, setNewsCategoriesLoading] = useState(false);
+
+  // Email settings form state
+  const [emailForm, setEmailForm] = useState<EmailSettings>({
+    smtp_host: "",
+    smtp_port: 587,
+    smtp_secure: false,
+    smtp_user: "",
+    smtp_password: "",
+    from_email: "",
+    from_name: "",
+    email_enabled: false,
+  });
+  const [emailLoading, setEmailLoading] = useState(false);
+  const [emailSaving, setEmailSaving] = useState(false);
+  const [emailTestResult, setEmailTestResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [testEmailAddress, setTestEmailAddress] = useState("");
+  const [showSmtpPassword, setShowSmtpPassword] = useState(false);
 
   // Logo settings
   const [logoUrl, setLogoUrl] = useState<string>("/logo.png");
@@ -508,6 +548,161 @@ const AdminPanel = () => {
     }
   };
 
+  // --- NEWS CATEGORIES CRUD ---
+  const fetchNewsCategories = async () => {
+    setNewsCategoriesLoading(true);
+    try {
+      const result = await categoriesAPI.getAll();
+      if (result.success && result.data) {
+        setNewsCategoriesData(result.data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch categories:", error);
+    } finally {
+      setNewsCategoriesLoading(false);
+    }
+  };
+
+  const openNewCategory = () => {
+    setEditingCategoryId(null);
+    setCategoryForm({ name: "", slug: "", description: "", color: "#3B82F6" });
+    setIsCategoryDialogOpen(true);
+  };
+
+  const openEditCategory = (cat: Category) => {
+    setEditingCategoryId(cat.id);
+    setCategoryForm({
+      name: cat.name,
+      slug: cat.slug,
+      description: cat.description || "",
+      color: cat.color || "#3B82F6",
+    });
+    setIsCategoryDialogOpen(true);
+  };
+
+  const handleSaveCategory = async () => {
+    if (!categoryForm.name.trim()) { showError("Name required"); return; }
+    setSubmitting(true);
+    try {
+      const data: CreateCategoryData = {
+        name: categoryForm.name,
+        slug: categoryForm.slug || categoryForm.name.toLowerCase().replace(/\s+/g, '-'),
+        description: categoryForm.description || undefined,
+        color: categoryForm.color,
+      };
+      const result = editingCategoryId
+        ? await categoriesAPI.update(editingCategoryId, data)
+        : await categoriesAPI.create(data);
+      if (result.success) {
+        showSuccess(editingCategoryId ? "Category updated" : "Category created");
+        setIsCategoryDialogOpen(false);
+        await fetchNewsCategories();
+        await fetchCategories(); // Refresh the categories hook too
+      } else {
+        showError(result.message || "Failed");
+      }
+    } catch {
+      showError("Error");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDeleteCategory = async (id: string) => {
+    if (!confirm("Delete this category? Articles will be unassigned.")) return;
+    try {
+      const result = await categoriesAPI.delete(id);
+      if (result.success) {
+        showSuccess("Deleted");
+        await fetchNewsCategories();
+        await fetchCategories();
+      } else {
+        showError(result.message || "Failed");
+      }
+    } catch {
+      showError("Error");
+    }
+  };
+
+  // Load news categories when tab is opened
+  useEffect(() => {
+    if (activeTab === "categories" && backendAvailable) {
+      fetchNewsCategories();
+    }
+  }, [activeTab, backendAvailable]);
+
+  // --- EMAIL SETTINGS ---
+  const fetchEmailSettings = async () => {
+    setEmailLoading(true);
+    try {
+      const result = await settingsAPI.getEmailSettings();
+      if (result.success && result.data) {
+        setEmailForm(result.data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch email settings:", error);
+    } finally {
+      setEmailLoading(false);
+    }
+  };
+
+  const handleSaveEmailSettings = async () => {
+    setEmailSaving(true);
+    setEmailTestResult(null);
+    try {
+      const result = await settingsAPI.updateEmailSettings(emailForm);
+      if (result.success) {
+        showSuccess("Email settings saved");
+      } else {
+        showError(result.message || "Failed to save email settings");
+      }
+    } catch {
+      showError("Error saving email settings");
+    } finally {
+      setEmailSaving(false);
+    }
+  };
+
+  const handleTestEmailConnection = async () => {
+    setEmailTestResult(null);
+    try {
+      const result = await settingsAPI.testEmailConnection();
+      if (result.success) {
+        setEmailTestResult({ success: true, message: "Connection successful! SMTP server is reachable." });
+      } else {
+        setEmailTestResult({ success: false, message: result.message || "Connection failed" });
+      }
+    } catch {
+      setEmailTestResult({ success: false, message: "Failed to test connection" });
+    }
+  };
+
+  const handleSendTestEmail = async () => {
+    if (!testEmailAddress) {
+      showError("Please enter an email address");
+      return;
+    }
+    setEmailTestResult(null);
+    try {
+      const result = await settingsAPI.sendTestEmail(testEmailAddress);
+      if (result.success) {
+        setEmailTestResult({ success: true, message: `Test email sent to ${testEmailAddress}` });
+        showSuccess("Test email sent successfully");
+      } else {
+        setEmailTestResult({ success: false, message: result.message || "Failed to send test email" });
+      }
+    } catch {
+      setEmailTestResult({ success: false, message: "Failed to send test email" });
+    }
+  };
+
+  // Load email settings when tab is opened
+  useEffect(() => {
+    if (activeTab === "email" && backendAvailable) {
+      fetchEmailSettings();
+    }
+  }, [activeTab, backendAvailable]);
+
   // --- LOGO ---
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -607,10 +802,12 @@ const AdminPanel = () => {
             <div className="py-2"><p className="text-xs font-semibold text-muted-foreground px-2 mb-2">ADMIN SECTIONS</p></div>
             {[
               { key: "news", icon: Newspaper, label: "News Articles" },
+              { key: "categories", icon: Tag, label: "News Categories" },
               { key: "urls", icon: Link2, label: "URL Categories" },
               { key: "users", icon: Users, label: "Users" },
               { key: "groups", icon: UserPlus, label: "Groups" },
               { key: "faqs", icon: MessageCircleQuestion, label: "FAQs" },
+              { key: "email", icon: Mail, label: "Email Settings" },
               { key: "theme", icon: Palette, label: "Theme & Logo" },
             ].map(({ key, icon: Icon, label }) => (
               <Button key={key} variant={sidebarTab === key ? "secondary" : "ghost"} className="w-full justify-start"
@@ -691,15 +888,18 @@ const AdminPanel = () => {
               {backendAvailable === false && <BackendWarning />}
               <Tabs value={activeTab} className="w-full" onValueChange={(val) => { setActiveTab(val); setSidebarTab(val); }}>
                 <div className="flex justify-between items-center mb-6">
-                  <TabsList>
+                  <TabsList className="flex-wrap">
                     <TabsTrigger value="news">News Articles</TabsTrigger>
+                    <TabsTrigger value="categories">Categories</TabsTrigger>
                     <TabsTrigger value="urls">URL Categories</TabsTrigger>
                     <TabsTrigger value="users">Users</TabsTrigger>
                     <TabsTrigger value="groups">Groups</TabsTrigger>
                     <TabsTrigger value="faqs">FAQs</TabsTrigger>
+                    <TabsTrigger value="email">Email</TabsTrigger>
                     <TabsTrigger value="theme">Theme & Logo</TabsTrigger>
                   </TabsList>
                   {activeTab === "news" && <Button onClick={openNewArticle}><Plus className="mr-2 h-4 w-4" />Add Article</Button>}
+                  {activeTab === "categories" && <Button onClick={openNewCategory}><Plus className="mr-2 h-4 w-4" />Add Category</Button>}
                   {activeTab === "urls" && <Button onClick={openNewUrlCat}><Plus className="mr-2 h-4 w-4" />Add Category</Button>}
                   {activeTab === "users" && <Button onClick={openNewUser}><Plus className="mr-2 h-4 w-4" />Add User</Button>}
                   {activeTab === "groups" && <Button onClick={openNewGroup}><Plus className="mr-2 h-4 w-4" />Add Group</Button>}
@@ -755,6 +955,62 @@ const AdminPanel = () => {
                             </TableBody>
                           </Table>
                         </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                {/* NEWS CATEGORIES TAB */}
+                <TabsContent value="categories" className="space-y-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2"><Tag className="h-5 w-5" />Manage News Categories</CardTitle>
+                      <CardDescription>Create and manage categories for organizing news articles.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {newsCategoriesLoading ? (
+                        <LoadingSection />
+                      ) : (
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Name</TableHead>
+                              <TableHead>Slug</TableHead>
+                              <TableHead>Description</TableHead>
+                              <TableHead>Color</TableHead>
+                              <TableHead className="w-20">Articles</TableHead>
+                              <TableHead className="w-24">Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {newsCategoriesData.length === 0 ? (
+                              <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">No categories yet. Create your first category!</TableCell></TableRow>
+                            ) : (
+                              newsCategoriesData.map((cat) => (
+                                <TableRow key={cat.id}>
+                                  <TableCell className="font-medium">{cat.name}</TableCell>
+                                  <TableCell><code className="text-xs bg-muted px-1 py-0.5 rounded">{cat.slug}</code></TableCell>
+                                  <TableCell className="max-w-[200px] truncate">{cat.description || "—"}</TableCell>
+                                  <TableCell>
+                                    <div className="flex items-center gap-2">
+                                      <div className="h-4 w-4 rounded-full border" style={{ backgroundColor: cat.color }} />
+                                      <span className="text-xs text-muted-foreground">{cat.color}</span>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge variant="outline">{cat.article_count || 0}</Badge>
+                                  </TableCell>
+                                  <TableCell>
+                                    <div className="flex gap-1">
+                                      <Button variant="ghost" size="sm" onClick={() => openEditCategory(cat)}><Edit2 className="h-4 w-4" /></Button>
+                                      <Button variant="ghost" size="sm" onClick={() => handleDeleteCategory(cat.id)}><Trash2 className="h-4 w-4" /></Button>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              ))
+                            )}
+                          </TableBody>
+                        </Table>
                       )}
                     </CardContent>
                   </Card>
@@ -912,6 +1168,200 @@ const AdminPanel = () => {
                           </Table>
                         </div>
                       )}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                {/* EMAIL SETTINGS TAB */}
+                <TabsContent value="email" className="space-y-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2"><Mail className="h-5 w-5" />Email Configuration</CardTitle>
+                      <CardDescription>Configure SMTP settings for password reset emails and notifications.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      {emailLoading ? (
+                        <LoadingSection />
+                      ) : (
+                        <>
+                          {/* Enable/Disable Toggle */}
+                          <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/30">
+                            <div>
+                              <Label className="text-base font-medium">Email Notifications</Label>
+                              <p className="text-sm text-muted-foreground">Enable email functionality for password resets and notifications</p>
+                            </div>
+                            <Switch
+                              checked={emailForm.email_enabled}
+                              onCheckedChange={(checked) => setEmailForm({ ...emailForm, email_enabled: checked })}
+                            />
+                          </div>
+
+                          {emailForm.email_enabled && (
+                            <>
+                              {/* SMTP Server Settings */}
+                              <div className="space-y-4">
+                                <h4 className="font-medium text-sm border-b pb-2">SMTP Server Settings</h4>
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div className="space-y-2">
+                                    <Label>SMTP Host *</Label>
+                                    <Input
+                                      value={emailForm.smtp_host}
+                                      onChange={(e) => setEmailForm({ ...emailForm, smtp_host: e.target.value })}
+                                      placeholder="smtp.example.com"
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label>SMTP Port *</Label>
+                                    <Input
+                                      type="number"
+                                      value={emailForm.smtp_port}
+                                      onChange={(e) => setEmailForm({ ...emailForm, smtp_port: parseInt(e.target.value) || 587 })}
+                                      placeholder="587"
+                                    />
+                                  </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div className="space-y-2">
+                                    <Label>SMTP Username</Label>
+                                    <Input
+                                      value={emailForm.smtp_user}
+                                      onChange={(e) => setEmailForm({ ...emailForm, smtp_user: e.target.value })}
+                                      placeholder="user@example.com"
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label>SMTP Password</Label>
+                                    <div className="relative">
+                                      <Input
+                                        type={showSmtpPassword ? "text" : "password"}
+                                        value={emailForm.smtp_password}
+                                        onChange={(e) => setEmailForm({ ...emailForm, smtp_password: e.target.value })}
+                                        placeholder="••••••••"
+                                      />
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                                        onClick={() => setShowSmtpPassword(!showSmtpPassword)}
+                                      >
+                                        {showSmtpPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <Checkbox
+                                    id="smtp-secure"
+                                    checked={emailForm.smtp_secure}
+                                    onCheckedChange={(checked) => setEmailForm({ ...emailForm, smtp_secure: !!checked })}
+                                  />
+                                  <Label htmlFor="smtp-secure" className="cursor-pointer">Use SSL/TLS (port 465)</Label>
+                                </div>
+                              </div>
+
+                              {/* Sender Settings */}
+                              <div className="space-y-4">
+                                <h4 className="font-medium text-sm border-b pb-2">Sender Information</h4>
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div className="space-y-2">
+                                    <Label>From Email *</Label>
+                                    <Input
+                                      type="email"
+                                      value={emailForm.from_email}
+                                      onChange={(e) => setEmailForm({ ...emailForm, from_email: e.target.value })}
+                                      placeholder="noreply@company.com"
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label>From Name</Label>
+                                    <Input
+                                      value={emailForm.from_name}
+                                      onChange={(e) => setEmailForm({ ...emailForm, from_name: e.target.value })}
+                                      placeholder="Company Portal"
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Test Email */}
+                              <div className="space-y-4">
+                                <h4 className="font-medium text-sm border-b pb-2">Test Configuration</h4>
+                                <div className="flex items-end gap-4">
+                                  <div className="flex-1 space-y-2">
+                                    <Label>Test Email Address</Label>
+                                    <Input
+                                      type="email"
+                                      value={testEmailAddress}
+                                      onChange={(e) => setTestEmailAddress(e.target.value)}
+                                      placeholder="your@email.com"
+                                    />
+                                  </div>
+                                  <Button variant="outline" onClick={handleTestEmailConnection} className="gap-2">
+                                    <CheckCircle className="h-4 w-4" />
+                                    Test Connection
+                                  </Button>
+                                  <Button variant="outline" onClick={handleSendTestEmail} disabled={!testEmailAddress} className="gap-2">
+                                    <Send className="h-4 w-4" />
+                                    Send Test Email
+                                  </Button>
+                                </div>
+
+                                {emailTestResult && (
+                                  <Alert variant={emailTestResult.success ? "default" : "destructive"}>
+                                    {emailTestResult.success ? (
+                                      <CheckCircle className="h-4 w-4" />
+                                    ) : (
+                                      <XCircle className="h-4 w-4" />
+                                    )}
+                                    <AlertDescription>{emailTestResult.message}</AlertDescription>
+                                  </Alert>
+                                )}
+                              </div>
+                            </>
+                          )}
+
+                          {/* Save Button */}
+                          <div className="flex justify-end pt-4 border-t">
+                            <Button onClick={handleSaveEmailSettings} disabled={emailSaving}>
+                              {emailSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                              Save Email Settings
+                            </Button>
+                          </div>
+                        </>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Email Feature Info */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Email Features</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3 text-sm text-muted-foreground">
+                        <div className="flex items-start gap-3">
+                          <Mail className="h-5 w-5 mt-0.5 text-primary" />
+                          <div>
+                            <p className="font-medium text-foreground">Password Reset Emails</p>
+                            <p>Users can reset their passwords via email link from the login page</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-3">
+                          <Mail className="h-5 w-5 mt-0.5 text-primary" />
+                          <div>
+                            <p className="font-medium text-foreground">Welcome Emails</p>
+                            <p>New users receive a welcome email when their account is created</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-3">
+                          <Mail className="h-5 w-5 mt-0.5 text-primary" />
+                          <div>
+                            <p className="font-medium text-foreground">News Notifications</p>
+                            <p>Optional email notifications when new articles are published</p>
+                          </div>
+                        </div>
+                      </div>
                     </CardContent>
                   </Card>
                 </TabsContent>
@@ -1277,6 +1727,72 @@ const AdminPanel = () => {
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsGroupDialogOpen(false)} disabled={submitting}>Cancel</Button>
             <Button onClick={handleSaveGroup} disabled={submitting}>{submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{editingGroupId ? "Save Changes" : "Create Group"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* CATEGORY DIALOG */}
+      <Dialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{editingCategoryId ? "Edit Category" : "New Category"}</DialogTitle>
+            <DialogDescription>
+              {editingCategoryId ? "Update the category details." : "Create a new category for organizing news articles."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label>Name *</Label>
+              <Input
+                value={categoryForm.name}
+                onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })}
+                placeholder="Category name"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>Slug</Label>
+              <Input
+                value={categoryForm.slug}
+                onChange={(e) => setCategoryForm({ ...categoryForm, slug: e.target.value })}
+                placeholder="category-slug (auto-generated if empty)"
+              />
+              <p className="text-xs text-muted-foreground">URL-friendly identifier. Leave blank to auto-generate from name.</p>
+            </div>
+            <div className="grid gap-2">
+              <Label>Description</Label>
+              <Textarea
+                value={categoryForm.description}
+                onChange={(e) => setCategoryForm({ ...categoryForm, description: e.target.value })}
+                placeholder="Optional description..."
+                rows={2}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>Color</Label>
+              <div className="flex gap-2">
+                <Input
+                  type="color"
+                  value={categoryForm.color}
+                  onChange={(e) => setCategoryForm({ ...categoryForm, color: e.target.value })}
+                  className="h-10 w-20 cursor-pointer"
+                />
+                <Input
+                  value={categoryForm.color}
+                  onChange={(e) => setCategoryForm({ ...categoryForm, color: e.target.value })}
+                  className="flex-1"
+                  placeholder="#3B82F6"
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCategoryDialogOpen(false)} disabled={submitting}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveCategory} disabled={submitting}>
+              {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {editingCategoryId ? "Save Changes" : "Create Category"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -38,6 +38,7 @@ import {
   Mail,
   Send,
   CheckCircle,
+  Shield,
   XCircle,
 } from "lucide-react";
 import {
@@ -230,6 +231,41 @@ const AdminPanel = () => {
   const [emailTestResult, setEmailTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [testEmailAddress, setTestEmailAddress] = useState("");
   const [showSmtpPassword, setShowSmtpPassword] = useState(false);
+
+  // Role management state
+  const [rolePermissions, setRolePermissions] = useState({
+    admin: {
+      news: { read: true, write: true, delete: true },
+      users: { read: true, write: true, delete: true },
+      groups: { read: true, write: true, delete: true },
+      categories: { read: true, write: true, delete: true },
+      urls: { read: true, write: true, delete: true },
+      faqs: { read: true, write: true, delete: true },
+      email: { read: true, write: true, delete: true },
+      theme: { read: true, write: true, delete: true },
+    },
+    editor: {
+      news: { read: true, write: true, delete: false },
+      users: { read: false, write: false, delete: false },
+      groups: { read: false, write: false, delete: false },
+      categories: { read: true, write: false, delete: false },
+      urls: { read: true, write: false, delete: false },
+      faqs: { read: true, write: true, delete: false },
+      email: { read: false, write: false, delete: false },
+      theme: { read: false, write: false, delete: false },
+    },
+    user: {
+      news: { read: true, write: false, delete: false },
+      users: { read: false, write: false, delete: false },
+      groups: { read: false, write: false, delete: false },
+      categories: { read: true, write: false, delete: false },
+      urls: { read: true, write: false, delete: false },
+      faqs: { read: true, write: false, delete: false },
+      email: { read: false, write: false, delete: false },
+      theme: { read: false, write: false, delete: false },
+    },
+  });
+  const [rolesSaving, setRolesSaving] = useState(false);
 
   // Logo settings
   const [logoUrl, setLogoUrl] = useState<string>("/logo.png");
@@ -805,6 +841,7 @@ const AdminPanel = () => {
               { key: "categories", icon: Tag, label: "News Categories" },
               { key: "urls", icon: Link2, label: "URL Categories" },
               { key: "users", icon: Users, label: "Users" },
+              { key: "roles", icon: Shield, label: "User Roles" },
               { key: "groups", icon: UserPlus, label: "Groups" },
               { key: "faqs", icon: MessageCircleQuestion, label: "FAQs" },
               { key: "email", icon: Mail, label: "Email Settings" },
@@ -890,9 +927,10 @@ const AdminPanel = () => {
                 <div className="flex justify-between items-center mb-6">
                   <TabsList className="flex-wrap">
                     <TabsTrigger value="news">News Articles</TabsTrigger>
-                    <TabsTrigger value="categories">Categories</TabsTrigger>
+                    <TabsTrigger value="categories">News Categories</TabsTrigger>
                     <TabsTrigger value="urls">URL Categories</TabsTrigger>
                     <TabsTrigger value="users">Users</TabsTrigger>
+                    <TabsTrigger value="roles">User Roles</TabsTrigger>
                     <TabsTrigger value="groups">Groups</TabsTrigger>
                     <TabsTrigger value="faqs">FAQs</TabsTrigger>
                     <TabsTrigger value="email">Email</TabsTrigger>
@@ -1124,6 +1162,126 @@ const AdminPanel = () => {
                           </Table>
                         </div>
                       )}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                {/* USER ROLES TAB */}
+                <TabsContent value="roles" className="space-y-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Shield className="h-5 w-5" />
+                        User Roles & Permissions
+                      </CardTitle>
+                      <CardDescription>
+                        Configure what each user role can access and modify. Admin has full access, Editor should only have article publishing rights, and User has read-only access.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      {["admin", "editor", "user"].map((role) => (
+                        <Card key={role} className="border-2">
+                          <CardHeader className="pb-3">
+                            <CardTitle className="text-lg capitalize flex items-center gap-2">
+                              <Shield className="h-4 w-4" />
+                              {role}
+                            </CardTitle>
+                            <CardDescription>
+                              {role === "admin" && "Full system access - can manage all features"}
+                              {role === "editor" && "Limited to content management - can publish articles"}
+                              {role === "user" && "Read-only access - can view content"}
+                            </CardDescription>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="space-y-4">
+                              {Object.entries(rolePermissions[role as keyof typeof rolePermissions]).map(([section, perms]) => (
+                                <div key={section} className="flex items-center justify-between border-b pb-3 last:border-0">
+                                  <div className="flex-1">
+                                    <Label className="text-sm font-medium capitalize">{section.replace(/_/g, " ")}</Label>
+                                  </div>
+                                  <div className="flex gap-4">
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                      <input
+                                        type="checkbox"
+                                        checked={perms.read}
+                                        onChange={(e) => {
+                                          setRolePermissions({
+                                            ...rolePermissions,
+                                            [role]: {
+                                              ...rolePermissions[role as keyof typeof rolePermissions],
+                                              [section]: { ...perms, read: e.target.checked }
+                                            }
+                                          });
+                                        }}
+                                        className="rounded border-gray-300"
+                                        disabled={role === "admin"}
+                                      />
+                                      <span className="text-sm text-muted-foreground">Read</span>
+                                    </label>
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                      <input
+                                        type="checkbox"
+                                        checked={perms.write}
+                                        onChange={(e) => {
+                                          setRolePermissions({
+                                            ...rolePermissions,
+                                            [role]: {
+                                              ...rolePermissions[role as keyof typeof rolePermissions],
+                                              [section]: { ...perms, write: e.target.checked }
+                                            }
+                                          });
+                                        }}
+                                        className="rounded border-gray-300"
+                                        disabled={role === "admin"}
+                                      />
+                                      <span className="text-sm text-muted-foreground">Write</span>
+                                    </label>
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                      <input
+                                        type="checkbox"
+                                        checked={perms.delete}
+                                        onChange={(e) => {
+                                          setRolePermissions({
+                                            ...rolePermissions,
+                                            [role]: {
+                                              ...rolePermissions[role as keyof typeof rolePermissions],
+                                              [section]: { ...perms, delete: e.target.checked }
+                                            }
+                                          });
+                                        }}
+                                        className="rounded border-gray-300"
+                                        disabled={role === "admin"}
+                                      />
+                                      <span className="text-sm text-muted-foreground">Delete</span>
+                                    </label>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                      <div className="flex justify-end gap-2 pt-4">
+                        <Button 
+                          onClick={async () => {
+                            setRolesSaving(true);
+                            try {
+                              // Save role permissions to backend
+                              await settingsAPI.bulkUpdate({
+                                role_permissions: JSON.stringify(rolePermissions)
+                              });
+                              showSuccess("Role permissions saved successfully");
+                            } catch {
+                              showError("Failed to save role permissions");
+                            } finally {
+                              setRolesSaving(false);
+                            }
+                          }}
+                          disabled={rolesSaving}
+                        >
+                          {rolesSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> : "Save Permissions"}
+                        </Button>
+                      </div>
                     </CardContent>
                   </Card>
                 </TabsContent>

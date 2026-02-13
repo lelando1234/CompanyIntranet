@@ -211,6 +211,80 @@ const ThemeCustomizer = () => {
         loginButtonBg1: "#3b82f6", loginButtonBg2: "#6366f1", loginTitleColor1: "#60a5fa", loginTitleColor2: "#818cf8",
       },
     },
+    {
+      name: "Rose & Coral",
+      colors: {
+        ...defaultColors, primary: "#f43f5e", secondary: "#fb7185", accent: "#ff6b9d", foreground: "#4c0519",
+        headerBg: "#9f1239", headerText: "#ffffff", sidebarBg: "#fff1f2", sidebarText: "#4c0519",
+        loginBg1: "#fff1f2", loginBg2: "#ffe4e6", loginCardBorder: "#fda4af",
+        loginButtonBg1: "#f43f5e", loginButtonBg2: "#fb7185", loginTitleColor1: "#f43f5e", loginTitleColor2: "#fb7185",
+      },
+    },
+    {
+      name: "Emerald & Lime",
+      colors: {
+        ...defaultColors, primary: "#10b981", secondary: "#84cc16", accent: "#84cc16", foreground: "#064e3b",
+        headerBg: "#047857", headerText: "#ffffff", sidebarBg: "#ecfdf5", sidebarText: "#064e3b",
+        loginBg1: "#ecfdf5", loginBg2: "#f7fee7", loginCardBorder: "#6ee7b7",
+        loginButtonBg1: "#10b981", loginButtonBg2: "#84cc16", loginTitleColor1: "#10b981", loginTitleColor2: "#84cc16",
+      },
+    },
+    {
+      name: "Indigo & Purple",
+      colors: {
+        ...defaultColors, primary: "#6366f1", secondary: "#8b5cf6", accent: "#a855f7", foreground: "#312e81",
+        headerBg: "#4338ca", headerText: "#ffffff", sidebarBg: "#eef2ff", sidebarText: "#312e81",
+        loginBg1: "#eef2ff", loginBg2: "#f5f3ff", loginCardBorder: "#a5b4fc",
+        loginButtonBg1: "#6366f1", loginButtonBg2: "#8b5cf6", loginTitleColor1: "#6366f1", loginTitleColor2: "#8b5cf6",
+      },
+    },
+    {
+      name: "Amber & Red",
+      colors: {
+        ...defaultColors, primary: "#f59e0b", secondary: "#ef4444", accent: "#fb923c", foreground: "#451a03",
+        headerBg: "#b45309", headerText: "#ffffff", sidebarBg: "#fffbeb", sidebarText: "#451a03",
+        loginBg1: "#fffbeb", loginBg2: "#fef2f2", loginCardBorder: "#fcd34d",
+        loginButtonBg1: "#f59e0b", loginButtonBg2: "#ef4444", loginTitleColor1: "#f59e0b", loginTitleColor2: "#ef4444",
+      },
+    },
+    {
+      name: "Sky & Blue",
+      colors: {
+        ...defaultColors, primary: "#0ea5e9", secondary: "#3b82f6", accent: "#60a5fa", foreground: "#0c4a6e",
+        headerBg: "#0369a1", headerText: "#ffffff", sidebarBg: "#f0f9ff", sidebarText: "#0c4a6e",
+        loginBg1: "#f0f9ff", loginBg2: "#eff6ff", loginCardBorder: "#7dd3fc",
+        loginButtonBg1: "#0ea5e9", loginButtonBg2: "#3b82f6", loginTitleColor1: "#0ea5e9", loginTitleColor2: "#3b82f6",
+      },
+    },
+    {
+      name: "Slate & Gray",
+      colors: {
+        ...defaultColors, primary: "#475569", secondary: "#64748b", accent: "#94a3b8",
+        foreground: "#e2e8f0", background: "#1e293b",
+        headerBg: "#334155", headerText: "#f1f5f9", sidebarBg: "#334155", sidebarText: "#f1f5f9",
+        articleCardBg: "#334155", articleCardBorder: "#475569",
+        loginBg1: "#1e293b", loginBg2: "#334155", loginCardBorder: "#475569",
+        loginButtonBg1: "#475569", loginButtonBg2: "#64748b", loginTitleColor1: "#94a3b8", loginTitleColor2: "#cbd5e1",
+      },
+    },
+    {
+      name: "Violet & Fuchsia",
+      colors: {
+        ...defaultColors, primary: "#7c3aed", secondary: "#d946ef", accent: "#e879f9", foreground: "#3b0764",
+        headerBg: "#6b21a8", headerText: "#ffffff", sidebarBg: "#faf5ff", sidebarText: "#3b0764",
+        loginBg1: "#faf5ff", loginBg2: "#fdf4ff", loginCardBorder: "#c084fc",
+        loginButtonBg1: "#7c3aed", loginButtonBg2: "#d946ef", loginTitleColor1: "#7c3aed", loginTitleColor2: "#d946ef",
+      },
+    },
+    {
+      name: "Mint & Seafoam",
+      colors: {
+        ...defaultColors, primary: "#2dd4bf", secondary: "#5eead4", accent: "#14b8a6", foreground: "#134e4a",
+        headerBg: "#0f766e", headerText: "#ffffff", sidebarBg: "#f0fdfa", sidebarText: "#134e4a",
+        loginBg1: "#f0fdfa", loginBg2: "#ccfbf1", loginCardBorder: "#5eead4",
+        loginButtonBg1: "#2dd4bf", loginButtonBg2: "#5eead4", loginTitleColor1: "#2dd4bf", loginTitleColor2: "#14b8a6",
+      },
+    },
   ];
 
   const applyPreset = (preset: (typeof presets)[0]) => {

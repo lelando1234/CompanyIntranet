@@ -41,30 +41,60 @@ async function apiFetch<T>(
   // If no API base URL is configured, treat the backend as unavailable.
   // This prevents noisy "Failed to fetch" errors in environments without the server.
   if (!API_BASE_URL) {
+    console.warn('[DEBUG] No API_BASE_URL configured. Check VITE_API_URL environment variable.');
     return { success: false, message: "Backend not configured" };
   }
 
+  const fullUrl = `${API_BASE_URL}${endpoint}`;
+  console.log('[DEBUG] API Request:', {
+    url: fullUrl,
+    method: options.method || 'GET',
+    hasAuth: !!headers.Authorization,
+    timestamp: new Date().toISOString()
+  });
+
   try {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const response = await fetch(fullUrl, {
       ...options,
       headers,
+    });
+
+    console.log('[DEBUG] API Response:', {
+      url: fullUrl,
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok
     });
 
     const text = await response.text();
     const data = text ? JSON.parse(text) : { success: true };
 
+    console.log('[DEBUG] API Response Data:', {
+      url: fullUrl,
+      success: data.success,
+      dataKeys: Object.keys(data),
+      hasArticles: !!data.data?.articles,
+      articleCount: data.data?.articles?.length || 0
+    });
+
     if (!response.ok) {
       // Handle 401 - token expired
       if (response.status === 401) {
+        console.warn('[DEBUG] 401 Unauthorized - redirecting to login');
         setAuthToken(null);
         window.location.href = '/';
       }
+      console.error('[DEBUG] Request failed:', data.message || 'Unknown error');
       return { success: false, message: data.message || 'Request failed', errors: data.errors };
     }
 
     return data;
   } catch (error) {
-    console.error('API Error:', error);
+    console.error('[DEBUG] API Network Error:', {
+      url: fullUrl,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
+    });
     return { success: false, message: 'Network error. Please try again.' };
   }
 }

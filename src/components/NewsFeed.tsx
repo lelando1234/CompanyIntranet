@@ -60,6 +60,14 @@ const NewsFeed = ({ articles = [], useApi = false }: NewsFeedProps) => {
 
   const fetchArticlesFromApi = async () => {
     setLoading(true);
+    console.log('[DEBUG NewsFeed] Fetching articles with params:', {
+      page: currentPage,
+      limit: ARTICLES_PER_PAGE,
+      category: selectedCategory !== 'all' ? selectedCategory : undefined,
+      search: searchTerm || undefined,
+      status: 'published'
+    });
+    
     try {
       const result = await articlesAPI.getAll({
         page: currentPage,
@@ -67,6 +75,13 @@ const NewsFeed = ({ articles = [], useApi = false }: NewsFeedProps) => {
         category: selectedCategory !== 'all' ? selectedCategory : undefined,
         search: searchTerm || undefined,
         status: 'published'
+      });
+      
+      console.log('[DEBUG NewsFeed] API result:', {
+        success: result.success,
+        hasData: !!result.data,
+        articleCount: result.data?.articles?.length || 0,
+        message: result.message
       });
       
       if (result.success && result.data) {
@@ -85,12 +100,15 @@ const NewsFeed = ({ articles = [], useApi = false }: NewsFeedProps) => {
             type: att.mime_type
           }))
         }));
+        console.log('[DEBUG NewsFeed] Mapped articles:', mappedArticles.length);
         setApiArticles(mappedArticles);
         setTotalPages(result.data.pagination.pages || 1);
         setTotalArticles(result.data.pagination.total || mappedArticles.length);
+      } else {
+        console.warn('[DEBUG NewsFeed] Failed to fetch articles:', result.message);
       }
     } catch (error) {
-      console.error('Error fetching articles:', error);
+      console.error('[DEBUG NewsFeed] Error fetching articles:', error);
     } finally {
       setLoading(false);
     }

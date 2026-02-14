@@ -35,6 +35,168 @@ const defaultColors: ColorPalette = {
   sidebarText: "#001a33",
 };
 
+// Color theme presets
+const colorPresets = [
+  { 
+    name: "Blue & Green (Default)", 
+    colors: { ...defaultColors } 
+  },
+  {
+    name: "Purple & Pink",
+    colors: {
+      primary: "#9333ea",
+      secondary: "#ec4899",
+      accent: "#ec4899",
+      background: "#ffffff",
+      foreground: "#1e1b4b",
+      headerBg: "#581c87",
+      headerText: "#ffffff",
+      sidebarBg: "#f5f3ff",
+      sidebarText: "#1e1b4b",
+    },
+  },
+  {
+    name: "Orange & Yellow",
+    colors: {
+      primary: "#f97316",
+      secondary: "#eab308",
+      accent: "#eab308",
+      background: "#ffffff",
+      foreground: "#431407",
+      headerBg: "#9a3412",
+      headerText: "#ffffff",
+      sidebarBg: "#fff7ed",
+      sidebarText: "#431407",
+    },
+  },
+  {
+    name: "Teal & Cyan",
+    colors: {
+      primary: "#14b8a6",
+      secondary: "#06b6d4",
+      accent: "#06b6d4",
+      background: "#ffffff",
+      foreground: "#042f2e",
+      headerBg: "#115e59",
+      headerText: "#ffffff",
+      sidebarBg: "#f0fdfa",
+      sidebarText: "#042f2e",
+    },
+  },
+  {
+    name: "Dark Professional",
+    colors: {
+      primary: "#3b82f6",
+      secondary: "#6366f1",
+      accent: "#8b5cf6",
+      foreground: "#e2e8f0",
+      background: "#0f172a",
+      headerBg: "#1e293b",
+      headerText: "#e2e8f0",
+      sidebarBg: "#1e293b",
+      sidebarText: "#e2e8f0",
+    },
+  },
+  {
+    name: "Rose & Coral",
+    colors: {
+      primary: "#f43f5e",
+      secondary: "#fb7185",
+      accent: "#ff6b9d",
+      background: "#ffffff",
+      foreground: "#4c0519",
+      headerBg: "#9f1239",
+      headerText: "#ffffff",
+      sidebarBg: "#fff1f2",
+      sidebarText: "#4c0519",
+    },
+  },
+  {
+    name: "Emerald & Lime",
+    colors: {
+      primary: "#10b981",
+      secondary: "#84cc16",
+      accent: "#84cc16",
+      background: "#ffffff",
+      foreground: "#064e3b",
+      headerBg: "#047857",
+      headerText: "#ffffff",
+      sidebarBg: "#ecfdf5",
+      sidebarText: "#064e3b",
+    },
+  },
+  {
+    name: "Indigo & Purple",
+    colors: {
+      primary: "#6366f1",
+      secondary: "#8b5cf6",
+      accent: "#a855f7",
+      background: "#ffffff",
+      foreground: "#312e81",
+      headerBg: "#4338ca",
+      headerText: "#ffffff",
+      sidebarBg: "#eef2ff",
+      sidebarText: "#312e81",
+    },
+  },
+  {
+    name: "Amber & Red",
+    colors: {
+      primary: "#f59e0b",
+      secondary: "#ef4444",
+      accent: "#fb923c",
+      background: "#ffffff",
+      foreground: "#451a03",
+      headerBg: "#b45309",
+      headerText: "#ffffff",
+      sidebarBg: "#fffbeb",
+      sidebarText: "#451a03",
+    },
+  },
+  {
+    name: "Sky & Blue",
+    colors: {
+      primary: "#0ea5e9",
+      secondary: "#3b82f6",
+      accent: "#60a5fa",
+      background: "#ffffff",
+      foreground: "#0c4a6e",
+      headerBg: "#0369a1",
+      headerText: "#ffffff",
+      sidebarBg: "#f0f9ff",
+      sidebarText: "#0c4a6e",
+    },
+  },
+  {
+    name: "Slate & Gray",
+    colors: {
+      primary: "#475569",
+      secondary: "#64748b",
+      accent: "#94a3b8",
+      foreground: "#e2e8f0",
+      background: "#1e293b",
+      headerBg: "#334155",
+      headerText: "#f1f5f9",
+      sidebarBg: "#334155",
+      sidebarText: "#f1f5f9",
+    },
+  },
+  {
+    name: "Violet & Fuchsia",
+    colors: {
+      primary: "#7c3aed",
+      secondary: "#d946ef",
+      accent: "#e879f9",
+      background: "#ffffff",
+      foreground: "#3b0764",
+      headerBg: "#6b21a8",
+      headerText: "#ffffff",
+      sidebarBg: "#faf5ff",
+      sidebarText: "#3b0764",
+    },
+  },
+];
+
 export default function UserProfile() {
   const { user, refreshUser } = useAuth();
   const navigate = useNavigate();
@@ -275,6 +437,12 @@ export default function UserProfile() {
     setColors({ ...adminColors });
   };
 
+  // Apply a color preset
+  const applyPreset = (preset: typeof colorPresets[0]) => {
+    setColors(preset.colors as ColorPalette);
+    setUseAdminColors(false);
+  };
+
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
       <div className="max-w-4xl mx-auto">
@@ -466,7 +634,71 @@ export default function UserProfile() {
               {!useAdminColors && (
                 <>
                   <Separator />
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  
+                  {/* Color Presets */}
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="text-lg font-semibold mb-2">Color Presets</h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Quick start with pre-made color combinations
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {colorPresets.map((preset) => (
+                        <Card 
+                          key={preset.name} 
+                          className="cursor-pointer hover:shadow-lg transition-shadow border-2 hover:border-primary"
+                          onClick={() => applyPreset(preset)}
+                        >
+                          <CardHeader className="p-4">
+                            <CardTitle className="text-sm">{preset.name}</CardTitle>
+                          </CardHeader>
+                          <CardContent className="p-4 pt-0">
+                            <div className="flex gap-1 mb-2">
+                              <div 
+                                className="h-8 flex-1 rounded" 
+                                style={{ backgroundColor: preset.colors.primary }} 
+                              />
+                              <div 
+                                className="h-8 flex-1 rounded" 
+                                style={{ backgroundColor: preset.colors.secondary }} 
+                              />
+                              <div 
+                                className="h-8 flex-1 rounded" 
+                                style={{ backgroundColor: preset.colors.accent }} 
+                              />
+                            </div>
+                            <div className="flex gap-1">
+                              <div 
+                                className="h-4 flex-1 rounded" 
+                                style={{ backgroundColor: preset.colors.headerBg }} 
+                              />
+                              <div 
+                                className="h-4 flex-1 rounded" 
+                                style={{ backgroundColor: preset.colors.sidebarBg }} 
+                              />
+                              <div 
+                                className="h-4 flex-1 rounded" 
+                                style={{ backgroundColor: preset.colors.background }} 
+                              />
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+
+                  <Separator />
+                  
+                  {/* Manual Color Customization */}
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="text-lg font-semibold mb-2">Custom Colors</h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Fine-tune individual colors to your preference
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="color-primary">Primary Color</Label>
                       <div className="flex gap-2">
@@ -604,6 +836,7 @@ export default function UserProfile() {
                         />
                       </div>
                     </div>
+                  </div>
                   </div>
 
                   <div className="flex gap-2">

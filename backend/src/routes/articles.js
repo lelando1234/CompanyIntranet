@@ -42,7 +42,11 @@ const upload = multer({
 // Get all articles (public - published only, authenticated - all based on role)
 router.get('/', optionalAuth, async (req, res) => {
   try {
-    const { page = 1, limit = 10, category, search, status } = req.query;
+    const { page = 1, limit = 10, category: rawCategory, search: rawSearch, status: rawStatus } = req.query;
+    // Sanitize query params - treat "undefined" and "null" strings as missing values
+    const category = (rawCategory && rawCategory !== 'undefined' && rawCategory !== 'null') ? rawCategory : undefined;
+    const search = (rawSearch && rawSearch !== 'undefined' && rawSearch !== 'null') ? rawSearch : undefined;
+    const status = (rawStatus && rawStatus !== 'undefined' && rawStatus !== 'null') ? rawStatus : undefined;
     const offset = (parseInt(page) - 1) * parseInt(limit);
 
     let whereClause = '1=1';

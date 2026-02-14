@@ -183,7 +183,15 @@ export interface UpdateUserData {
 
 export const usersAPI = {
   getAll: (params?: { page?: number; limit?: number; search?: string; role?: string; status?: string }) => {
-    const queryString = params ? '?' + new URLSearchParams(params as any).toString() : '';
+    const cleanParams: Record<string, string> = {};
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          cleanParams[key] = String(value);
+        }
+      });
+    }
+    const queryString = Object.keys(cleanParams).length > 0 ? '?' + new URLSearchParams(cleanParams).toString() : '';
     return apiFetch<{ users: User[]; pagination: any }>(`/users${queryString}`);
   },
 
@@ -337,7 +345,16 @@ export interface UpdateArticleData {
 
 export const articlesAPI = {
   getAll: (params?: { page?: number; limit?: number; category?: string; search?: string; status?: string }) => {
-    const queryString = params ? '?' + new URLSearchParams(params as any).toString() : '';
+    // Filter out undefined/null values to prevent them from being sent as literal "undefined" strings
+    const cleanParams: Record<string, string> = {};
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          cleanParams[key] = String(value);
+        }
+      });
+    }
+    const queryString = Object.keys(cleanParams).length > 0 ? '?' + new URLSearchParams(cleanParams).toString() : '';
     return apiFetch<{ articles: Article[]; pagination: any }>(`/articles${queryString}`);
   },
 
@@ -608,7 +625,15 @@ export const settingsAPI = {
 
   // Audit log
   getAuditLog: (params?: { page?: number; limit?: number; action?: string; user_id?: string }) => {
-    const queryString = params ? '?' + new URLSearchParams(params as any).toString() : '';
+    const cleanParams: Record<string, string> = {};
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          cleanParams[key] = String(value);
+        }
+      });
+    }
+    const queryString = Object.keys(cleanParams).length > 0 ? '?' + new URLSearchParams(cleanParams).toString() : '';
     return apiFetch<{ logs: any[]; pagination: any }>(`/settings/audit/log${queryString}`);
   },
 };
@@ -679,7 +704,15 @@ export interface CreateFAQData {
 
 export const faqsAPI = {
   getAll: (params?: { category?: string; active_only?: boolean }) => {
-    const queryString = params ? '?' + new URLSearchParams(params as any).toString() : '';
+    const cleanParams: Record<string, string> = {};
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          cleanParams[key] = String(value);
+        }
+      });
+    }
+    const queryString = Object.keys(cleanParams).length > 0 ? '?' + new URLSearchParams(cleanParams).toString() : '';
     return apiFetch<FAQ[]>(`/faqs${queryString}`);
   },
 

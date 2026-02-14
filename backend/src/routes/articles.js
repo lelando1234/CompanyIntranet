@@ -42,30 +42,49 @@ const upload = multer({
 // Get all articles (public - published only, authenticated - all based on role)
 router.get('/', optionalAuth, async (req, res) => {
   try {
-    const { page = 1, limit = 10, category, search, status } = req.query;
+    const { page = 1, limit = 10, category: rawCategory, search: rawSearch, status: rawStatus } = req.query;
+    // Sanitize query params - treat "undefined" and "null" strings as missing values
+    const category = (rawCategory && rawCategory !== 'undefined' && rawCategory !== 'null') ? rawCategory : undefined;
+    const search = (rawSearch && rawSearch !== 'undefined' && rawSearch !== 'null') ? rawSearch : undefined;
+    const status = (rawStatus && rawStatus !== 'undefined' && rawStatus !== 'null') ? rawStatus : undefined;
     const offset = (parseInt(page) - 1) * parseInt(limit);
 
     let whereClause = '1=1';
     const params = [];
 
+    console.log('[DEBUG Articles API] Request params:', {
+      page, limit, category, search, status,
+      user: req.user ? { id: req.user.id, role: req.user.role } : 'No user',
+      offset
+    });
+
     // Non-authenticated users only see published articles
     if (!req.user || req.user.role === 'user') {
       whereClause += ' AND a.status = ?';
       params.push('published');
+      console.log('[DEBUG Articles API] Filter: Non-admin user - showing only published articles');
     } else if (status) {
       whereClause += ' AND a.status = ?';
       params.push(status);
+      console.log('[DEBUG Articles API] Filter: Admin/Editor with status filter:', status);
+    } else {
+      console.log('[DEBUG Articles API] Filter: Admin/Editor - showing all statuses');
     }
 
     if (category) {
       whereClause += ' AND a.category_id = ?';
       params.push(category);
+      console.log('[DEBUG Articles API] Filter: Category ID:', category);
     }
 
     if (search) {
       whereClause += ' AND (a.title LIKE ? OR a.content LIKE ?)';
       params.push(`%${search}%`, `%${search}%`);
+      console.log('[DEBUG Articles API] Filter: Search term:', search);
     }
+
+    console.log('[DEBUG Articles API] Final WHERE clause:', whereClause);
+    console.log('[DEBUG Articles API] Query params:', params);
 
     // Get total count
     const countResult = await query(
@@ -73,6 +92,7 @@ router.get('/', optionalAuth, async (req, res) => {
       params
     );
     const total = Number(countResult[0].total);
+    console.log('[DEBUG Articles API] Total articles matching filters:', total);
 
     // Get articles
     const articles = await query(`
@@ -86,6 +106,16 @@ router.get('/', optionalAuth, async (req, res) => {
       ORDER BY a.published_at DESC, a.created_at DESC
       LIMIT ? OFFSET ?
     `, [...params, parseInt(limit), offset]);
+
+    console.log('[DEBUG Articles API] Retrieved articles:', articles.length);
+    if (articles.length > 0) {
+      console.log('[DEBUG Articles API] Sample article:', {
+        id: articles[0].id,
+        title: articles[0].title,
+        status: articles[0].status,
+        published_at: articles[0].published_at
+      });
+    }
 
     // Get attachments for each article
     for (const article of articles) {
@@ -103,6 +133,8 @@ router.get('/', optionalAuth, async (req, res) => {
       article.target_groups = targetGroups;
     }
 
+    console.log('[DEBUG Articles API] Sending response with', articles.length, 'articles');
+    
     res.json({
       success: true,
       data: {
@@ -116,6 +148,7 @@ router.get('/', optionalAuth, async (req, res) => {
       }
     });
   } catch (error) {
+    console.error('[DEBUG Articles API] Error:', error);
     console.error('Get articles error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }

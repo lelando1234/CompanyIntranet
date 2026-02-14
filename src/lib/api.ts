@@ -41,30 +41,60 @@ async function apiFetch<T>(
   // If no API base URL is configured, treat the backend as unavailable.
   // This prevents noisy "Failed to fetch" errors in environments without the server.
   if (!API_BASE_URL) {
+    console.warn('[DEBUG] No API_BASE_URL configured. Check VITE_API_URL environment variable.');
     return { success: false, message: "Backend not configured" };
   }
 
+  const fullUrl = `${API_BASE_URL}${endpoint}`;
+  console.log('[DEBUG] API Request:', {
+    url: fullUrl,
+    method: options.method || 'GET',
+    hasAuth: !!headers.Authorization,
+    timestamp: new Date().toISOString()
+  });
+
   try {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const response = await fetch(fullUrl, {
       ...options,
       headers,
+    });
+
+    console.log('[DEBUG] API Response:', {
+      url: fullUrl,
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok
     });
 
     const text = await response.text();
     const data = text ? JSON.parse(text) : { success: true };
 
+    console.log('[DEBUG] API Response Data:', {
+      url: fullUrl,
+      success: data.success,
+      dataKeys: Object.keys(data),
+      hasArticles: !!data.data?.articles,
+      articleCount: data.data?.articles?.length || 0
+    });
+
     if (!response.ok) {
       // Handle 401 - token expired
       if (response.status === 401) {
+        console.warn('[DEBUG] 401 Unauthorized - redirecting to login');
         setAuthToken(null);
         window.location.href = '/';
       }
+      console.error('[DEBUG] Request failed:', data.message || 'Unknown error');
       return { success: false, message: data.message || 'Request failed', errors: data.errors };
     }
 
     return data;
   } catch (error) {
-    console.error('API Error:', error);
+    console.error('[DEBUG] API Network Error:', {
+      url: fullUrl,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
+    });
     return { success: false, message: 'Network error. Please try again.' };
   }
 }
@@ -100,6 +130,18 @@ export const authAPI = {
     }),
 
   refreshToken: () => apiFetch<{ token: string }>('/auth/refresh', { method: 'POST' }),
+
+  forgotPassword: (email: string) =>
+    apiFetch('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
+
+  resetPassword: (token: string, newPassword: string) =>
+    apiFetch('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ token, newPassword }),
+    }),
 };
 
 // ============ USERS API ============
@@ -141,7 +183,15 @@ export interface UpdateUserData {
 
 export const usersAPI = {
   getAll: (params?: { page?: number; limit?: number; search?: string; role?: string; status?: string }) => {
-    const queryString = params ? '?' + new URLSearchParams(params as any).toString() : '';
+    const cleanParams: Record<string, string> = {};
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          cleanParams[key] = String(value);
+        }
+      });
+    }
+    const queryString = Object.keys(cleanParams).length > 0 ? '?' + new URLSearchParams(cleanParams).toString() : '';
     return apiFetch<{ users: User[]; pagination: any }>(`/users${queryString}`);
   },
 
@@ -295,7 +345,16 @@ export interface UpdateArticleData {
 
 export const articlesAPI = {
   getAll: (params?: { page?: number; limit?: number; category?: string; search?: string; status?: string }) => {
-    const queryString = params ? '?' + new URLSearchParams(params as any).toString() : '';
+    // Filter out undefined/null values to prevent them from being sent as literal "undefined" strings
+    const cleanParams: Record<string, string> = {};
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          cleanParams[key] = String(value);
+        }
+      });
+    }
+    const queryString = Object.keys(cleanParams).length > 0 ? '?' + new URLSearchParams(cleanParams).toString() : '';
     return apiFetch<{ articles: Article[]; pagination: any }>(`/articles${queryString}`);
   },
 
@@ -481,6 +540,17 @@ export interface ThemeSettings {
   favicon_url?: string;
 }
 
+export interface EmailSettings {
+  smtp_host: string;
+  smtp_port: number;
+  smtp_secure: boolean;
+  smtp_user: string;
+  smtp_password: string;
+  from_email: string;
+  from_name: string;
+  email_enabled: boolean;
+}
+
 export const settingsAPI = {
   getAll: () => apiFetch<Record<string, any>>('/settings'),
 
@@ -535,9 +605,35 @@ export const settingsAPI = {
     return response.json();
   },
 
+  // Email settings
+  getEmailSettings: () => apiFetch<EmailSettings>('/settings/email'),
+
+  updateEmailSettings: (data: Partial<EmailSettings>) =>
+    apiFetch('/settings/email', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  testEmailConnection: () =>
+    apiFetch('/settings/email/test', { method: 'POST' }),
+
+  sendTestEmail: (toEmail: string) =>
+    apiFetch('/settings/email/send-test', {
+      method: 'POST',
+      body: JSON.stringify({ to: toEmail }),
+    }),
+
   // Audit log
   getAuditLog: (params?: { page?: number; limit?: number; action?: string; user_id?: string }) => {
-    const queryString = params ? '?' + new URLSearchParams(params as any).toString() : '';
+    const cleanParams: Record<string, string> = {};
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          cleanParams[key] = String(value);
+        }
+      });
+    }
+    const queryString = Object.keys(cleanParams).length > 0 ? '?' + new URLSearchParams(cleanParams).toString() : '';
     return apiFetch<{ logs: any[]; pagination: any }>(`/settings/audit/log${queryString}`);
   },
 };
@@ -608,7 +704,15 @@ export interface CreateFAQData {
 
 export const faqsAPI = {
   getAll: (params?: { category?: string; active_only?: boolean }) => {
-    const queryString = params ? '?' + new URLSearchParams(params as any).toString() : '';
+    const cleanParams: Record<string, string> = {};
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          cleanParams[key] = String(value);
+        }
+      });
+    }
+    const queryString = Object.keys(cleanParams).length > 0 ? '?' + new URLSearchParams(cleanParams).toString() : '';
     return apiFetch<FAQ[]>(`/faqs${queryString}`);
   },
 

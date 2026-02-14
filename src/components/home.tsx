@@ -12,9 +12,17 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ArrowRight, AlertCircle, Loader2, WifiOff } from "lucide-react";
-import { settingsAPI } from "@/lib/api";
+import { ArrowRight, AlertCircle, Loader2, WifiOff, Mail, ArrowLeft, CheckCircle } from "lucide-react";
+import { settingsAPI, authAPI } from "@/lib/api";
 
 function Home() {
   const navigate = useNavigate();
@@ -25,6 +33,13 @@ function Home() {
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [portalName, setPortalName] = useState("Company Portal");
+  
+  // Forgot password state
+  const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState("");
+  const [forgotPasswordSubmitting, setForgotPasswordSubmitting] = useState(false);
+  const [forgotPasswordSent, setForgotPasswordSent] = useState(false);
+  const [forgotPasswordError, setForgotPasswordError] = useState("");
 
   // Load portal name from settings
   useEffect(() => {
@@ -94,6 +109,32 @@ function Home() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotPasswordError("");
+    setForgotPasswordSubmitting(true);
+
+    try {
+      const result = await authAPI.forgotPassword(forgotPasswordEmail);
+      if (result.success) {
+        setForgotPasswordSent(true);
+      } else {
+        setForgotPasswordError(result.message || "Failed to send reset email. Please try again.");
+      }
+    } catch (err) {
+      setForgotPasswordError("An error occurred. Please try again.");
+    } finally {
+      setForgotPasswordSubmitting(false);
+    }
+  };
+
+  const closeForgotPasswordDialog = () => {
+    setIsForgotPasswordOpen(false);
+    setForgotPasswordEmail("");
+    setForgotPasswordError("");
+    setForgotPasswordSent(false);
   };
 
   if (isLoading) {
@@ -202,19 +243,29 @@ function Home() {
                 />
               </div>
 
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="rememberMe"
-                  checked={rememberMe}
-                  onCheckedChange={(checked) => setRememberMe(!!checked)}
-                  disabled={isSubmitting}
-                />
-                <Label
-                  htmlFor="rememberMe"
-                  className="text-sm font-normal cursor-pointer"
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="rememberMe"
+                    checked={rememberMe}
+                    onCheckedChange={(checked) => setRememberMe(!!checked)}
+                    disabled={isSubmitting}
+                  />
+                  <Label
+                    htmlFor="rememberMe"
+                    className="text-sm font-normal cursor-pointer"
+                  >
+                    Remember me
+                  </Label>
+                </div>
+                <Button
+                  type="button"
+                  variant="link"
+                  className="text-sm px-0 h-auto font-normal"
+                  onClick={() => setIsForgotPasswordOpen(true)}
                 >
-                  Remember me
-                </Label>
+                  Forgot password?
+                </Button>
               </div>
 
               <Button
@@ -240,6 +291,95 @@ function Home() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Forgot Password Dialog */}
+      <Dialog open={isForgotPasswordOpen} onOpenChange={closeForgotPasswordDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5" />
+              Reset Password
+            </DialogTitle>
+            <DialogDescription>
+              {forgotPasswordSent 
+                ? "Check your email for password reset instructions."
+                : "Enter your email address and we'll send you a link to reset your password."
+              }
+            </DialogDescription>
+          </DialogHeader>
+
+          {forgotPasswordSent ? (
+            <div className="py-6 text-center">
+              <div className="mx-auto w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mb-4">
+                <CheckCircle className="h-6 w-6 text-green-600" />
+              </div>
+              <p className="text-sm text-muted-foreground mb-4">
+                If an account exists with <strong>{forgotPasswordEmail}</strong>, you will receive a password reset email shortly.
+              </p>
+              <Button onClick={closeForgotPasswordDialog} className="w-full">
+                Back to Login
+              </Button>
+            </div>
+          ) : (
+            <form onSubmit={handleForgotPassword}>
+              <div className="space-y-4 py-4">
+                {forgotPasswordError && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{forgotPasswordError}</AlertDescription>
+                  </Alert>
+                )}
+
+                <div className="space-y-2">
+                  <Label htmlFor="forgotEmail">Email Address</Label>
+                  <Input
+                    id="forgotEmail"
+                    type="email"
+                    placeholder="you@company.com"
+                    value={forgotPasswordEmail}
+                    onChange={(e) => setForgotPasswordEmail(e.target.value)}
+                    required
+                    disabled={forgotPasswordSubmitting}
+                  />
+                </div>
+              </div>
+
+              <DialogFooter className="flex-col sm:flex-row gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={closeForgotPasswordDialog}
+                  disabled={forgotPasswordSubmitting}
+                  className="w-full sm:w-auto"
+                >
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Back
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={forgotPasswordSubmitting || !forgotPasswordEmail}
+                  className="w-full sm:w-auto"
+                  style={{
+                    background: `linear-gradient(to right, var(--login-button-bg-1, #2563eb), var(--login-button-bg-2, #16a34a))`,
+                  }}
+                >
+                  {forgotPasswordSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Mail className="mr-2 h-4 w-4" />
+                      Send Reset Link
+                    </>
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

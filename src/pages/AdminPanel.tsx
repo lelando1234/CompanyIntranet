@@ -442,7 +442,10 @@ const AdminPanel = () => {
   };
 
   const handleSaveArticle = async () => {
-    if (!articleForm.title.trim() || !articleForm.content.trim()) { showError("Title and content are required"); return; }
+    if (!articleForm.title.trim() || !articleForm.content.trim()) {
+      showError("Title and content are required");
+      return;
+    }
     setSubmitting(true);
     try {
       const data: any = {
@@ -453,15 +456,20 @@ const AdminPanel = () => {
         status: articleForm.status,
         target_groups: articleForm.target_groups,
       };
-      const result = editingArticleId ? await updateArticle(editingArticleId, data) : await createArticle(data);
+      const result = editingArticleId
+        ? await updateArticle(editingArticleId, data)
+        : await createArticle(data);
       if (result.success) {
         showSuccess(editingArticleId ? "Article updated" : "Article created");
         setIsNewsDialogOpen(false);
       } else {
         showError(result.message || "Failed to save article");
       }
-    } catch (err: any) { showError(err.message || "An error occurred"); }
-    finally { setSubmitting(false); }
+    } catch (err: any) {
+      showError(err.message || "An error occurred");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleDeleteArticle = async (id: string) => {
@@ -534,8 +542,14 @@ const AdminPanel = () => {
   };
 
   const handleSaveUser = async () => {
-    if (!userForm.name.trim() || !userForm.email.trim()) { showError("Name and email required"); return; }
-    if (!editingUserId && !userForm.password.trim()) { showError("Password required for new users"); return; }
+    if (!userForm.name.trim() || !userForm.email.trim()) {
+      showError("Name and email required");
+      return;
+    }
+    if (!editingUserId && !userForm.password.trim()) {
+      showError("Password required for new users");
+      return;
+    }
     // Password match validation
     if (userForm.password.trim() && userForm.password !== userForm.confirmPassword) {
       setUserPasswordError("Passwords don't match");
@@ -546,18 +560,44 @@ const AdminPanel = () => {
     setSubmitting(true);
     try {
       if (editingUserId) {
-        const data: UpdateUserData = { name: userForm.name, email: userForm.email, role: userForm.role, department: userForm.department || undefined, phone: userForm.phone || undefined, groups: userForm.groups };
+        const data: UpdateUserData = {
+          name: userForm.name,
+          email: userForm.email,
+          role: userForm.role,
+          department: userForm.department || undefined,
+          phone: userForm.phone || undefined,
+          groups: userForm.groups,
+        };
         if (userForm.password.trim()) data.password = userForm.password;
         const result = await updateUser(editingUserId, data);
-        if (result.success) { showSuccess("User updated"); setIsUserDialogOpen(false); }
-        else showError(result.message || "Failed");
+        if (result.success) {
+          showSuccess("User updated");
+          setIsUserDialogOpen(false);
+        } else {
+          showError(result.message || "Failed");
+        }
       } else {
-        const result = await createUser({ name: userForm.name, email: userForm.email, password: userForm.password, role: userForm.role, department: userForm.department || undefined, phone: userForm.phone || undefined, groups: userForm.groups });
-        if (result.success) { showSuccess("User created"); setIsUserDialogOpen(false); }
-        else showError(result.message || "Failed");
+        const result = await createUser({
+          name: userForm.name,
+          email: userForm.email,
+          password: userForm.password,
+          role: userForm.role,
+          department: userForm.department || undefined,
+          phone: userForm.phone || undefined,
+          groups: userForm.groups,
+        });
+        if (result.success) {
+          showSuccess("User created");
+          setIsUserDialogOpen(false);
+        } else {
+          showError(result.message || "Failed");
+        }
       }
-    } catch (err: any) { showError(err.message || "Error"); }
-    finally { setSubmitting(false); }
+    } catch (err: any) {
+      showError(err.message || "Error");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleDeleteUser = async (id: string) => {
@@ -871,31 +911,38 @@ const AdminPanel = () => {
   const filteredUsers = users.filter((u) => u.name.toLowerCase().includes(searchTerm.toLowerCase()) || u.email.toLowerCase().includes(searchTerm.toLowerCase()));
 
   // Helper components
-  const LoadingSection = () => (
-    <div className="flex items-center justify-center p-12">
-      <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      <span className="ml-2 text-muted-foreground">Loading...</span>
-    </div>
-  );
+  function LoadingSection() {
+    return (
+      <div className="flex items-center justify-center p-12">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-2 text-muted-foreground">Loading...</span>
+      </div>
+    );
+  }
 
-  const ErrorBanner = ({ message }: { message: string }) => (
-    <Alert variant="destructive" className="mb-4">
-      <AlertTriangle className="h-4 w-4" />
-      <AlertTitle>Error</AlertTitle>
-      <AlertDescription>{message}</AlertDescription>
-    </Alert>
-  );
+  function ErrorBanner({ message }: { message: string }) {
+    return (
+      <Alert variant="destructive" className="mb-4">
+        <AlertTriangle className="h-4 w-4" />
+        <AlertTitle>Error</AlertTitle>
+        <AlertDescription>{message}</AlertDescription>
+      </Alert>
+    );
+  }
 
-  const BackendWarning = () => (
-    <Alert variant="destructive" className="mb-4">
-      <AlertTriangle className="h-4 w-4" />
-      <AlertTitle>Backend Not Connected</AlertTitle>
-      <AlertDescription>
-        The backend server is not reachable. Changes will NOT be saved.
-        <br />API URL: <code className="font-mono text-xs">{import.meta.env.VITE_API_URL || "(not configured)"}</code>
-      </AlertDescription>
-    </Alert>
-  );
+  function BackendWarning() {
+    return (
+      <Alert variant="destructive" className="mb-4">
+        <AlertTriangle className="h-4 w-4" />
+        <AlertTitle>Backend Not Connected</AlertTitle>
+        <AlertDescription>
+          The backend server is not reachable. Changes will NOT be saved.
+          <br />API URL:{" "}
+          <code className="font-mono text-xs">{import.meta.env.VITE_API_URL || "(not configured)"}</code>
+        </AlertDescription>
+      </Alert>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-background">
@@ -1674,8 +1721,10 @@ const AdminPanel = () => {
                   
                   <ThemeCustomizer />
                 </TabsContent>
+                )}
 
                 {/* FAQs TAB */}
+                {canViewTab("faqs") && (
                 <TabsContent value="faqs" className="space-y-4">
                   <Card>
                     <CardHeader>

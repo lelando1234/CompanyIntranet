@@ -49,6 +49,7 @@ const NewsFeed = ({ articles = [], useApi = false, externalSearchTerm = "" }: Ne
   const [apiArticles, setApiArticles] = useState<NewsArticle[]>([]);
   const [apiCategories, setApiCategories] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(false);
+  const [initialLoad, setInitialLoad] = useState(true);
   const [totalPages, setTotalPages] = useState(1);
   const [totalArticles, setTotalArticles] = useState(0);
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -149,6 +150,7 @@ const NewsFeed = ({ articles = [], useApi = false, externalSearchTerm = "" }: Ne
       console.error('[DEBUG NewsFeed] Error fetching articles:', error);
     } finally {
       setLoading(false);
+      setInitialLoad(false);
     }
   };
 
@@ -283,7 +285,7 @@ const NewsFeed = ({ articles = [], useApi = false, externalSearchTerm = "" }: Ne
     }
   };
 
-  if (loading) {
+  if (loading && initialLoad) {
     return (
       <div className="w-full bg-background p-4 md:p-6 flex items-center justify-center min-h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -294,7 +296,12 @@ const NewsFeed = ({ articles = [], useApi = false, externalSearchTerm = "" }: Ne
   return (
     <div className="w-full bg-background p-4 md:p-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold mb-2">Company News</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-bold mb-2">Company News</h1>
+          {loading && !initialLoad && (
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          )}
+        </div>
         <p className="text-muted-foreground">
           Stay updated with the latest company announcements and news
         </p>

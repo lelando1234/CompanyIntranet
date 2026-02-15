@@ -4,6 +4,7 @@ import Home from "@/components/home";
 import Dashboard from "@/pages/Dashboard";
 import AdminPanel from "@/pages/AdminPanel";
 import UserProfile from "@/pages/UserProfile";
+import ResetPassword from "@/pages/ResetPassword";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { settingsAPI, preferencesAPI } from "@/lib/api";
 // @ts-ignore - tempo-routes is generated at build time
@@ -153,6 +154,7 @@ function AppRoutes() {
     <>
       <Routes>
         <Route path="/" element={<Home />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route
           path="/dashboard"
           element={

@@ -7,19 +7,54 @@ import {
 } from "@/components/ui/accordion";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, ExternalLink, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, ExternalLink, Loader2, Link2, Globe, BookOpen, FileText, Briefcase, Heart, Star, Folder, HelpCircle, Settings, Users, Mail, Phone, MapPin, Calendar, Clock, Shield, Zap, Database, Code, Image, Video, Music, Download, Upload, Search, Home, type LucideIcon } from "lucide-react";
 import { urlCategoriesAPI } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
+
+// Map icon names from the backend to actual Lucide icon components
+const iconMap: Record<string, LucideIcon> = {
+  Link: Link2,
+  Link2: Link2,
+  Globe: Globe,
+  BookOpen: BookOpen,
+  FileText: FileText,
+  Briefcase: Briefcase,
+  Heart: Heart,
+  Star: Star,
+  Folder: Folder,
+  HelpCircle: HelpCircle,
+  Settings: Settings,
+  Users: Users,
+  Mail: Mail,
+  Phone: Phone,
+  MapPin: MapPin,
+  Calendar: Calendar,
+  Clock: Clock,
+  Shield: Shield,
+  Zap: Zap,
+  Database: Database,
+  Code: Code,
+  Image: Image,
+  Video: Video,
+  Music: Music,
+  Download: Download,
+  Upload: Upload,
+  Search: Search,
+  Home: Home,
+  ExternalLink: ExternalLink,
+};
 
 interface LinkItem {
   id: string;
   title: string;
   url: string;
+  icon?: string;
 }
 
 interface LinkCategory {
   id: string;
   name: string;
+  icon?: string;
   links: LinkItem[];
 }
 
@@ -59,10 +94,12 @@ const SideNavigation = ({
           const mapped: LinkCategory[] = (result.data as any[]).map((cat) => ({
             id: cat.id,
             name: cat.name,
+            icon: cat.icon,
             links: (cat.links || []).map((link: any) => ({
               id: link.id,
               title: link.title,
               url: link.url,
+              icon: link.icon,
             })),
           }));
           setApiCategories(mapped);
@@ -116,47 +153,64 @@ const SideNavigation = ({
           </div>
         ) : collapsed ? (
           <div className="py-2">
-            {categories.map((category) => (
-              <div
-                key={category.id}
-                className="flex flex-col items-center py-2"
-              >
+            {categories.map((category) => {
+              const CategoryIcon = category.icon ? iconMap[category.icon] : null;
+              return (
                 <div
-                  className="w-8 h-8 rounded-full bg-muted flex items-center justify-center mb-1 cursor-pointer"
-                  title={category.name}
+                  key={category.id}
+                  className="flex flex-col items-center py-2"
                 >
-                  {category.name.charAt(0)}
+                  <div
+                    className="w-8 h-8 rounded-full bg-muted flex items-center justify-center mb-1 cursor-pointer"
+                    title={category.name}
+                  >
+                    {CategoryIcon ? (
+                      <CategoryIcon size={16} />
+                    ) : (
+                      category.name.charAt(0)
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <Accordion type="multiple" className="px-2 py-2">
-            {categories.map((category) => (
-              <AccordionItem key={category.id} value={category.id}>
-                <AccordionTrigger className="py-2 hover:no-underline">
-                  <span className="text-sm font-medium">{category.name}</span>
-                </AccordionTrigger>
-                <AccordionContent>
-                  <div className="pl-2 py-1 space-y-1">
-                    {category.links.map((link) => (
-                      <Button
-                        key={link.id}
-                        variant="ghost"
-                        className="w-full justify-start text-sm font-normal py-1.5 h-auto"
-                        onClick={() => handleLinkClick(link.url)}
-                      >
-                        <ExternalLink
-                          size={14}
-                          className="mr-2 flex-shrink-0"
-                        />
-                        <span className="truncate">{link.title}</span>
-                      </Button>
-                    ))}
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-            ))}
+            {categories.map((category) => {
+              const CategoryIcon = category.icon ? iconMap[category.icon] : null;
+              return (
+                <AccordionItem key={category.id} value={category.id}>
+                  <AccordionTrigger className="py-2 hover:no-underline">
+                    <div className="flex items-center gap-2">
+                      {CategoryIcon && <CategoryIcon size={16} />}
+                      <span className="text-sm font-medium">{category.name}</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <div className="pl-2 py-1 space-y-1">
+                      {category.links.map((link) => {
+                        const LinkIcon = link.icon ? iconMap[link.icon] : null;
+                        return (
+                          <Button
+                            key={link.id}
+                            variant="ghost"
+                            className="w-full justify-start text-sm font-normal py-1.5 h-auto"
+                            onClick={() => handleLinkClick(link.url)}
+                          >
+                            {LinkIcon ? (
+                              <LinkIcon size={14} className="mr-2 flex-shrink-0" />
+                            ) : (
+                              <ExternalLink size={14} className="mr-2 flex-shrink-0" />
+                            )}
+                            <span className="truncate">{link.title}</span>
+                          </Button>
+                        );
+                      })}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              );
+            })}
           </Accordion>
         )}
       </ScrollArea>

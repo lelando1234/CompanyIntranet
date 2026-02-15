@@ -38,6 +38,8 @@ import {
   Mail,
   Send,
   CheckCircle,
+  Check,
+  X,
   Shield,
   XCircle,
 } from "lucide-react";
@@ -48,6 +50,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -112,6 +115,38 @@ import {
   type EmailSettings,
 } from "@/lib/api";
 import type { User } from "@/types/database";
+
+type SectionPerms = { read: boolean; write: boolean; delete: boolean };
+type RolePermsMap = Record<string, Record<string, SectionPerms>>;
+
+const defaultSections = ["news", "users", "groups", "categories", "urls", "faqs", "email", "theme"];
+
+const makeDefaultPerms = (allTrue = false): Record<string, SectionPerms> =>
+  Object.fromEntries(defaultSections.map((s) => [s, { read: allTrue, write: allTrue, delete: allTrue }]));
+
+const defaultRolePermissions: RolePermsMap = {
+  admin: makeDefaultPerms(true),
+  editor: {
+    news: { read: true, write: true, delete: false },
+    users: { read: false, write: false, delete: false },
+    groups: { read: false, write: false, delete: false },
+    categories: { read: true, write: false, delete: false },
+    urls: { read: true, write: false, delete: false },
+    faqs: { read: true, write: true, delete: false },
+    email: { read: false, write: false, delete: false },
+    theme: { read: false, write: false, delete: false },
+  },
+  user: {
+    news: { read: true, write: false, delete: false },
+    users: { read: false, write: false, delete: false },
+    groups: { read: false, write: false, delete: false },
+    categories: { read: true, write: false, delete: false },
+    urls: { read: true, write: false, delete: false },
+    faqs: { read: true, write: false, delete: false },
+    email: { read: false, write: false, delete: false },
+    theme: { read: false, write: false, delete: false },
+  },
+};
 
 const AdminPanel = () => {
   const navigate = useNavigate();
@@ -178,7 +213,7 @@ const AdminPanel = () => {
     email: "",
     password: "",
     confirmPassword: "",
-    role: "user" as "admin" | "editor" | "user",
+    role: "user" as string,
     department: "",
     phone: "",
     groups: [] as string[],
@@ -236,39 +271,22 @@ const AdminPanel = () => {
   const [showSmtpPassword, setShowSmtpPassword] = useState(false);
 
   // Role management state
-  const [rolePermissions, setRolePermissions] = useState({
-    admin: {
-      news: { read: true, write: true, delete: true },
-      users: { read: true, write: true, delete: true },
-      groups: { read: true, write: true, delete: true },
-      categories: { read: true, write: true, delete: true },
-      urls: { read: true, write: true, delete: true },
-      faqs: { read: true, write: true, delete: true },
-      email: { read: true, write: true, delete: true },
-      theme: { read: true, write: true, delete: true },
-    },
-    editor: {
-      news: { read: true, write: true, delete: false },
-      users: { read: false, write: false, delete: false },
-      groups: { read: false, write: false, delete: false },
-      categories: { read: true, write: false, delete: false },
-      urls: { read: true, write: false, delete: false },
-      faqs: { read: true, write: true, delete: false },
-      email: { read: false, write: false, delete: false },
-      theme: { read: false, write: false, delete: false },
-    },
-    user: {
-      news: { read: true, write: false, delete: false },
-      users: { read: false, write: false, delete: false },
-      groups: { read: false, write: false, delete: false },
-      categories: { read: true, write: false, delete: false },
-      urls: { read: true, write: false, delete: false },
-      faqs: { read: true, write: false, delete: false },
-      email: { read: false, write: false, delete: false },
-      theme: { read: false, write: false, delete: false },
-    },
-  });
+  const [rolePermissions, setRolePermissions] = useState<RolePermsMap>(defaultRolePermissions);
   const [rolesSaving, setRolesSaving] = useState(false);
+  const [permissionsLoaded, setPermissionsLoaded] = useState(false);
+
+  // Dynamic role management
+  const [customRoles, setCustomRoles] = useState<string[]>(["admin", "editor", "user"]);
+  const [isAddRoleDialogOpen, setIsAddRoleDialogOpen] = useState(false);
+  const [newRoleName, setNewRoleName] = useState("");
+  const [renamingRole, setRenamingRole] = useState<string | null>(null);
+  const [renameRoleName, setRenameRoleName] = useState("");
+
+  const roleDescriptions: Record<string, string> = {
+    admin: "Full system access - can manage all features",
+    editor: "Limited to content management - can publish articles",
+    user: "Read-only access - can view content",
+  };
 
   // Logo settings
   const [logoUrl, setLogoUrl] = useState<string>("/logo.png");
@@ -308,12 +326,16 @@ const AdminPanel = () => {
   const canViewTab = (tabValue: string): boolean => {
     // Admins can always see everything
     if (authUser?.role === "admin") return true;
+    // If permissions haven't loaded from backend yet, only show news for non-admins
+    if (!permissionsLoaded && backendAvailable) {
+      return tabValue === "news";
+    }
     const permKey = tabToPermissionKey[tabValue];
     if (!permKey) return true;
     const userRole = authUser?.role || "user";
-    const perms = rolePermissions[userRole as keyof typeof rolePermissions];
+    const perms = rolePermissions[userRole];
     if (!perms) return false;
-    const sectionPerms = perms[permKey as keyof typeof perms];
+    const sectionPerms = perms[permKey];
     if (!sectionPerms) return false;
     return sectionPerms.read === true;
   };
@@ -321,9 +343,9 @@ const AdminPanel = () => {
   const canWriteSection = (sectionKey: string): boolean => {
     if (authUser?.role === "admin") return true;
     const userRole = authUser?.role || "user";
-    const perms = rolePermissions[userRole as keyof typeof rolePermissions];
+    const perms = rolePermissions[userRole];
     if (!perms) return false;
-    const sectionPerms = perms[sectionKey as keyof typeof perms];
+    const sectionPerms = perms[sectionKey];
     if (!sectionPerms) return false;
     return sectionPerms.write === true;
   };
@@ -331,11 +353,50 @@ const AdminPanel = () => {
   const canDeleteSection = (sectionKey: string): boolean => {
     if (authUser?.role === "admin") return true;
     const userRole = authUser?.role || "user";
-    const perms = rolePermissions[userRole as keyof typeof rolePermissions];
+    const perms = rolePermissions[userRole];
     if (!perms) return false;
-    const sectionPerms = perms[sectionKey as keyof typeof perms];
+    const sectionPerms = perms[sectionKey];
     if (!sectionPerms) return false;
     return sectionPerms.delete === true;
+  };
+
+  // Add role handler
+  const handleAddRole = () => {
+    const roleName = newRoleName.trim().toLowerCase().replace(/\s+/g, "_");
+    if (!roleName || customRoles.includes(roleName)) return;
+    setCustomRoles((prev) => [...prev, roleName]);
+    setRolePermissions((prev) => ({
+      ...prev,
+      [roleName]: makeDefaultPerms(false),
+    }));
+    setNewRoleName("");
+    setIsAddRoleDialogOpen(false);
+  };
+
+  // Rename role handler
+  const handleRenameRole = (oldName: string) => {
+    const newName = renameRoleName.trim().toLowerCase().replace(/\s+/g, "_");
+    if (!newName || newName === oldName || customRoles.includes(newName)) return;
+    setCustomRoles((prev) => prev.map((r) => (r === oldName ? newName : r)));
+    setRolePermissions((prev) => {
+      const updated = { ...prev };
+      updated[newName] = updated[oldName];
+      delete updated[oldName];
+      return updated;
+    });
+    setRenamingRole(null);
+    setRenameRoleName("");
+  };
+
+  // Delete role handler
+  const handleDeleteRole = (roleName: string) => {
+    if (roleName === "admin") return; // Never delete admin
+    setCustomRoles((prev) => prev.filter((r) => r !== roleName));
+    setRolePermissions((prev) => {
+      const updated = { ...prev };
+      delete updated[roleName];
+      return updated;
+    });
   };
 
   // Set initial active tab to first visible tab when permissions load
@@ -346,7 +407,7 @@ const AdminPanel = () => {
       setActiveTab(visibleTabs[0]);
       setSidebarTab(visibleTabs[0]);
     }
-  }, [rolePermissions, authUser?.role]);
+  }, [rolePermissions, authUser?.role, permissionsLoaded]);
 
   // Load settings on mount
   useEffect(() => {
@@ -376,13 +437,43 @@ const AdminPanel = () => {
               const parsed = typeof result.data.role_permissions === 'string' 
                 ? JSON.parse(result.data.role_permissions) 
                 : result.data.role_permissions;
-              setRolePermissions(prev => ({ ...prev, ...parsed }));
+              // Deep merge: for each role, merge each section's permissions
+              setRolePermissions(prev => {
+                const merged: RolePermsMap = { ...prev };
+                for (const [role, sections] of Object.entries(parsed)) {
+                  if (typeof sections === 'object' && sections !== null) {
+                    merged[role] = { ...(merged[role] || makeDefaultPerms(false)) };
+                    for (const [section, perms] of Object.entries(sections as Record<string, SectionPerms>)) {
+                      merged[role][section] = { ...(merged[role][section] || { read: false, write: false, delete: false }), ...perms };
+                    }
+                  }
+                }
+                return merged;
+              });
             } catch { /* use defaults */ }
           }
+          // Load custom roles list from backend
+          if (result.data.custom_roles) {
+            try {
+              const parsedRoles = typeof result.data.custom_roles === 'string'
+                ? JSON.parse(result.data.custom_roles)
+                : result.data.custom_roles;
+              if (Array.isArray(parsedRoles) && parsedRoles.length > 0) {
+                setCustomRoles(parsedRoles);
+              }
+            } catch { /* use defaults */ }
+          }
+          setPermissionsLoaded(true);
         }
-      } catch { /* use defaults */ }
+      } catch {
+        setPermissionsLoaded(true);
+      }
     };
-    if (backendAvailable) loadSettings();
+    if (backendAvailable) {
+      loadSettings();
+    } else {
+      setPermissionsLoaded(true);
+    }
   }, [backendAvailable]);
 
   // Load FAQs when tab is opened
@@ -1305,31 +1396,91 @@ const AdminPanel = () => {
                 <TabsContent value="roles" className="space-y-4">
                   <Card>
                     <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Shield className="h-5 w-5" />
-                        User Roles & Permissions
-                      </CardTitle>
-                      <CardDescription>
-                        Configure what each user role can access and modify. Admin has full access, Editor should only have article publishing rights, and User has read-only access.
-                      </CardDescription>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <CardTitle className="flex items-center gap-2">
+                            <Shield className="h-5 w-5" />
+                            User Roles & Permissions
+                          </CardTitle>
+                          <CardDescription>
+                            Configure what each user role can access and modify. Add new roles or rename existing ones. Admin always has full access.
+                          </CardDescription>
+                        </div>
+                        <Dialog open={isAddRoleDialogOpen} onOpenChange={setIsAddRoleDialogOpen}>
+                          <DialogTrigger asChild>
+                            <Button variant="outline" size="sm"><Plus className="mr-2 h-4 w-4" /> Add Role</Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Add New Role</DialogTitle>
+                              <DialogDescription>Create a new custom role. Role name will be lowercased and spaces replaced with underscores.</DialogDescription>
+                            </DialogHeader>
+                            <div className="grid gap-4 py-4">
+                              <div className="grid gap-2">
+                                <Label>Role Name</Label>
+                                <Input
+                                  value={newRoleName}
+                                  onChange={(e) => setNewRoleName(e.target.value)}
+                                  placeholder="e.g. moderator, reviewer, manager"
+                                />
+                                {newRoleName && customRoles.includes(newRoleName.trim().toLowerCase().replace(/\s+/g, "_")) && (
+                                  <p className="text-sm text-destructive">A role with this name already exists</p>
+                                )}
+                              </div>
+                            </div>
+                            <DialogFooter>
+                              <Button variant="outline" onClick={() => { setIsAddRoleDialogOpen(false); setNewRoleName(""); }}>Cancel</Button>
+                              <Button onClick={handleAddRole} disabled={!newRoleName.trim() || customRoles.includes(newRoleName.trim().toLowerCase().replace(/\s+/g, "_"))}>Create Role</Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
+                      </div>
                     </CardHeader>
                     <CardContent className="space-y-6">
-                      {["admin", "editor", "user"].map((role) => (
-                        <Card key={role} className="border-2">
+                      {customRoles.map((role) => (
+                        <Card key={role} className={`border-2 ${role === "admin" ? "border-primary/30" : ""}`}>
                           <CardHeader className="pb-3">
-                            <CardTitle className="text-lg capitalize flex items-center gap-2">
-                              <Shield className="h-4 w-4" />
-                              {role}
-                            </CardTitle>
-                            <CardDescription>
-                              {role === "admin" && "Full system access - can manage all features"}
-                              {role === "editor" && "Limited to content management - can publish articles"}
-                              {role === "user" && "Read-only access - can view content"}
-                            </CardDescription>
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1">
+                                {renamingRole === role ? (
+                                  <div className="flex items-center gap-2">
+                                    <Input
+                                      value={renameRoleName}
+                                      onChange={(e) => setRenameRoleName(e.target.value)}
+                                      className="max-w-[200px] h-8"
+                                      placeholder="New role name"
+                                      autoFocus
+                                      onKeyDown={(e) => { if (e.key === "Enter") handleRenameRole(role); if (e.key === "Escape") { setRenamingRole(null); setRenameRoleName(""); } }}
+                                    />
+                                    <Button size="sm" variant="ghost" onClick={() => handleRenameRole(role)}><Check className="h-4 w-4" /></Button>
+                                    <Button size="sm" variant="ghost" onClick={() => { setRenamingRole(null); setRenameRoleName(""); }}><X className="h-4 w-4" /></Button>
+                                  </div>
+                                ) : (
+                                  <CardTitle className="text-lg capitalize flex items-center gap-2">
+                                    <Shield className="h-4 w-4" />
+                                    {role.replace(/_/g, " ")}
+                                    {role === "admin" && <Badge variant="default" className="ml-2 text-xs">Protected</Badge>}
+                                  </CardTitle>
+                                )}
+                                <CardDescription>
+                                  {roleDescriptions[role] || `Custom role - configure permissions below`}
+                                </CardDescription>
+                              </div>
+                              {role !== "admin" && renamingRole !== role && (
+                                <div className="flex gap-1">
+                                  <Button variant="ghost" size="sm" onClick={() => { setRenamingRole(role); setRenameRoleName(role); }}>
+                                    <Edit2 className="h-4 w-4" />
+                                  </Button>
+                                  <Button variant="ghost" size="sm" className="text-destructive" onClick={() => handleDeleteRole(role)}>
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
                           </CardHeader>
                           <CardContent>
                             <div className="space-y-4">
-                              {Object.entries(rolePermissions[role as keyof typeof rolePermissions]).map(([section, perms]) => (
+                              {rolePermissions[role] && Object.entries(rolePermissions[role]).map(([section, perms]) => (
                                 <div key={section} className="flex items-center justify-between border-b pb-3 last:border-0">
                                   <div className="flex-1">
                                     <Label className="text-sm font-medium capitalize">{section.replace(/_/g, " ")}</Label>
@@ -1343,7 +1494,7 @@ const AdminPanel = () => {
                                           setRolePermissions({
                                             ...rolePermissions,
                                             [role]: {
-                                              ...rolePermissions[role as keyof typeof rolePermissions],
+                                              ...rolePermissions[role],
                                               [section]: { ...perms, read: e.target.checked }
                                             }
                                           });
@@ -1361,7 +1512,7 @@ const AdminPanel = () => {
                                           setRolePermissions({
                                             ...rolePermissions,
                                             [role]: {
-                                              ...rolePermissions[role as keyof typeof rolePermissions],
+                                              ...rolePermissions[role],
                                               [section]: { ...perms, write: e.target.checked }
                                             }
                                           });
@@ -1379,7 +1530,7 @@ const AdminPanel = () => {
                                           setRolePermissions({
                                             ...rolePermissions,
                                             [role]: {
-                                              ...rolePermissions[role as keyof typeof rolePermissions],
+                                              ...rolePermissions[role],
                                               [section]: { ...perms, delete: e.target.checked }
                                             }
                                           });
@@ -1401,9 +1552,10 @@ const AdminPanel = () => {
                           onClick={async () => {
                             setRolesSaving(true);
                             try {
-                              // Save role permissions to backend
+                              // Save role permissions and custom roles to backend
                               await settingsAPI.bulkUpdate({
-                                role_permissions: JSON.stringify(rolePermissions)
+                                role_permissions: JSON.stringify(rolePermissions),
+                                custom_roles: JSON.stringify(customRoles),
                               });
                               showSuccess("Role permissions saved successfully");
                             } catch {
@@ -1967,12 +2119,12 @@ const AdminPanel = () => {
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label>Role</Label>
-                <Select value={userForm.role} onValueChange={(val) => setUserForm({ ...userForm, role: val as "admin" | "editor" | "user" })}>
+                <Select value={userForm.role} onValueChange={(val) => setUserForm({ ...userForm, role: val as any })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="editor">Editor</SelectItem>
-                    <SelectItem value="user">User</SelectItem>
+                    {customRoles.map((role) => (
+                      <SelectItem key={role} value={role} className="capitalize">{role.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

@@ -104,18 +104,23 @@ function SettingsLoader({ children }: { children: React.ReactNode }) {
       } catch { /* use localStorage / defaults */ }
 
       // Now check user preferences — if user chose a custom theme, override admin theme
-      try {
-        const prefResult = await preferencesAPI.getAll();
-        if (prefResult.success && prefResult.data) {
-          const useAdminTheme = prefResult.data.use_admin_theme !== false;
-          if (!useAdminTheme && prefResult.data.theme_colors && typeof prefResult.data.theme_colors === 'object') {
-            // User has a custom theme set — apply it
-            const userColors = prefResult.data.theme_colors;
-            applyPalette(userColors);
-            localStorage.setItem("theme-palette", JSON.stringify(userColors));
+      // Only fetch preferences if user has an auth token (this endpoint requires auth)
+      // Without this guard, unauthenticated page loads trigger a 401 → redirect → infinite loop
+      const token = localStorage.getItem('auth_token');
+      if (token) {
+        try {
+          const prefResult = await preferencesAPI.getAll();
+          if (prefResult.success && prefResult.data) {
+            const useAdminTheme = prefResult.data.use_admin_theme !== false;
+            if (!useAdminTheme && prefResult.data.theme_colors && typeof prefResult.data.theme_colors === 'object') {
+              // User has a custom theme set — apply it
+              const userColors = prefResult.data.theme_colors;
+              applyPalette(userColors);
+              localStorage.setItem("theme-palette", JSON.stringify(userColors));
+            }
           }
-        }
-      } catch { /* user prefs not available, keep admin theme */ }
+        } catch { /* user prefs not available, keep admin theme */ }
+      }
     };
     loadFromApi();
   }, []);

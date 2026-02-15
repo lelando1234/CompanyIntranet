@@ -74,9 +74,12 @@ async function apiFetch<T>(
 
     // Handle 401 - token expired
     if (response.status === 401) {
-      console.warn('[DEBUG] 401 Unauthorized - redirecting to login');
+      console.warn('[DEBUG] 401 Unauthorized for:', fullUrl);
       setAuthToken(null);
-      window.location.href = '/';
+      // Only redirect if we're NOT already on the login page to prevent infinite reload loops
+      if (window.location.pathname !== '/') {
+        window.location.href = '/';
+      }
       return { success: false, message: 'Unauthorized' };
     }
 

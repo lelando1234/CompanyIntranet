@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Search, Filter, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Paperclip, Loader2 } from "lucide-react";
 import {
   Card,
@@ -41,6 +41,7 @@ const ARTICLES_PER_PAGE = 4;
 
 const NewsFeed = ({ articles = [], useApi = false }: NewsFeedProps) => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [expandedArticles, setExpandedArticles] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
@@ -49,6 +50,22 @@ const NewsFeed = ({ articles = [], useApi = false }: NewsFeedProps) => {
   const [loading, setLoading] = useState(false);
   const [totalPages, setTotalPages] = useState(1);
   const [totalArticles, setTotalArticles] = useState(0);
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Debounce search term to avoid API calls on every keystroke
+  useEffect(() => {
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current);
+    }
+    searchDebounceRef.current = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 400);
+    return () => {
+      if (searchDebounceRef.current) {
+        clearTimeout(searchDebounceRef.current);
+      }
+    };
+  }, [searchTerm]);
 
   // Fetch articles from API if useApi is true
   useEffect(() => {
@@ -56,7 +73,7 @@ const NewsFeed = ({ articles = [], useApi = false }: NewsFeedProps) => {
       fetchArticlesFromApi();
       fetchCategoriesFromApi();
     }
-  }, [useApi, currentPage, selectedCategory, searchTerm]);
+  }, [useApi, currentPage, selectedCategory, debouncedSearchTerm]);
 
   const fetchArticlesFromApi = async () => {
     setLoading(true);
@@ -64,7 +81,7 @@ const NewsFeed = ({ articles = [], useApi = false }: NewsFeedProps) => {
       page: currentPage,
       limit: ARTICLES_PER_PAGE,
       category: selectedCategory !== 'all' ? selectedCategory : undefined,
-      search: searchTerm || undefined,
+      search: debouncedSearchTerm || undefined,
       status: 'published'
     });
     
@@ -73,7 +90,7 @@ const NewsFeed = ({ articles = [], useApi = false }: NewsFeedProps) => {
         page: currentPage,
         limit: ARTICLES_PER_PAGE,
         category: selectedCategory !== 'all' ? selectedCategory : undefined,
-        search: searchTerm || undefined,
+        search: debouncedSearchTerm || undefined,
         status: 'published'
       });
       

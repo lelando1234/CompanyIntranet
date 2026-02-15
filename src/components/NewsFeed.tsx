@@ -69,9 +69,14 @@ const NewsFeed = ({ articles = [], useApi = false, externalSearchTerm = "" }: Ne
   }, [searchTerm]);
 
   // Sync external search term from parent (e.g., Dashboard header search)
+  // Use a ref to avoid dependency loop with searchTerm
+  const prevExternalSearchRef = useRef(externalSearchTerm);
   useEffect(() => {
-    if (externalSearchTerm !== undefined && externalSearchTerm !== searchTerm) {
-      setSearchTerm(externalSearchTerm);
+    if (externalSearchTerm !== prevExternalSearchRef.current) {
+      prevExternalSearchRef.current = externalSearchTerm;
+      if (externalSearchTerm !== searchTerm) {
+        setSearchTerm(externalSearchTerm);
+      }
     }
   }, [externalSearchTerm]);
 
@@ -255,10 +260,10 @@ const NewsFeed = ({ articles = [], useApi = false, externalSearchTerm = "" }: Ne
   const startIndex = (currentPage - 1) * ARTICLES_PER_PAGE;
   const paginatedArticles = useApi ? filteredArticles : filteredArticles.slice(startIndex, startIndex + ARTICLES_PER_PAGE);
 
-  // Reset to page 1 when filters change
+  // Reset to page 1 when filters change (use debounced search to avoid reset on every keystroke)
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, selectedCategory, useApi]);
+  }, [debouncedSearchTerm, selectedCategory, useApi]);
 
   // Toggle article expansion
   const toggleArticleExpansion = (id: string) => {

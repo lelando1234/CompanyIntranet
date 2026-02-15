@@ -1195,6 +1195,7 @@ const AdminPanel = () => {
                 </TabsContent>
 
                 {/* USERS TAB */}
+                {canViewTab("users") && (
                 <TabsContent value="users" className="space-y-4">
                   <Card>
                     <CardHeader>
@@ -1244,8 +1245,10 @@ const AdminPanel = () => {
                     </CardContent>
                   </Card>
                 </TabsContent>
+                )}
 
                 {/* USER ROLES TAB */}
+                {canViewTab("roles") && (
                 <TabsContent value="roles" className="space-y-4">
                   <Card>
                     <CardHeader>
@@ -1364,8 +1367,10 @@ const AdminPanel = () => {
                     </CardContent>
                   </Card>
                 </TabsContent>
+                )}
 
                 {/* GROUPS TAB */}
+                {canViewTab("groups") && (
                 <TabsContent value="groups" className="space-y-4">
                   <Card>
                     <CardHeader>
@@ -1408,8 +1413,10 @@ const AdminPanel = () => {
                     </CardContent>
                   </Card>
                 </TabsContent>
+                )}
 
                 {/* EMAIL SETTINGS TAB */}
+                {canViewTab("email") && (
                 <TabsContent value="email" className="space-y-6">
                   <Card>
                     <CardHeader>
@@ -1602,8 +1609,10 @@ const AdminPanel = () => {
                     </CardContent>
                   </Card>
                 </TabsContent>
+                )}
 
                 {/* THEME & LOGO TAB */}
+                {canViewTab("theme") && (
                 <TabsContent value="theme" className="space-y-6">
                   <Card>
                     <CardHeader>
@@ -1715,6 +1724,7 @@ const AdminPanel = () => {
                     </CardContent>
                   </Card>
                 </TabsContent>
+                )}
               </Tabs>
             </>
           )}

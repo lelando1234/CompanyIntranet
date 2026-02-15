@@ -83,9 +83,10 @@ router.get('/', optionalAuth, async (req, res) => {
       console.log('[DEBUG Articles API] Filter: Search term:', search);
     }
 
-    // Group-based visibility: for regular users, only show articles that either
-    // have no target groups (visible to everyone) or target groups that match the user's groups
-    if (req.user && req.user.role === 'user') {
+    // Group-based visibility: for regular users and editors, only show articles that either
+    // have no target groups (visible to everyone) or target groups that match the user's groups.
+    // Admins can see all articles regardless of group assignment.
+    if (req.user && req.user.role !== 'admin') {
       // Get the user's group IDs
       const userGroups = await query(
         'SELECT group_id FROM user_groups WHERE user_id = ?',
@@ -208,8 +209,8 @@ router.get('/:id', optionalAuth, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Article not found' });
     }
 
-    // Check group visibility for regular users
-    if (req.user && req.user.role === 'user') {
+    // Check group visibility for regular users and editors (admins can see all)
+    if (req.user && req.user.role !== 'admin') {
       const articleGroups = await query(
         'SELECT group_id FROM article_groups WHERE article_id = ?',
         [req.params.id]

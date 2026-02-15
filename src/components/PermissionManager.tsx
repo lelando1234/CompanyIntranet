@@ -169,7 +169,7 @@ const PermissionManager = () => {
     title: "",
     url: "",
     category: "",
-    accessType: "public" as const,
+    accessType: "public" as "public" | "restricted",
   });
   const [permissionType, setPermissionType] = useState<"user" | "group">(
     "user",

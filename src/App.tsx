@@ -6,6 +6,7 @@ import AdminPanel from "@/pages/AdminPanel";
 import UserProfile from "@/pages/UserProfile";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { settingsAPI, preferencesAPI } from "@/lib/api";
+// @ts-ignore - tempo-routes is generated at build time
 import routes from "tempo-routes";
 
 // Load settings & theme on startup

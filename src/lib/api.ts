@@ -1,6 +1,8 @@
 // API Configuration
 // In the Tempo canvas environment there is no backend running, so any real fetch will fail.
 // Default to an empty base URL and allow the app to gracefully fall back to local/default UI.
+import type { User } from "@/types/database";
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || "";
 
 // Token management
@@ -49,7 +51,7 @@ async function apiFetch<T>(
   console.log('[DEBUG] API Request:', {
     url: fullUrl,
     method: options.method || 'GET',
-    hasAuth: !!headers.Authorization,
+    hasAuth: !!Object.prototype.hasOwnProperty.call(headers, 'Authorization'),
     timestamp: new Date().toISOString()
   });
 
@@ -162,20 +164,6 @@ export const authAPI = {
 };
 
 // ============ USERS API ============
-
-export interface User {
-  id: string;
-  email: string;
-  name: string;
-  role: 'admin' | 'editor' | 'user';
-  avatar?: string;
-  department?: string;
-  phone?: string;
-  status: 'active' | 'inactive' | 'suspended';
-  groups?: { id: string; name: string; color: string }[];
-  last_login?: string;
-  created_at: string;
-}
 
 export interface CreateUserData {
   email: string;

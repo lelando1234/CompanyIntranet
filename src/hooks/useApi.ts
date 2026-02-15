@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 import api, {
-  User,
   Group,
   Article,
   Category,
@@ -16,6 +15,7 @@ import api, {
   CreateURLLinkData,
   ThemeSettings,
 } from '@/lib/api';
+import type { User } from '@/types/database';
 
 // Check if backend is available
 const checkBackendAvailable = async (): Promise<boolean> => {

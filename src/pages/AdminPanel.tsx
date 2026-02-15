@@ -31,7 +31,7 @@ import {
   Image as ImageIcon,
   Eye,
   EyeOff,
-  User,
+  User as UserIcon,
   LogOut,
   MessageCircleQuestion,
   Tag,
@@ -103,7 +103,6 @@ import {
   type CreateArticleData,
   type UpdateArticleData,
   type Article,
-  type User,
   type Group,
   type URLCategory,
   type URLLink,
@@ -112,6 +111,7 @@ import {
   type UpdateCategoryData,
   type EmailSettings,
 } from "@/lib/api";
+import type { User } from "@/types/database";
 
 const AdminPanel = () => {
   const navigate = useNavigate();
@@ -905,7 +905,7 @@ const AdminPanel = () => {
                     <span>Dashboard</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => navigate("/profile")}>
-                    <User className="mr-2 h-4 w-4" />
+                    <UserIcon className="mr-2 h-4 w-4" />
                     <span>Profile</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />

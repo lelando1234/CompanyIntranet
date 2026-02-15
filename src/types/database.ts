@@ -10,6 +10,10 @@ export interface User {
   updated_at: string;
   last_login?: string;
   is_active: boolean;
+  department?: string;
+  phone?: string;
+  status?: 'active' | 'inactive' | 'suspended';
+  groups?: { id: string; name: string; color?: string }[];
 }
 
 export interface Group {

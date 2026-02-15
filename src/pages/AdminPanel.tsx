@@ -1024,6 +1024,7 @@ const AdminPanel = () => {
                 </div>
 
                 {/* NEWS TAB */}
+                {canViewTab("news") && (
                 <TabsContent value="news" className="space-y-4">
                   <Card>
                     <CardHeader>
@@ -1076,8 +1077,10 @@ const AdminPanel = () => {
                     </CardContent>
                   </Card>
                 </TabsContent>
+                )}
 
                 {/* NEWS CATEGORIES TAB */}
+                {canViewTab("categories") && (
                 <TabsContent value="categories" className="space-y-4">
                   <Card>
                     <CardHeader>
@@ -1132,8 +1135,10 @@ const AdminPanel = () => {
                     </CardContent>
                   </Card>
                 </TabsContent>
+                )}
 
                 {/* URL CATEGORIES TAB */}
+                {canViewTab("urls") && (
                 <TabsContent value="urls" className="space-y-4">
                   <Card>
                     <CardHeader>

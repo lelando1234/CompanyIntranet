@@ -5,7 +5,8 @@ import Dashboard from "@/pages/Dashboard";
 import AdminPanel from "@/pages/AdminPanel";
 import UserProfile from "@/pages/UserProfile";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
-import { settingsAPI } from "@/lib/api";
+import { settingsAPI, preferencesAPI } from "@/lib/api";
+// @ts-ignore - tempo-routes is generated at build time
 import routes from "tempo-routes";
 
 // Load settings & theme on startup
@@ -67,11 +68,25 @@ function SettingsLoader({ children }: { children: React.ReactNode }) {
 
     // Then load from API (overrides localStorage if available — this is the source of truth)
     const loadFromApi = async () => {
+      let adminPalette: any = null;
+
       try {
         const result = await settingsAPI.getAll();
         if (result.success && result.data) {
           if (result.data.site_name) {
             document.title = result.data.site_name;
+          }
+          // Load and apply favicon
+          if (result.data.favicon_url) {
+            const link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
+            if (link) {
+              link.href = result.data.favicon_url;
+            } else {
+              const newLink = document.createElement('link');
+              newLink.rel = 'icon';
+              newLink.href = result.data.favicon_url;
+              document.head.appendChild(newLink);
+            }
           }
           if (result.data.theme_palette) {
             let palette;
@@ -80,12 +95,33 @@ function SettingsLoader({ children }: { children: React.ReactNode }) {
             } else {
               palette = result.data.theme_palette;
             }
+            adminPalette = palette;
+            // Apply admin palette first as default
             applyPalette(palette);
             // Sync to localStorage so next load is instant
             localStorage.setItem("theme-palette", JSON.stringify(palette));
           }
         }
       } catch { /* use localStorage / defaults */ }
+
+      // Now check user preferences — if user chose a custom theme, override admin theme
+      // Only fetch preferences if user has an auth token (this endpoint requires auth)
+      // Without this guard, unauthenticated page loads trigger a 401 → redirect → infinite loop
+      const token = localStorage.getItem('auth_token');
+      if (token) {
+        try {
+          const prefResult = await preferencesAPI.getAll();
+          if (prefResult.success && prefResult.data) {
+            const useAdminTheme = prefResult.data.use_admin_theme !== false;
+            if (!useAdminTheme && prefResult.data.theme_colors && typeof prefResult.data.theme_colors === 'object') {
+              // User has a custom theme set — apply it
+              const userColors = prefResult.data.theme_colors;
+              applyPalette(userColors);
+              localStorage.setItem("theme-palette", JSON.stringify(userColors));
+            }
+          }
+        } catch { /* user prefs not available, keep admin theme */ }
+      }
     };
     loadFromApi();
   }, []);

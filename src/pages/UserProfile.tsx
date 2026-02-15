@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Camera, Loader2, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, Camera, Loader2, Eye, EyeOff, ChevronDown, Settings, LogOut } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,14 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { authAPI, usersAPI, preferencesAPI, settingsAPI } from "@/lib/api";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface ColorPalette {
   primary: string;
@@ -198,9 +206,14 @@ const colorPresets = [
 ];
 
 export default function UserProfile() {
-  const { user, refreshUser } = useAuth();
+  const { user, refreshUser, logout } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Site settings state
+  const [portalName, setPortalName] = useState("Company Portal");
+  const [copyrightText, setCopyrightText] = useState("");
+  const companyLogo = "/logo.png";
 
   // Profile picture state
   const [avatar, setAvatar] = useState(user?.avatar || "");
@@ -221,6 +234,20 @@ export default function UserProfile() {
   const [adminColors, setAdminColors] = useState<ColorPalette>({ ...defaultColors });
   const [savingColors, setSavingColors] = useState(false);
   const [useAdminColors, setUseAdminColors] = useState(true);
+
+  // Load user preferences and admin color settings
+  useEffect(() => {
+    const loadSiteSettings = async () => {
+      try {
+        const result = await settingsAPI.getAll();
+        if (result.success && result.data) {
+          if (result.data.site_name) setPortalName(result.data.site_name);
+          if (result.data.copyright_text !== undefined) setCopyrightText(result.data.copyright_text);
+        }
+      } catch { /* use defaults */ }
+    };
+    loadSiteSettings();
+  }, []);
 
   // Load user preferences and admin color settings
   useEffect(() => {
@@ -413,6 +440,9 @@ export default function UserProfile() {
         root.style.setProperty("--sidebar-bg", activeColors.sidebarBg);
         root.style.setProperty("--sidebar-text", activeColors.sidebarText);
 
+        // Sync to localStorage so theme persists across page navigations
+        localStorage.setItem("theme-palette", JSON.stringify(activeColors));
+
         toast({
           title: "Success",
           description: "Color preferences saved successfully",
@@ -443,19 +473,86 @@ export default function UserProfile() {
     setUseAdminColors(false);
   };
 
-  return (
-    <div className="min-h-screen bg-background p-4 md:p-8">
-      <div className="max-w-4xl mx-auto">
-        <Button
-          variant="ghost"
-          onClick={() => navigate("/dashboard")}
-          className="mb-6"
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Dashboard
-        </Button>
+  const userName = user?.name || "User";
+  const userAvatar = user?.avatar || "";
+  const canAccessAdmin = user?.role === "admin" || user?.role === "editor";
 
-        <h1 className="text-3xl font-bold mb-8">Profile Settings</h1>
+  const handleLogout = () => {
+    logout();
+    navigate("/");
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col bg-background">
+      {/* Header */}
+      <header className="sticky top-0 z-10 border-b shadow-sm" style={{ backgroundColor: 'var(--header-bg, hsl(var(--background)))', color: 'var(--header-text, inherit)' }}>
+        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <img src={companyLogo} alt="Company Logo" className="h-8 w-auto" />
+            <h1 className="text-xl font-bold hidden md:block">
+              {portalName}
+            </h1>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="flex items-center gap-2">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={userAvatar} alt={userName} />
+                    <AvatarFallback>
+                      {userName
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="hidden md:inline-block">{userName}</span>
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>
+                  <div>
+                    <p>{userName}</p>
+                    <p className="text-xs text-muted-foreground capitalize">{user?.role}</p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate("/dashboard")}>
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  <span>Dashboard</span>
+                </DropdownMenuItem>
+                {canAccessAdmin && (
+                  <DropdownMenuItem onClick={() => navigate("/admin")}>
+                    <Settings className="mr-2 h-4 w-4" />
+                    <span>Admin Panel</span>
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Log out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="flex-1 overflow-y-auto p-4 md:p-8">
+        <div className="max-w-4xl mx-auto">
+          <Button
+            variant="ghost"
+            onClick={() => navigate("/dashboard")}
+            className="mb-6"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Dashboard
+          </Button>
+
+          <h1 className="text-3xl font-bold mb-8">Profile Settings</h1>
 
         <div className="space-y-6">
           {/* Profile Picture Section */}
@@ -860,6 +957,16 @@ export default function UserProfile() {
           </Card>
         </div>
       </div>
+
+      {/* Copyright Footer */}
+      {copyrightText && (
+        <footer className="mt-8 py-4 border-t">
+          <div className="container mx-auto text-center text-sm text-muted-foreground">
+            {copyrightText}
+          </div>
+        </footer>
+      )}
+      </main>
     </div>
   );
 }

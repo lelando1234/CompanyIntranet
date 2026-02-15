@@ -1,6 +1,8 @@
 // API Configuration
 // In the Tempo canvas environment there is no backend running, so any real fetch will fail.
 // Default to an empty base URL and allow the app to gracefully fall back to local/default UI.
+import type { User } from "@/types/database";
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || "";
 
 // Token management
@@ -49,7 +51,7 @@ async function apiFetch<T>(
   console.log('[DEBUG] API Request:', {
     url: fullUrl,
     method: options.method || 'GET',
-    hasAuth: !!headers.Authorization,
+    hasAuth: !!Object.prototype.hasOwnProperty.call(headers, 'Authorization'),
     timestamp: new Date().toISOString()
   });
 
@@ -66,8 +68,31 @@ async function apiFetch<T>(
       ok: response.ok
     });
 
+    // Handle rate limiting BEFORE trying to parse body
+    if (response.status === 429) {
+      console.warn('[DEBUG] Rate limited (429) for:', fullUrl);
+      return { success: false, message: 'Too many requests. Please wait a moment and try again.' };
+    }
+
+    // Handle 401 - token expired
+    if (response.status === 401) {
+      console.warn('[DEBUG] 401 Unauthorized for:', fullUrl);
+      setAuthToken(null);
+      // Only redirect if we're NOT already on the login page to prevent infinite reload loops
+      if (window.location.pathname !== '/') {
+        window.location.href = '/';
+      }
+      return { success: false, message: 'Unauthorized' };
+    }
+
     const text = await response.text();
-    const data = text ? JSON.parse(text) : { success: true };
+    let data: any;
+    try {
+      data = text ? JSON.parse(text) : { success: true };
+    } catch (parseError) {
+      console.error('[DEBUG] JSON parse error for:', fullUrl, 'Response text:', text.substring(0, 200));
+      return { success: false, message: `Server returned invalid JSON (HTTP ${response.status})` };
+    }
 
     console.log('[DEBUG] API Response Data:', {
       url: fullUrl,
@@ -78,12 +103,6 @@ async function apiFetch<T>(
     });
 
     if (!response.ok) {
-      // Handle 401 - token expired
-      if (response.status === 401) {
-        console.warn('[DEBUG] 401 Unauthorized - redirecting to login');
-        setAuthToken(null);
-        window.location.href = '/';
-      }
       console.error('[DEBUG] Request failed:', data.message || 'Unknown error');
       return { success: false, message: data.message || 'Request failed', errors: data.errors };
     }
@@ -145,20 +164,6 @@ export const authAPI = {
 };
 
 // ============ USERS API ============
-
-export interface User {
-  id: string;
-  email: string;
-  name: string;
-  role: 'admin' | 'editor' | 'user';
-  avatar?: string;
-  department?: string;
-  phone?: string;
-  status: 'active' | 'inactive' | 'suspended';
-  groups?: { id: string; name: string; color: string }[];
-  last_login?: string;
-  created_at: string;
-}
 
 export interface CreateUserData {
   email: string;

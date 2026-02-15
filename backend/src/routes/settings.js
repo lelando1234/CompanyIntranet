@@ -135,6 +135,189 @@ router.get('/', async (req, res) => {
   }
 });
 
+// === Email Settings ===
+
+// Get email settings (admin only)
+router.get('/email', verifyToken, requireRole('admin'), async (req, res) => {
+  try {
+    // Email settings are stored as individual settings keys
+    const emailKeys = [
+      'smtp_host', 'smtp_port', 'smtp_secure', 'smtp_user', 'smtp_password',
+      'from_email', 'from_name', 'email_enabled'
+    ];
+    const placeholders = emailKeys.map(() => '?').join(', ');
+    const settings = await query(
+      `SELECT setting_key, setting_value, setting_type FROM settings WHERE setting_key IN (${placeholders})`,
+      emailKeys
+    );
+
+    const emailSettings = {
+      smtp_host: '',
+      smtp_port: 587,
+      smtp_secure: false,
+      smtp_user: '',
+      smtp_password: '',
+      from_email: '',
+      from_name: '',
+      email_enabled: false,
+    };
+
+    for (const setting of settings) {
+      let value = setting.setting_value;
+      if (setting.setting_type === 'number') {
+        value = parseFloat(value);
+      } else if (setting.setting_type === 'boolean') {
+        value = value === 'true';
+      }
+      emailSettings[setting.setting_key] = value;
+    }
+
+    res.json({ success: true, data: emailSettings });
+  } catch (error) {
+    console.error('Get email settings error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Update email settings (admin only)
+router.put('/email', verifyToken, requireRole('admin'), async (req, res) => {
+  try {
+    const emailFields = ['smtp_host', 'smtp_port', 'smtp_secure', 'smtp_user', 'smtp_password', 'from_email', 'from_name', 'email_enabled'];
+
+    for (const key of emailFields) {
+      if (req.body[key] !== undefined) {
+        const value = req.body[key];
+        const stringValue = String(value);
+        let settingType = 'string';
+        if (typeof value === 'number') settingType = 'number';
+        else if (typeof value === 'boolean') settingType = 'boolean';
+
+        const existing = await query('SELECT id FROM settings WHERE setting_key = ?', [key]);
+        if (existing.length === 0) {
+          const settingId = uuidv4();
+          await query(
+            'INSERT INTO settings (id, setting_key, setting_value, setting_type) VALUES (?, ?, ?, ?)',
+            [settingId, key, stringValue, settingType]
+          );
+        } else {
+          await query(
+            'UPDATE settings SET setting_value = ?, setting_type = ? WHERE setting_key = ?',
+            [stringValue, settingType, key]
+          );
+        }
+      }
+    }
+
+    await logAudit(req.user.id, 'UPDATE_EMAIL_SETTINGS', 'settings', null, null, req.body, req);
+    res.json({ success: true, message: 'Email settings saved successfully' });
+  } catch (error) {
+    console.error('Update email settings error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Test email SMTP connection (admin only)
+router.post('/email/test', verifyToken, requireRole('admin'), async (req, res) => {
+  try {
+    // Load email settings
+    const emailKeys = ['smtp_host', 'smtp_port', 'smtp_secure', 'smtp_user', 'smtp_password'];
+    const placeholders = emailKeys.map(() => '?').join(', ');
+    const settings = await query(
+      `SELECT setting_key, setting_value FROM settings WHERE setting_key IN (${placeholders})`,
+      emailKeys
+    );
+
+    const config = {};
+    for (const s of settings) {
+      config[s.setting_key] = s.setting_value;
+    }
+
+    if (!config.smtp_host) {
+      return res.json({ success: false, message: 'SMTP host is not configured' });
+    }
+
+    // Try connecting with nodemailer if available
+    try {
+      const nodemailer = require('nodemailer');
+      const transporter = nodemailer.createTransport({
+        host: config.smtp_host,
+        port: parseInt(config.smtp_port) || 587,
+        secure: config.smtp_secure === 'true',
+        auth: config.smtp_user ? {
+          user: config.smtp_user,
+          pass: config.smtp_password || '',
+        } : undefined,
+        connectionTimeout: 10000,
+      });
+
+      await transporter.verify();
+      res.json({ success: true, message: 'SMTP connection successful' });
+    } catch (smtpError) {
+      res.json({ success: false, message: `SMTP connection failed: ${smtpError.message}` });
+    }
+  } catch (error) {
+    console.error('Test email connection error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Send test email (admin only)
+router.post('/email/send-test', verifyToken, requireRole('admin'), async (req, res) => {
+  try {
+    const { to } = req.body;
+    if (!to) {
+      return res.status(400).json({ success: false, message: 'Recipient email address required' });
+    }
+
+    // Load email settings
+    const emailKeys = ['smtp_host', 'smtp_port', 'smtp_secure', 'smtp_user', 'smtp_password', 'from_email', 'from_name'];
+    const placeholders = emailKeys.map(() => '?').join(', ');
+    const settings = await query(
+      `SELECT setting_key, setting_value FROM settings WHERE setting_key IN (${placeholders})`,
+      emailKeys
+    );
+
+    const config = {};
+    for (const s of settings) {
+      config[s.setting_key] = s.setting_value;
+    }
+
+    if (!config.smtp_host) {
+      return res.json({ success: false, message: 'SMTP host is not configured. Please save email settings first.' });
+    }
+
+    try {
+      const nodemailer = require('nodemailer');
+      const transporter = nodemailer.createTransport({
+        host: config.smtp_host,
+        port: parseInt(config.smtp_port) || 587,
+        secure: config.smtp_secure === 'true',
+        auth: config.smtp_user ? {
+          user: config.smtp_user,
+          pass: config.smtp_password || '',
+        } : undefined,
+        connectionTimeout: 10000,
+      });
+
+      await transporter.sendMail({
+        from: `"${config.from_name || 'Company Portal'}" <${config.from_email || config.smtp_user || 'noreply@example.com'}>`,
+        to,
+        subject: 'Test Email from Company Portal',
+        text: 'This is a test email from your Company Portal. If you received this, your email settings are configured correctly!',
+        html: '<h2>Test Email</h2><p>This is a test email from your <strong>Company Portal</strong>.</p><p>If you received this, your email settings are configured correctly!</p>',
+      });
+
+      await logAudit(req.user.id, 'SEND_TEST_EMAIL', 'email', null, null, { to }, req);
+      res.json({ success: true, message: `Test email sent to ${to}` });
+    } catch (smtpError) {
+      res.json({ success: false, message: `Failed to send email: ${smtpError.message}` });
+    }
+  } catch (error) {
+    console.error('Send test email error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
 // Get single setting
 router.get('/:key', async (req, res) => {
   try {

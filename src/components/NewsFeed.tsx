@@ -35,18 +35,19 @@ interface NewsArticle {
 interface NewsFeedProps {
   articles?: NewsArticle[];
   useApi?: boolean;
+  externalSearchTerm?: string;
 }
 
 const ARTICLES_PER_PAGE = 4;
 
-const NewsFeed = ({ articles = [], useApi = false }: NewsFeedProps) => {
+const NewsFeed = ({ articles = [], useApi = false, externalSearchTerm = "" }: NewsFeedProps) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [expandedArticles, setExpandedArticles] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [apiArticles, setApiArticles] = useState<NewsArticle[]>([]);
-  const [apiCategories, setApiCategories] = useState<string[]>([]);
+  const [apiCategories, setApiCategories] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(false);
   const [totalPages, setTotalPages] = useState(1);
   const [totalArticles, setTotalArticles] = useState(0);
@@ -67,6 +68,20 @@ const NewsFeed = ({ articles = [], useApi = false }: NewsFeedProps) => {
     };
   }, [searchTerm]);
 
+  // Sync external search term from parent (e.g., Dashboard header search)
+  useEffect(() => {
+    if (externalSearchTerm !== undefined && externalSearchTerm !== searchTerm) {
+      setSearchTerm(externalSearchTerm);
+    }
+  }, [externalSearchTerm]);
+
+  // Map category name to ID for API calls
+  const getCategoryIdByName = useCallback((name: string): string | undefined => {
+    if (name === "all") return undefined;
+    const cat = apiCategories.find(c => c.name === name);
+    return cat?.id;
+  }, [apiCategories]);
+
   // Fetch articles from API if useApi is true
   useEffect(() => {
     if (useApi) {
@@ -77,10 +92,11 @@ const NewsFeed = ({ articles = [], useApi = false }: NewsFeedProps) => {
 
   const fetchArticlesFromApi = async () => {
     setLoading(true);
+    const categoryId = getCategoryIdByName(selectedCategory);
     console.log('[DEBUG NewsFeed] Fetching articles with params:', {
       page: currentPage,
       limit: ARTICLES_PER_PAGE,
-      category: selectedCategory !== 'all' ? selectedCategory : undefined,
+      category: categoryId,
       search: debouncedSearchTerm || undefined,
       status: 'published'
     });
@@ -89,7 +105,7 @@ const NewsFeed = ({ articles = [], useApi = false }: NewsFeedProps) => {
       const result = await articlesAPI.getAll({
         page: currentPage,
         limit: ARTICLES_PER_PAGE,
-        category: selectedCategory !== 'all' ? selectedCategory : undefined,
+        category: categoryId,
         search: debouncedSearchTerm || undefined,
         status: 'published'
       });
@@ -135,7 +151,7 @@ const NewsFeed = ({ articles = [], useApi = false }: NewsFeedProps) => {
     try {
       const result = await categoriesAPI.getAll();
       if (result.success && result.data) {
-        setApiCategories(result.data.map((cat: Category) => cat.name));
+        setApiCategories(result.data.map((cat: Category) => ({ id: cat.id, name: cat.name })));
       }
     } catch (error) {
       console.error('Error fetching categories:', error);
@@ -219,7 +235,7 @@ const NewsFeed = ({ articles = [], useApi = false }: NewsFeedProps) => {
 
   // Get unique categories for filter
   const categories = useApi && apiCategories.length > 0
-    ? ["all", ...apiCategories]
+    ? ["all", ...apiCategories.map(cat => cat.name)]
     : ["all", ...new Set(displayArticles.map((article) => article.category))];
 
   // Filter articles based on search term and category (client-side if not using API)
@@ -241,9 +257,7 @@ const NewsFeed = ({ articles = [], useApi = false }: NewsFeedProps) => {
 
   // Reset to page 1 when filters change
   React.useEffect(() => {
-    if (!useApi) {
-      setCurrentPage(1);
-    }
+    setCurrentPage(1);
   }, [searchTerm, selectedCategory, useApi]);
 
   // Toggle article expansion

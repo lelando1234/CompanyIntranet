@@ -177,12 +177,15 @@ const AdminPanel = () => {
     name: "",
     email: "",
     password: "",
+    confirmPassword: "",
     role: "user" as "admin" | "editor" | "user",
     department: "",
     phone: "",
     groups: [] as string[],
   });
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmUserPassword, setShowConfirmUserPassword] = useState(false);
+  const [userPasswordError, setUserPasswordError] = useState("");
 
   const [groupForm, setGroupForm] = useState({
     name: "",
@@ -289,6 +292,62 @@ const AdminPanel = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  // Helper: check if the current user's role has read access to a tab/section
+  const tabToPermissionKey: Record<string, string> = {
+    news: "news",
+    categories: "categories",
+    urls: "urls",
+    users: "users",
+    roles: "users", // roles tab is part of user management
+    groups: "groups",
+    faqs: "faqs",
+    email: "email",
+    theme: "theme",
+  };
+
+  const canViewTab = (tabValue: string): boolean => {
+    // Admins can always see everything
+    if (authUser?.role === "admin") return true;
+    const permKey = tabToPermissionKey[tabValue];
+    if (!permKey) return true;
+    const userRole = authUser?.role || "user";
+    const perms = rolePermissions[userRole as keyof typeof rolePermissions];
+    if (!perms) return false;
+    const sectionPerms = perms[permKey as keyof typeof perms];
+    if (!sectionPerms) return false;
+    return sectionPerms.read === true;
+  };
+
+  const canWriteSection = (sectionKey: string): boolean => {
+    if (authUser?.role === "admin") return true;
+    const userRole = authUser?.role || "user";
+    const perms = rolePermissions[userRole as keyof typeof rolePermissions];
+    if (!perms) return false;
+    const sectionPerms = perms[sectionKey as keyof typeof perms];
+    if (!sectionPerms) return false;
+    return sectionPerms.write === true;
+  };
+
+  const canDeleteSection = (sectionKey: string): boolean => {
+    if (authUser?.role === "admin") return true;
+    const userRole = authUser?.role || "user";
+    const perms = rolePermissions[userRole as keyof typeof rolePermissions];
+    if (!perms) return false;
+    const sectionPerms = perms[sectionKey as keyof typeof perms];
+    if (!sectionPerms) return false;
+    return sectionPerms.delete === true;
+  };
+
+  // Set initial active tab to first visible tab when permissions load
+  useEffect(() => {
+    const allTabs = ["news", "categories", "urls", "users", "roles", "groups", "faqs", "email", "theme"];
+    const visibleTabs = allTabs.filter(tab => canViewTab(tab));
+    if (visibleTabs.length > 0 && !canViewTab(activeTab)) {
+      setActiveTab(visibleTabs[0]);
+      setSidebarTab(visibleTabs[0]);
+    }
+  }, [rolePermissions, authUser?.role]);
+
   // Load settings on mount
   useEffect(() => {
     const loadSettings = async () => {
@@ -311,6 +370,15 @@ const AdminPanel = () => {
           if (result.data.welcome_subtext) setWelcomeSubtext(result.data.welcome_subtext);
           if (result.data.show_welcome !== undefined) setShowWelcome(result.data.show_welcome === true || result.data.show_welcome === 'true');
           if (result.data.copyright_text !== undefined) setCopyrightText(result.data.copyright_text || '');
+          // Load role permissions from backend
+          if (result.data.role_permissions) {
+            try {
+              const parsed = typeof result.data.role_permissions === 'string' 
+                ? JSON.parse(result.data.role_permissions) 
+                : result.data.role_permissions;
+              setRolePermissions(prev => ({ ...prev, ...parsed }));
+            } catch { /* use defaults */ }
+          }
         }
       } catch { /* use defaults */ }
     };
@@ -449,21 +517,32 @@ const AdminPanel = () => {
   // --- USERS CRUD ---
   const openNewUser = () => {
     setEditingUserId(null);
-    setUserForm({ name: "", email: "", password: "", role: "user", department: "", phone: "", groups: [] });
+    setUserForm({ name: "", email: "", password: "", confirmPassword: "", role: "user", department: "", phone: "", groups: [] });
     setShowPassword(false);
+    setShowConfirmUserPassword(false);
+    setUserPasswordError("");
     setIsUserDialogOpen(true);
   };
 
   const openEditUser = (user: User) => {
     setEditingUserId(user.id);
-    setUserForm({ name: user.name, email: user.email, password: "", role: user.role, department: user.department || "", phone: user.phone || "", groups: user.groups?.map((g) => g.id) || [] });
+    setUserForm({ name: user.name, email: user.email, password: "", confirmPassword: "", role: user.role, department: user.department || "", phone: user.phone || "", groups: user.groups?.map((g) => g.id) || [] });
     setShowPassword(false);
+    setShowConfirmUserPassword(false);
+    setUserPasswordError("");
     setIsUserDialogOpen(true);
   };
 
   const handleSaveUser = async () => {
     if (!userForm.name.trim() || !userForm.email.trim()) { showError("Name and email required"); return; }
     if (!editingUserId && !userForm.password.trim()) { showError("Password required for new users"); return; }
+    // Password match validation
+    if (userForm.password.trim() && userForm.password !== userForm.confirmPassword) {
+      setUserPasswordError("Passwords don't match");
+      showError("Passwords don't match");
+      return;
+    }
+    setUserPasswordError("");
     setSubmitting(true);
     try {
       if (editingUserId) {
@@ -846,7 +925,7 @@ const AdminPanel = () => {
               { key: "faqs", icon: MessageCircleQuestion, label: "FAQs" },
               { key: "email", icon: Mail, label: "Email Settings" },
               { key: "theme", icon: Palette, label: "Theme & Logo" },
-            ].map(({ key, icon: Icon, label }) => (
+            ].filter(({ key }) => canViewTab(key)).map(({ key, icon: Icon, label }) => (
               <Button key={key} variant={sidebarTab === key ? "secondary" : "ghost"} className="w-full justify-start"
                 onClick={() => { setSidebarTab(key); setActiveTab(key); }}>
                 <Icon className="mr-2 h-4 w-4" /> {label}
@@ -926,22 +1005,22 @@ const AdminPanel = () => {
               <Tabs value={activeTab} className="w-full" onValueChange={(val) => { setActiveTab(val); setSidebarTab(val); }}>
                 <div className="flex justify-between items-center mb-6">
                   <TabsList className="flex-wrap">
-                    <TabsTrigger value="news">News Articles</TabsTrigger>
-                    <TabsTrigger value="categories">News Categories</TabsTrigger>
-                    <TabsTrigger value="urls">URL Categories</TabsTrigger>
-                    <TabsTrigger value="users">Users</TabsTrigger>
-                    <TabsTrigger value="roles">User Roles</TabsTrigger>
-                    <TabsTrigger value="groups">Groups</TabsTrigger>
-                    <TabsTrigger value="faqs">FAQs</TabsTrigger>
-                    <TabsTrigger value="email">Email</TabsTrigger>
-                    <TabsTrigger value="theme">Theme & Logo</TabsTrigger>
+                    {canViewTab("news") && <TabsTrigger value="news">News Articles</TabsTrigger>}
+                    {canViewTab("categories") && <TabsTrigger value="categories">News Categories</TabsTrigger>}
+                    {canViewTab("urls") && <TabsTrigger value="urls">URL Categories</TabsTrigger>}
+                    {canViewTab("users") && <TabsTrigger value="users">Users</TabsTrigger>}
+                    {canViewTab("roles") && <TabsTrigger value="roles">User Roles</TabsTrigger>}
+                    {canViewTab("groups") && <TabsTrigger value="groups">Groups</TabsTrigger>}
+                    {canViewTab("faqs") && <TabsTrigger value="faqs">FAQs</TabsTrigger>}
+                    {canViewTab("email") && <TabsTrigger value="email">Email</TabsTrigger>}
+                    {canViewTab("theme") && <TabsTrigger value="theme">Theme & Logo</TabsTrigger>}
                   </TabsList>
-                  {activeTab === "news" && <Button onClick={openNewArticle}><Plus className="mr-2 h-4 w-4" />Add Article</Button>}
-                  {activeTab === "categories" && <Button onClick={openNewCategory}><Plus className="mr-2 h-4 w-4" />Add Category</Button>}
-                  {activeTab === "urls" && <Button onClick={openNewUrlCat}><Plus className="mr-2 h-4 w-4" />Add Category</Button>}
-                  {activeTab === "users" && <Button onClick={openNewUser}><Plus className="mr-2 h-4 w-4" />Add User</Button>}
-                  {activeTab === "groups" && <Button onClick={openNewGroup}><Plus className="mr-2 h-4 w-4" />Add Group</Button>}
-                  {activeTab === "faqs" && <Button onClick={openNewFAQ}><Plus className="mr-2 h-4 w-4" />Add FAQ</Button>}
+                  {activeTab === "news" && canWriteSection("news") && <Button onClick={openNewArticle}><Plus className="mr-2 h-4 w-4" />Add Article</Button>}
+                  {activeTab === "categories" && canWriteSection("categories") && <Button onClick={openNewCategory}><Plus className="mr-2 h-4 w-4" />Add Category</Button>}
+                  {activeTab === "urls" && canWriteSection("urls") && <Button onClick={openNewUrlCat}><Plus className="mr-2 h-4 w-4" />Add Category</Button>}
+                  {activeTab === "users" && canWriteSection("users") && <Button onClick={openNewUser}><Plus className="mr-2 h-4 w-4" />Add User</Button>}
+                  {activeTab === "groups" && canWriteSection("groups") && <Button onClick={openNewGroup}><Plus className="mr-2 h-4 w-4" />Add Group</Button>}
+                  {activeTab === "faqs" && canWriteSection("faqs") && <Button onClick={openNewFAQ}><Plus className="mr-2 h-4 w-4" />Add FAQ</Button>}
                 </div>
 
                 {/* NEWS TAB */}
@@ -1803,12 +1882,24 @@ const AdminPanel = () => {
               <div className="grid gap-2">
                 <Label>Password {editingUserId ? "(leave blank to keep)" : "*"}</Label>
                 <div className="relative">
-                  <Input type={showPassword ? "text" : "password"} value={userForm.password} onChange={(e) => setUserForm({ ...userForm, password: e.target.value })} placeholder={editingUserId ? "Leave blank to keep current" : "Enter password"} />
+                  <Input type={showPassword ? "text" : "password"} value={userForm.password} onChange={(e) => { setUserForm({ ...userForm, password: e.target.value }); if (userPasswordError) setUserPasswordError(""); }} placeholder={editingUserId ? "Leave blank to keep current" : "Enter password"} />
                   <Button type="button" variant="ghost" size="sm" className="absolute right-0 top-0 h-full px-3 hover:bg-transparent" onClick={() => setShowPassword(!showPassword)}>
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </Button>
                 </div>
               </div>
+              <div className="grid gap-2">
+                <Label>Confirm Password {editingUserId ? "" : "*"}</Label>
+                <div className="relative">
+                  <Input type={showConfirmUserPassword ? "text" : "password"} value={userForm.confirmPassword} onChange={(e) => { setUserForm({ ...userForm, confirmPassword: e.target.value }); if (userPasswordError) setUserPasswordError(""); }} placeholder="Confirm password" className={userPasswordError ? "border-red-500 focus-visible:ring-red-500" : ""} />
+                  <Button type="button" variant="ghost" size="sm" className="absolute right-0 top-0 h-full px-3 hover:bg-transparent" onClick={() => setShowConfirmUserPassword(!showConfirmUserPassword)}>
+                    {showConfirmUserPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                </div>
+                {userPasswordError && <p className="text-sm text-red-500 font-medium">{userPasswordError}</p>}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label>Role</Label>
                 <Select value={userForm.role} onValueChange={(val) => setUserForm({ ...userForm, role: val as "admin" | "editor" | "user" })}>

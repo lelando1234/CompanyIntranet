@@ -228,6 +228,7 @@ export default function UserProfile() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
 
   // Color preferences state
   const [colors, setColors] = useState<ColorPalette>({ ...defaultColors });
@@ -368,8 +369,10 @@ export default function UserProfile() {
   // Handle password change
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
+    setPasswordError("");
 
     if (newPassword !== confirmPassword) {
+      setPasswordError("Passwords don't match");
       toast({
         title: "Passwords don't match",
         description: "Please make sure your new passwords match",
@@ -379,6 +382,7 @@ export default function UserProfile() {
     }
 
     if (newPassword.length < 6) {
+      setPasswordError("Password must be at least 6 characters long");
       toast({
         title: "Password too short",
         description: "Password must be at least 6 characters long",
@@ -674,7 +678,12 @@ export default function UserProfile() {
                       id="confirm-password"
                       type={showConfirmPassword ? "text" : "password"}
                       value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      onChange={(e) => {
+                        setConfirmPassword(e.target.value);
+                        // Clear error when user types
+                        if (passwordError) setPasswordError("");
+                      }}
+                      className={passwordError && confirmPassword ? "border-red-500 focus-visible:ring-red-500" : ""}
                       required
                       minLength={6}
                     />
@@ -692,6 +701,9 @@ export default function UserProfile() {
                       )}
                     </Button>
                   </div>
+                  {passwordError && (
+                    <p className="text-sm text-red-500 font-medium">{passwordError}</p>
+                  )}
                 </div>
 
                 <Button type="submit" disabled={changingPassword}>

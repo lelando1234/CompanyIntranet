@@ -83,6 +83,35 @@ router.get('/', optionalAuth, async (req, res) => {
       console.log('[DEBUG Articles API] Filter: Search term:', search);
     }
 
+    // Group-based visibility: for regular users and editors, only show articles that either
+    // have no target groups (visible to everyone) or target groups that match the user's groups.
+    // Admins can see all articles regardless of group assignment.
+    if (req.user && req.user.role !== 'admin') {
+      // Get the user's group IDs
+      const userGroups = await query(
+        'SELECT group_id FROM user_groups WHERE user_id = ?',
+        [req.user.id]
+      );
+      const userGroupIds = userGroups.map(g => g.group_id);
+
+      if (userGroupIds.length > 0) {
+        const placeholders = userGroupIds.map(() => '?').join(',');
+        whereClause += ` AND (
+          NOT EXISTS (SELECT 1 FROM article_groups ag2 WHERE ag2.article_id = a.id)
+          OR EXISTS (SELECT 1 FROM article_groups ag3 WHERE ag3.article_id = a.id AND ag3.group_id IN (${placeholders}))
+        )`;
+        params.push(...userGroupIds);
+      } else {
+        // User has no groups - only show articles with no target groups
+        whereClause += ' AND NOT EXISTS (SELECT 1 FROM article_groups ag2 WHERE ag2.article_id = a.id)';
+      }
+      console.log('[DEBUG Articles API] Filter: Group visibility applied for user groups:', userGroupIds);
+    } else if (!req.user) {
+      // Unauthenticated users only see articles with no target groups
+      whereClause += ' AND NOT EXISTS (SELECT 1 FROM article_groups ag2 WHERE ag2.article_id = a.id)';
+      console.log('[DEBUG Articles API] Filter: Unauthenticated - showing only ungrouped articles');
+    }
+
     console.log('[DEBUG Articles API] Final WHERE clause:', whereClause);
     console.log('[DEBUG Articles API] Query params:', params);
 
@@ -178,6 +207,34 @@ router.get('/:id', optionalAuth, async (req, res) => {
 
     if (articles.length === 0) {
       return res.status(404).json({ success: false, message: 'Article not found' });
+    }
+
+    // Check group visibility for regular users and editors (admins can see all)
+    if (req.user && req.user.role !== 'admin') {
+      const articleGroups = await query(
+        'SELECT group_id FROM article_groups WHERE article_id = ?',
+        [req.params.id]
+      );
+      if (articleGroups.length > 0) {
+        const userGroups = await query(
+          'SELECT group_id FROM user_groups WHERE user_id = ?',
+          [req.user.id]
+        );
+        const userGroupIds = userGroups.map(g => g.group_id);
+        const hasAccess = articleGroups.some(ag => userGroupIds.includes(ag.group_id));
+        if (!hasAccess) {
+          return res.status(404).json({ success: false, message: 'Article not found' });
+        }
+      }
+    } else if (!req.user) {
+      // Unauthenticated users can only see articles with no target groups
+      const articleGroups = await query(
+        'SELECT group_id FROM article_groups WHERE article_id = ?',
+        [req.params.id]
+      );
+      if (articleGroups.length > 0) {
+        return res.status(404).json({ success: false, message: 'Article not found' });
+      }
     }
 
     // Get attachments

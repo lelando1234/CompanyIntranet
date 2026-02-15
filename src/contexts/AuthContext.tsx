@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { authAPI, setAuthToken, getAuthToken } from "@/lib/api";
 
-export type UserRole = "admin" | "editor" | "user";
+export type UserRole = string;
 
 export interface User {
   id: string;

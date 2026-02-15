@@ -1245,6 +1245,7 @@ const AdminPanel = () => {
                     </CardContent>
                   </Card>
                 </TabsContent>
+                )}
 
                 {/* USERS TAB */}
                 {canViewTab("users") && (

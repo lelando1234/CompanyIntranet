@@ -66,8 +66,28 @@ async function apiFetch<T>(
       ok: response.ok
     });
 
+    // Handle rate limiting BEFORE trying to parse body
+    if (response.status === 429) {
+      console.warn('[DEBUG] Rate limited (429) for:', fullUrl);
+      return { success: false, message: 'Too many requests. Please wait a moment and try again.' };
+    }
+
+    // Handle 401 - token expired
+    if (response.status === 401) {
+      console.warn('[DEBUG] 401 Unauthorized - redirecting to login');
+      setAuthToken(null);
+      window.location.href = '/';
+      return { success: false, message: 'Unauthorized' };
+    }
+
     const text = await response.text();
-    const data = text ? JSON.parse(text) : { success: true };
+    let data: any;
+    try {
+      data = text ? JSON.parse(text) : { success: true };
+    } catch (parseError) {
+      console.error('[DEBUG] JSON parse error for:', fullUrl, 'Response text:', text.substring(0, 200));
+      return { success: false, message: `Server returned invalid JSON (HTTP ${response.status})` };
+    }
 
     console.log('[DEBUG] API Response Data:', {
       url: fullUrl,
@@ -78,12 +98,6 @@ async function apiFetch<T>(
     });
 
     if (!response.ok) {
-      // Handle 401 - token expired
-      if (response.status === 401) {
-        console.warn('[DEBUG] 401 Unauthorized - redirecting to login');
-        setAuthToken(null);
-        window.location.href = '/';
-      }
       console.error('[DEBUG] Request failed:', data.message || 'Unknown error');
       return { success: false, message: data.message || 'Request failed', errors: data.errors };
     }

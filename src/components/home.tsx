@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ArrowRight, AlertCircle, Loader2, WifiOff, Mail, ArrowLeft, CheckCircle } from "lucide-react";
-import { settingsAPI, authAPI } from "@/lib/api";
+import { authAPI } from "@/lib/api";
 
 function Home() {
   const navigate = useNavigate();
@@ -41,30 +41,13 @@ function Home() {
   const [forgotPasswordSent, setForgotPasswordSent] = useState(false);
   const [forgotPasswordError, setForgotPasswordError] = useState("");
 
-  // Load portal name from settings
+  // Load portal name from document title (already set by SettingsLoader in App.tsx)
+  // This avoids a duplicate API call that contributes to rate limiting
   useEffect(() => {
-    const loadSettings = async () => {
-      try {
-        const result = await settingsAPI.getAll();
-        if (result.success && result.data?.site_name) {
-          setPortalName(result.data.site_name);
-          document.title = result.data.site_name;
-        }
-        // Load and apply favicon
-        if (result.success && result.data?.favicon_url) {
-          const link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
-          if (link) {
-            link.href = result.data.favicon_url;
-          } else {
-            const newLink = document.createElement('link');
-            newLink.rel = 'icon';
-            newLink.href = result.data.favicon_url;
-            document.head.appendChild(newLink);
-          }
-        }
-      } catch { /* use default */ }
-    };
-    loadSettings();
+    const currentTitle = document.title;
+    if (currentTitle && currentTitle !== 'Vite + React + TS' && currentTitle !== 'Vite App') {
+      setPortalName(currentTitle);
+    }
   }, []);
 
   // Load theme colors from localStorage

@@ -35,8 +35,10 @@ const checkBackendAvailable = async (): Promise<boolean> => {
   try {
     const response = await fetch(`${apiUrl}/health`, {
       method: 'GET',
-      signal: AbortSignal.timeout(3000)
+      signal: AbortSignal.timeout(5000)
     });
+    // Treat 429 as "available but rate-limited" — the backend IS running
+    if (response.status === 429) return true;
     return response.ok;
   } catch {
     return false;

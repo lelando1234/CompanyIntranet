@@ -75,6 +75,18 @@ function SettingsLoader({ children }: { children: React.ReactNode }) {
           if (result.data.site_name) {
             document.title = result.data.site_name;
           }
+          // Load and apply favicon
+          if (result.data.favicon_url) {
+            const link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
+            if (link) {
+              link.href = result.data.favicon_url;
+            } else {
+              const newLink = document.createElement('link');
+              newLink.rel = 'icon';
+              newLink.href = result.data.favicon_url;
+              document.head.appendChild(newLink);
+            }
+          }
           if (result.data.theme_palette) {
             let palette;
             if (typeof result.data.theme_palette === 'string') {

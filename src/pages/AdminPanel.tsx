@@ -42,6 +42,26 @@ import {
   X,
   Shield,
   XCircle,
+  Link,
+  Globe,
+  BookOpen,
+  FileText,
+  Briefcase,
+  Heart,
+  Star,
+  Folder,
+  Clock,
+  MapPin,
+  Calendar,
+  Phone,
+  Zap,
+  Database,
+  Code,
+  Video,
+  Music,
+  Download,
+  Upload,
+  ExternalLink,
 } from "lucide-react";
 import {
   Dialog,
@@ -2032,36 +2052,36 @@ const AdminPanel = () => {
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Link">Link</SelectItem>
-                  <SelectItem value="Link2">Link2</SelectItem>
-                  <SelectItem value="Globe">Globe</SelectItem>
-                  <SelectItem value="BookOpen">Book</SelectItem>
-                  <SelectItem value="FileText">File</SelectItem>
-                  <SelectItem value="Briefcase">Briefcase</SelectItem>
-                  <SelectItem value="Heart">Heart</SelectItem>
-                  <SelectItem value="Star">Star</SelectItem>
-                  <SelectItem value="Folder">Folder</SelectItem>
-                  <SelectItem value="HelpCircle">Help</SelectItem>
-                  <SelectItem value="Settings">Settings</SelectItem>
-                  <SelectItem value="Users">Users</SelectItem>
-                  <SelectItem value="Mail">Mail</SelectItem>
-                  <SelectItem value="Phone">Phone</SelectItem>
-                  <SelectItem value="MapPin">Location</SelectItem>
-                  <SelectItem value="Calendar">Calendar</SelectItem>
-                  <SelectItem value="Clock">Clock</SelectItem>
-                  <SelectItem value="Shield">Shield</SelectItem>
-                  <SelectItem value="Zap">Lightning</SelectItem>
-                  <SelectItem value="Database">Database</SelectItem>
-                  <SelectItem value="Code">Code</SelectItem>
-                  <SelectItem value="Image">Image</SelectItem>
-                  <SelectItem value="Video">Video</SelectItem>
-                  <SelectItem value="Music">Music</SelectItem>
-                  <SelectItem value="Download">Download</SelectItem>
-                  <SelectItem value="Upload">Upload</SelectItem>
-                  <SelectItem value="Search">Search</SelectItem>
-                  <SelectItem value="Home">Home</SelectItem>
-                  <SelectItem value="ExternalLink">External Link</SelectItem>
+                <SelectContent className="max-h-[300px]">
+                  <SelectItem value="Link"><span className="flex items-center gap-2"><Link className="h-4 w-4" /> Link</span></SelectItem>
+                  <SelectItem value="Link2"><span className="flex items-center gap-2"><Link2 className="h-4 w-4" /> Link2</span></SelectItem>
+                  <SelectItem value="Globe"><span className="flex items-center gap-2"><Globe className="h-4 w-4" /> Globe</span></SelectItem>
+                  <SelectItem value="BookOpen"><span className="flex items-center gap-2"><BookOpen className="h-4 w-4" /> Book</span></SelectItem>
+                  <SelectItem value="FileText"><span className="flex items-center gap-2"><FileText className="h-4 w-4" /> File</span></SelectItem>
+                  <SelectItem value="Briefcase"><span className="flex items-center gap-2"><Briefcase className="h-4 w-4" /> Briefcase</span></SelectItem>
+                  <SelectItem value="Heart"><span className="flex items-center gap-2"><Heart className="h-4 w-4" /> Heart</span></SelectItem>
+                  <SelectItem value="Star"><span className="flex items-center gap-2"><Star className="h-4 w-4" /> Star</span></SelectItem>
+                  <SelectItem value="Folder"><span className="flex items-center gap-2"><Folder className="h-4 w-4" /> Folder</span></SelectItem>
+                  <SelectItem value="HelpCircle"><span className="flex items-center gap-2"><HelpCircle className="h-4 w-4" /> Help</span></SelectItem>
+                  <SelectItem value="Settings"><span className="flex items-center gap-2"><Settings className="h-4 w-4" /> Settings</span></SelectItem>
+                  <SelectItem value="Users"><span className="flex items-center gap-2"><Users className="h-4 w-4" /> Users</span></SelectItem>
+                  <SelectItem value="Mail"><span className="flex items-center gap-2"><Mail className="h-4 w-4" /> Mail</span></SelectItem>
+                  <SelectItem value="Phone"><span className="flex items-center gap-2"><Phone className="h-4 w-4" /> Phone</span></SelectItem>
+                  <SelectItem value="MapPin"><span className="flex items-center gap-2"><MapPin className="h-4 w-4" /> Location</span></SelectItem>
+                  <SelectItem value="Calendar"><span className="flex items-center gap-2"><Calendar className="h-4 w-4" /> Calendar</span></SelectItem>
+                  <SelectItem value="Clock"><span className="flex items-center gap-2"><Clock className="h-4 w-4" /> Clock</span></SelectItem>
+                  <SelectItem value="Shield"><span className="flex items-center gap-2"><Shield className="h-4 w-4" /> Shield</span></SelectItem>
+                  <SelectItem value="Zap"><span className="flex items-center gap-2"><Zap className="h-4 w-4" /> Lightning</span></SelectItem>
+                  <SelectItem value="Database"><span className="flex items-center gap-2"><Database className="h-4 w-4" /> Database</span></SelectItem>
+                  <SelectItem value="Code"><span className="flex items-center gap-2"><Code className="h-4 w-4" /> Code</span></SelectItem>
+                  <SelectItem value="Image"><span className="flex items-center gap-2"><ImageIcon className="h-4 w-4" /> Image</span></SelectItem>
+                  <SelectItem value="Video"><span className="flex items-center gap-2"><Video className="h-4 w-4" /> Video</span></SelectItem>
+                  <SelectItem value="Music"><span className="flex items-center gap-2"><Music className="h-4 w-4" /> Music</span></SelectItem>
+                  <SelectItem value="Download"><span className="flex items-center gap-2"><Download className="h-4 w-4" /> Download</span></SelectItem>
+                  <SelectItem value="Upload"><span className="flex items-center gap-2"><Upload className="h-4 w-4" /> Upload</span></SelectItem>
+                  <SelectItem value="Search"><span className="flex items-center gap-2"><Search className="h-4 w-4" /> Search</span></SelectItem>
+                  <SelectItem value="Home"><span className="flex items-center gap-2"><Home className="h-4 w-4" /> Home</span></SelectItem>
+                  <SelectItem value="ExternalLink"><span className="flex items-center gap-2"><ExternalLink className="h-4 w-4" /> External Link</span></SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -2110,13 +2130,47 @@ const AdminPanel = () => {
             <div className="grid gap-2"><Label>Title *</Label><Input value={urlLinkForm.title} onChange={(e) => setUrlLinkForm({ ...urlLinkForm, title: e.target.value })} /></div>
             <div className="grid gap-2"><Label>URL *</Label><Input value={urlLinkForm.url} onChange={(e) => setUrlLinkForm({ ...urlLinkForm, url: e.target.value })} placeholder="https://..." /></div>
             <div className="grid gap-2">
-              <Label>Icon URL (optional)</Label>
-              <Input 
-                value={urlLinkForm.icon_url} 
-                onChange={(e) => setUrlLinkForm({ ...urlLinkForm, icon_url: e.target.value })} 
-                placeholder="https://example.com/favicon.ico"
-              />
-              <p className="text-xs text-muted-foreground">Add a small image URL (favicon) to display next to this link</p>
+              <Label>Favicon Icon (optional)</Label>
+              <div className="space-y-2">
+                {urlLinkForm.icon_url && (
+                  <div className="flex items-center gap-2 p-2 border rounded-md">
+                    <img 
+                      src={urlLinkForm.icon_url} 
+                      alt="Current favicon" 
+                      className="h-4 w-4"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                    <span className="text-sm text-muted-foreground flex-1 truncate">{urlLinkForm.icon_url}</span>
+                    <Button 
+                      type="button"
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => setUrlLinkForm({ ...urlLinkForm, icon_url: "" })}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+                <Input 
+                  type="file"
+                  accept="image/*,.ico"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      // Create a data URL for preview/storage
+                      const reader = new FileReader();
+                      reader.onloadend = () => {
+                        setUrlLinkForm({ ...urlLinkForm, icon_url: reader.result as string });
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                  className="cursor-pointer"
+                />
+                <p className="text-xs text-muted-foreground">Upload a small image or .ico file to display as favicon (16x16px recommended)</p>
+              </div>
             </div>
             <div className="grid gap-2"><Label>Description</Label><Input value={urlLinkForm.description} onChange={(e) => setUrlLinkForm({ ...urlLinkForm, description: e.target.value })} /></div>
             <div className="flex items-center space-x-2">

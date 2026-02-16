@@ -1,5 +1,36 @@
 # New Features Added
 
+## Recent UI Improvements (Latest)
+
+### Visual Icon Selector ✅
+**Updated:** URL category icon dropdown now shows **visual icons** instead of text labels.
+
+**What changed:**
+- Each icon option now displays the actual icon graphic alongside its name
+- Makes it much easier to identify and select the right icon visually
+- All 30+ icons have visual representations in the dropdown
+
+**Location:** Admin Panel → URL Categories → Icon field
+
+---
+
+### File Upload for Favicons ✅
+**Updated:** URL link icons can now be **uploaded** instead of entering a URL.
+
+**What changed:**
+- Upload any image file or .ico file directly
+- Preview of currently uploaded favicon
+- Easy removal of existing favicons with X button
+- Files are stored as base64 data URLs (no external hosting needed)
+
+**Recommended:** Use 16x16px images for best results
+
+**Location:** Admin Panel → URL Links → "Favicon Icon (optional)" field
+
+---
+
+## Previous Features
+
 ## 1. Custom Icons for URL Links (Favicons)
 
 You can now add small favicon-sized images to URL links in the dashboard.

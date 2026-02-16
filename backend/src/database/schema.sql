@@ -133,6 +133,7 @@ CREATE TABLE IF NOT EXISTS url_links (
     url VARCHAR(500) NOT NULL,
     description TEXT,
     icon VARCHAR(50),
+    icon_url VARCHAR(500),
     sort_order INT DEFAULT 0,
     is_external BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

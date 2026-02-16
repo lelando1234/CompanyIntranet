@@ -231,7 +231,7 @@ const AdminPanel = () => {
   });
 
   const [urlCatForm, setUrlCatForm] = useState({ name: "", description: "", icon: "Link", target_groups: [] as string[] });
-  const [urlLinkForm, setUrlLinkForm] = useState({ title: "", url: "", description: "", is_external: true });
+  const [urlLinkForm, setUrlLinkForm] = useState({ title: "", url: "", description: "", icon_url: "", is_external: true });
 
   const [faqForm, setFaqForm] = useState({
     question: "",
@@ -593,8 +593,8 @@ const AdminPanel = () => {
   };
 
   // URL Links
-  const openNewUrlLink = (catId: string) => { setEditingUrlLinkId(null); setEditingUrlCatForLink(catId); setUrlLinkForm({ title: "", url: "", description: "", is_external: true }); setIsUrlDialogOpen(true); };
-  const openEditUrlLink = (catId: string, link: URLLink) => { setEditingUrlLinkId(link.id); setEditingUrlCatForLink(catId); setUrlLinkForm({ title: link.title, url: link.url, description: link.description || "", is_external: link.is_external }); setIsUrlDialogOpen(true); };
+  const openNewUrlLink = (catId: string) => { setEditingUrlLinkId(null); setEditingUrlCatForLink(catId); setUrlLinkForm({ title: "", url: "", description: "", icon_url: "", is_external: true }); setIsUrlDialogOpen(true); };
+  const openEditUrlLink = (catId: string, link: URLLink) => { setEditingUrlLinkId(link.id); setEditingUrlCatForLink(catId); setUrlLinkForm({ title: link.title, url: link.url, description: link.description || "", icon_url: (link as any).icon_url || "", is_external: link.is_external }); setIsUrlDialogOpen(true); };
 
   const handleSaveUrlLink = async () => {
     if (!urlLinkForm.title.trim() || !urlLinkForm.url.trim() || !editingUrlCatForLink) { showError("Title and URL required"); return; }
@@ -2027,6 +2027,45 @@ const AdminPanel = () => {
             <div className="grid gap-2"><Label>Name *</Label><Input value={urlCatForm.name} onChange={(e) => setUrlCatForm({ ...urlCatForm, name: e.target.value })} /></div>
             <div className="grid gap-2"><Label>Description</Label><Input value={urlCatForm.description} onChange={(e) => setUrlCatForm({ ...urlCatForm, description: e.target.value })} /></div>
             <div className="grid gap-2">
+              <Label>Icon</Label>
+              <Select value={urlCatForm.icon} onValueChange={(value) => setUrlCatForm({ ...urlCatForm, icon: value })}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Link">Link</SelectItem>
+                  <SelectItem value="Link2">Link2</SelectItem>
+                  <SelectItem value="Globe">Globe</SelectItem>
+                  <SelectItem value="BookOpen">Book</SelectItem>
+                  <SelectItem value="FileText">File</SelectItem>
+                  <SelectItem value="Briefcase">Briefcase</SelectItem>
+                  <SelectItem value="Heart">Heart</SelectItem>
+                  <SelectItem value="Star">Star</SelectItem>
+                  <SelectItem value="Folder">Folder</SelectItem>
+                  <SelectItem value="HelpCircle">Help</SelectItem>
+                  <SelectItem value="Settings">Settings</SelectItem>
+                  <SelectItem value="Users">Users</SelectItem>
+                  <SelectItem value="Mail">Mail</SelectItem>
+                  <SelectItem value="Phone">Phone</SelectItem>
+                  <SelectItem value="MapPin">Location</SelectItem>
+                  <SelectItem value="Calendar">Calendar</SelectItem>
+                  <SelectItem value="Clock">Clock</SelectItem>
+                  <SelectItem value="Shield">Shield</SelectItem>
+                  <SelectItem value="Zap">Lightning</SelectItem>
+                  <SelectItem value="Database">Database</SelectItem>
+                  <SelectItem value="Code">Code</SelectItem>
+                  <SelectItem value="Image">Image</SelectItem>
+                  <SelectItem value="Video">Video</SelectItem>
+                  <SelectItem value="Music">Music</SelectItem>
+                  <SelectItem value="Download">Download</SelectItem>
+                  <SelectItem value="Upload">Upload</SelectItem>
+                  <SelectItem value="Search">Search</SelectItem>
+                  <SelectItem value="Home">Home</SelectItem>
+                  <SelectItem value="ExternalLink">External Link</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
               <Label>Visible to Groups (leave empty for all users)</Label>
               <ScrollArea className="h-[120px] border rounded-md p-3">
                 <div className="space-y-2">
@@ -2070,6 +2109,15 @@ const AdminPanel = () => {
           <div className="grid gap-4 py-4">
             <div className="grid gap-2"><Label>Title *</Label><Input value={urlLinkForm.title} onChange={(e) => setUrlLinkForm({ ...urlLinkForm, title: e.target.value })} /></div>
             <div className="grid gap-2"><Label>URL *</Label><Input value={urlLinkForm.url} onChange={(e) => setUrlLinkForm({ ...urlLinkForm, url: e.target.value })} placeholder="https://..." /></div>
+            <div className="grid gap-2">
+              <Label>Icon URL (optional)</Label>
+              <Input 
+                value={urlLinkForm.icon_url} 
+                onChange={(e) => setUrlLinkForm({ ...urlLinkForm, icon_url: e.target.value })} 
+                placeholder="https://example.com/favicon.ico"
+              />
+              <p className="text-xs text-muted-foreground">Add a small image URL (favicon) to display next to this link</p>
+            </div>
             <div className="grid gap-2"><Label>Description</Label><Input value={urlLinkForm.description} onChange={(e) => setUrlLinkForm({ ...urlLinkForm, description: e.target.value })} /></div>
             <div className="flex items-center space-x-2">
               <Checkbox id="isExternal" checked={urlLinkForm.is_external} onCheckedChange={(checked) => setUrlLinkForm({ ...urlLinkForm, is_external: !!checked })} />

@@ -49,6 +49,7 @@ interface LinkItem {
   title: string;
   url: string;
   icon?: string;
+  icon_url?: string;
 }
 
 interface LinkCategory {
@@ -100,6 +101,7 @@ const SideNavigation = ({
               title: link.title,
               url: link.url,
               icon: link.icon,
+              icon_url: link.icon_url,
             })),
           }));
           setApiCategories(mapped);
@@ -197,7 +199,17 @@ const SideNavigation = ({
                             className="w-full justify-start text-sm font-normal py-1.5 h-auto"
                             onClick={() => handleLinkClick(link.url)}
                           >
-                            {LinkIcon ? (
+                            {link.icon_url ? (
+                              <img 
+                                src={link.icon_url} 
+                                alt="" 
+                                className="w-4 h-4 mr-2 flex-shrink-0 object-contain"
+                                onError={(e) => {
+                                  // Fallback to icon if image fails to load
+                                  e.currentTarget.style.display = 'none';
+                                }}
+                              />
+                            ) : LinkIcon ? (
                               <LinkIcon size={14} className="mr-2 flex-shrink-0" />
                             ) : (
                               <ExternalLink size={14} className="mr-2 flex-shrink-0" />

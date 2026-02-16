@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { authAPI, usersAPI, preferencesAPI, settingsAPI } from "@/lib/api";
@@ -236,6 +237,10 @@ export default function UserProfile() {
   const [savingColors, setSavingColors] = useState(false);
   const [useAdminColors, setUseAdminColors] = useState(true);
 
+  // Email notifications state
+  const [emailNotificationsEnabled, setEmailNotificationsEnabled] = useState(true);
+  const [savingNotifications, setSavingNotifications] = useState(false);
+
   // Load user preferences and admin color settings
   useEffect(() => {
     const loadSiteSettings = async () => {
@@ -260,6 +265,11 @@ export default function UserProfile() {
           const userColors = prefResult.data.theme_colors;
           const useAdmin = prefResult.data.use_admin_theme !== false;
           setUseAdminColors(useAdmin);
+          
+          // Load email notifications preference
+          if (prefResult.data.email_notifications_enabled !== undefined) {
+            setEmailNotificationsEnabled(prefResult.data.email_notifications_enabled);
+          }
           
           if (userColors && typeof userColors === "object") {
             setColors({ ...defaultColors, ...userColors });
@@ -475,6 +485,31 @@ export default function UserProfile() {
   const applyPreset = (preset: typeof colorPresets[0]) => {
     setColors(preset.colors as ColorPalette);
     setUseAdminColors(false);
+  };
+
+  // Save email notification preference
+  const handleSaveEmailNotifications = async () => {
+    setSavingNotifications(true);
+    try {
+      const result = await preferencesAPI.set("email_notifications_enabled", emailNotificationsEnabled);
+
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: "Notification preferences saved successfully",
+        });
+      } else {
+        throw new Error(result.message);
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save notification preferences",
+        variant: "destructive",
+      });
+    } finally {
+      setSavingNotifications(false);
+    }
   };
 
   const userName = user?.name || "User";
@@ -713,6 +748,39 @@ export default function UserProfile() {
                   Change Password
                 </Button>
               </form>
+            </CardContent>
+          </Card>
+
+          {/* Email Notifications Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Email Notifications</CardTitle>
+              <CardDescription>
+                Manage your email notification preferences
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="email-notifications" className="text-base">
+                    Receive email notifications
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    Get notified about new articles, announcements, and updates
+                  </p>
+                </div>
+                <Switch
+                  id="email-notifications"
+                  checked={emailNotificationsEnabled}
+                  onCheckedChange={setEmailNotificationsEnabled}
+                />
+              </div>
+              <Button onClick={handleSaveEmailNotifications} disabled={savingNotifications}>
+                {savingNotifications && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Save Notification Preferences
+              </Button>
             </CardContent>
           </Card>
 

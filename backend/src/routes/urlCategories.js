@@ -211,7 +211,7 @@ router.post('/:categoryId/links', verifyToken, requireRole('admin', 'editor'), [
     }
 
     const { categoryId } = req.params;
-    const { title, url, description, icon, sort_order, is_external } = req.body;
+    const { title, url, description, icon, icon_url, sort_order, is_external } = req.body;
 
     // Check if category exists
     const category = await query('SELECT id FROM url_categories WHERE id = ?', [categoryId]);
@@ -222,9 +222,9 @@ router.post('/:categoryId/links', verifyToken, requireRole('admin', 'editor'), [
     const linkId = uuidv4();
 
     await query(`
-      INSERT INTO url_links (id, category_id, title, url, description, icon, sort_order, is_external)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `, [linkId, categoryId, title, url, description || null, icon || null, sort_order || 0, is_external !== false]);
+      INSERT INTO url_links (id, category_id, title, url, description, icon, icon_url, sort_order, is_external)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [linkId, categoryId, title, url, description || null, icon || null, icon_url || null, sort_order || 0, is_external !== false]);
 
     // Log audit
     await logAudit(req.user.id, 'CREATE_URL_LINK', 'url_link', linkId, null, { title, url }, req);
@@ -244,7 +244,7 @@ router.post('/:categoryId/links', verifyToken, requireRole('admin', 'editor'), [
 router.put('/:categoryId/links/:linkId', verifyToken, requireRole('admin', 'editor'), async (req, res) => {
   try {
     const { categoryId, linkId } = req.params;
-    const { title, url, description, icon, sort_order, is_external } = req.body;
+    const { title, url, description, icon, icon_url, sort_order, is_external } = req.body;
 
     const existing = await query(
       'SELECT * FROM url_links WHERE id = ? AND category_id = ?',
@@ -261,6 +261,7 @@ router.put('/:categoryId/links/:linkId', verifyToken, requireRole('admin', 'edit
     if (url) { updates.push('url = ?'); params.push(url); }
     if (description !== undefined) { updates.push('description = ?'); params.push(description); }
     if (icon !== undefined) { updates.push('icon = ?'); params.push(icon); }
+    if (icon_url !== undefined) { updates.push('icon_url = ?'); params.push(icon_url); }
     if (sort_order !== undefined) { updates.push('sort_order = ?'); params.push(sort_order); }
     if (is_external !== undefined) { updates.push('is_external = ?'); params.push(is_external); }
 

@@ -90,6 +90,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -118,9 +119,11 @@ import {
 } from "@/hooks/useApi";
 import {
   articlesAPI,
+  groupsAPI,
   settingsAPI,
   faqsAPI,
   categoriesAPI,
+  urlCategoriesAPI,
   type CreateUserData,
   type UpdateUserData,
   type CreateArticleData,
@@ -133,6 +136,7 @@ import {
   type CreateCategoryData,
   type UpdateCategoryData,
   type EmailSettings,
+  type EmailTemplates,
 } from "@/lib/api";
 import type { User } from "@/types/database";
 
@@ -166,6 +170,65 @@ const defaultRolePermissions: RolePermsMap = {
     email: { read: false, write: false, delete: false },
     theme: { read: false, write: false, delete: false },
   },
+};
+
+// Component to show group members in a popover
+const GroupMemberPopover = ({ groupId, groupName, users }: { groupId: string; groupName: string; users: User[] }) => {
+  const [members, setMembers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchMembers = async () => {
+      setLoading(true);
+      try {
+        const result = await groupsAPI.getById(groupId);
+        if (result.success && result.data?.members) {
+          const memberIds = result.data.members.map((m: any) => typeof m === "string" ? m : m.id);
+          const matchedUsers = users.filter(u => memberIds.includes(u.id));
+          // Also include members from the API response that might not be in the users list
+          const apiMembers = result.data.members
+            .filter((m: any) => typeof m !== "string" && !matchedUsers.find(u => u.id === m.id))
+            .map((m: any) => m);
+          setMembers([...matchedUsers, ...apiMembers]);
+        }
+      } catch (err) {
+        console.error("Failed to fetch group members:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchMembers();
+  }, [groupId, users]);
+
+  return (
+    <div className="p-3">
+      <p className="font-semibold text-sm mb-2">{groupName} — Members</p>
+      {loading ? (
+        <div className="flex items-center justify-center py-4">
+          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+          <span className="text-sm text-muted-foreground">Loading...</span>
+        </div>
+      ) : members.length === 0 ? (
+        <p className="text-sm text-muted-foreground py-2">No members in this group.</p>
+      ) : (
+        <ScrollArea className={members.length > 5 ? "h-[200px]" : ""}>
+          <div className="space-y-2">
+            {members.map((member) => (
+              <div key={member.id} className="flex items-center gap-2 text-sm">
+                <Avatar className="h-6 w-6">
+                  <AvatarFallback className="text-xs">{(member.name || member.email || "?").charAt(0).toUpperCase()}</AvatarFallback>
+                </Avatar>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium truncate">{member.name || "Unnamed"}</p>
+                  <p className="text-xs text-muted-foreground truncate">{member.email}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </ScrollArea>
+      )}
+    </div>
+  );
 };
 
 const AdminPanel = () => {
@@ -249,6 +312,8 @@ const AdminPanel = () => {
     members: [] as string[],
     permissions: [] as string[],
   });
+  const [groupMemberSearch, setGroupMemberSearch] = useState("");
+  const [groupMembersLoading, setGroupMembersLoading] = useState(false);
 
   const [urlCatForm, setUrlCatForm] = useState({ name: "", description: "", icon: "Link", target_groups: [] as string[] });
   const [urlLinkForm, setUrlLinkForm] = useState({ title: "", url: "", description: "", icon_url: "", is_external: true });
@@ -289,6 +354,19 @@ const AdminPanel = () => {
   const [emailTestResult, setEmailTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [testEmailAddress, setTestEmailAddress] = useState("");
   const [showSmtpPassword, setShowSmtpPassword] = useState(false);
+
+  // Email template state
+  const [emailTemplates, setEmailTemplates] = useState({
+    email_template_password_reset_subject: "Password Reset Request",
+    email_template_password_reset_body: `<h2>Password Reset Request</h2>\n<p>Hello {{user_name}},</p>\n<p>You requested a password reset. Click the link below to reset your password:</p>\n<p><a href="{{reset_url}}" style="display:inline-block;padding:10px 20px;background:{{primary_color}};color:#fff;text-decoration:none;border-radius:5px;">Reset Password</a></p>\n<p>Or copy this URL: {{reset_url}}</p>\n<p>This link will expire in 1 hour.</p>\n<p>If you didn't request this, please ignore this email.</p>`,
+    email_template_welcome_subject: "Welcome to {{site_name}}",
+    email_template_welcome_body: `<h2>Welcome to {{site_name}}!</h2>\n<p>Hello {{user_name}},</p>\n<p>Your account has been created successfully.</p>\n<p><a href="{{login_url}}" style="display:inline-block;padding:10px 20px;background:{{primary_color}};color:#fff;text-decoration:none;border-radius:5px;">Log In Now</a></p>`,
+    email_template_notification_subject: "New Article: {{article_title}}",
+    email_template_notification_body: `<h2>{{article_title}}</h2>\n<p>Hello {{user_name}},</p>\n<p>A new article has been published on {{site_name}}.</p>\n<p><a href="{{article_url}}" style="display:inline-block;padding:10px 20px;background:{{primary_color}};color:#fff;text-decoration:none;border-radius:5px;">Read More</a></p>`,
+  });
+  const [templateLoading, setTemplateLoading] = useState(false);
+  const [templateSaving, setTemplateSaving] = useState(false);
+  const [activeTemplateTab, setActiveTemplateTab] = useState("password_reset");
 
   // Role management state
   const [rolePermissions, setRolePermissions] = useState<RolePermsMap>(defaultRolePermissions);
@@ -718,11 +796,25 @@ const AdminPanel = () => {
   };
 
   // --- GROUPS CRUD ---
-  const openNewGroup = () => { setEditingGroupId(null); setGroupForm({ name: "", description: "", color: "#3B82F6", members: [], permissions: [] }); setIsGroupDialogOpen(true); };
-  const openEditGroup = (group: Group) => {
+  const openNewGroup = () => { setEditingGroupId(null); setGroupForm({ name: "", description: "", color: "#3B82F6", members: [], permissions: [] }); setGroupMemberSearch(""); setIsGroupDialogOpen(true); };
+  const openEditGroup = async (group: Group) => {
     setEditingGroupId(group.id);
-    setGroupForm({ name: group.name, description: group.description || "", color: group.color || "#3B82F6", members: group.members?.map((m: any) => typeof m === "string" ? m : m.id) || [], permissions: group.permissions || [] });
+    setGroupForm({ name: group.name, description: group.description || "", color: group.color || "#3B82F6", members: [], permissions: group.permissions || [] });
+    setGroupMemberSearch("");
+    setGroupMembersLoading(true);
     setIsGroupDialogOpen(true);
+    try {
+      const result = await groupsAPI.getById(group.id);
+      if (result.success && result.data) {
+        const fetchedGroup = result.data;
+        const memberIds = fetchedGroup.members?.map((m: any) => typeof m === "string" ? m : m.id) || [];
+        setGroupForm(prev => ({ ...prev, members: memberIds }));
+      }
+    } catch (err) {
+      console.error("Failed to fetch group members:", err);
+    } finally {
+      setGroupMembersLoading(false);
+    }
   };
 
   const handleSaveGroup = async () => {
@@ -966,8 +1058,40 @@ const AdminPanel = () => {
   useEffect(() => {
     if (activeTab === "email" && backendAvailable) {
       fetchEmailSettings();
+      fetchEmailTemplates();
     }
   }, [activeTab, backendAvailable]);
+
+  // --- EMAIL TEMPLATES ---
+  const fetchEmailTemplates = async () => {
+    setTemplateLoading(true);
+    try {
+      const result = await settingsAPI.getEmailTemplates();
+      if (result.success && result.data) {
+        setEmailTemplates(prev => ({ ...prev, ...result.data }));
+      }
+    } catch (error) {
+      console.error("Failed to fetch email templates:", error);
+    } finally {
+      setTemplateLoading(false);
+    }
+  };
+
+  const handleSaveEmailTemplates = async () => {
+    setTemplateSaving(true);
+    try {
+      const result = await settingsAPI.updateEmailTemplates(emailTemplates);
+      if (result.success) {
+        showSuccess("Email templates saved");
+      } else {
+        showError(result.message || "Failed to save email templates");
+      }
+    } catch {
+      showError("Error saving email templates");
+    } finally {
+      setTemplateSaving(false);
+    }
+  };
 
   // --- LOGO ---
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1624,7 +1748,16 @@ const AdminPanel = () => {
                                   <TableCell className="font-medium">{group.name}</TableCell>
                                   <TableCell>{group.description || "—"}</TableCell>
                                   <TableCell><div className="flex items-center gap-2"><div className="h-4 w-4 rounded-full" style={{ backgroundColor: group.color }} />{group.color}</div></TableCell>
-                                  <TableCell><Badge variant="outline">{group.member_count || 0} members</Badge></TableCell>
+                                  <TableCell>
+                                    <Popover>
+                                      <PopoverTrigger asChild>
+                                        <Badge variant="outline" className="cursor-pointer hover:bg-accent transition-colors">{group.member_count || 0} members</Badge>
+                                      </PopoverTrigger>
+                                      <PopoverContent className="w-72 p-0" align="start">
+                                        <GroupMemberPopover groupId={group.id} groupName={group.name} users={users} />
+                                      </PopoverContent>
+                                    </Popover>
+                                  </TableCell>
                                   <TableCell className="text-right">
                                     <Button variant="ghost" size="sm" onClick={() => openEditGroup(group)}><Edit2 className="h-4 w-4" /></Button>
                                     <Button variant="ghost" size="sm" className="text-destructive" onClick={() => handleDeleteGroup(group.id)}><Trash2 className="h-4 w-4" /></Button>
@@ -1795,6 +1928,154 @@ const AdminPanel = () => {
                             <Button onClick={handleSaveEmailSettings} disabled={emailSaving}>
                               {emailSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                               Save Email Settings
+                            </Button>
+                          </div>
+                        </>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Email Templates */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2"><FileText className="h-5 w-5" />Email Templates</CardTitle>
+                      <CardDescription>Customize the email templates sent for password resets, welcome emails, and notifications. Use variables like {"{{user_name}}"}, {"{{reset_url}}"}, {"{{site_name}}"}, {"{{primary_color}}"} in your templates.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {templateLoading ? (
+                        <div className="flex justify-center py-6"><Loader2 className="h-6 w-6 animate-spin" /></div>
+                      ) : (
+                        <>
+                          {/* Template selector tabs */}
+                          <div className="flex gap-2 border-b pb-2">
+                            {[
+                              { key: "password_reset", label: "Password Reset" },
+                              { key: "welcome", label: "Welcome Email" },
+                              { key: "notification", label: "Notification" },
+                            ].map(({ key, label }) => (
+                              <Button
+                                key={key}
+                                variant={activeTemplateTab === key ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => setActiveTemplateTab(key)}
+                              >
+                                {label}
+                              </Button>
+                            ))}
+                          </div>
+
+                          {/* Available variables info */}
+                          <div className="bg-muted/50 rounded-md p-3 text-xs text-muted-foreground">
+                            <p className="font-medium text-foreground mb-1">Available Variables:</p>
+                            <div className="flex flex-wrap gap-2">
+                              {activeTemplateTab === "password_reset" && (
+                                <>
+                                  <code className="bg-background px-1.5 py-0.5 rounded">{"{{user_name}}"}</code>
+                                  <code className="bg-background px-1.5 py-0.5 rounded">{"{{user_email}}"}</code>
+                                  <code className="bg-background px-1.5 py-0.5 rounded">{"{{reset_url}}"}</code>
+                                  <code className="bg-background px-1.5 py-0.5 rounded">{"{{site_name}}"}</code>
+                                  <code className="bg-background px-1.5 py-0.5 rounded">{"{{primary_color}}"}</code>
+                                </>
+                              )}
+                              {activeTemplateTab === "welcome" && (
+                                <>
+                                  <code className="bg-background px-1.5 py-0.5 rounded">{"{{user_name}}"}</code>
+                                  <code className="bg-background px-1.5 py-0.5 rounded">{"{{user_email}}"}</code>
+                                  <code className="bg-background px-1.5 py-0.5 rounded">{"{{login_url}}"}</code>
+                                  <code className="bg-background px-1.5 py-0.5 rounded">{"{{site_name}}"}</code>
+                                  <code className="bg-background px-1.5 py-0.5 rounded">{"{{primary_color}}"}</code>
+                                </>
+                              )}
+                              {activeTemplateTab === "notification" && (
+                                <>
+                                  <code className="bg-background px-1.5 py-0.5 rounded">{"{{user_name}}"}</code>
+                                  <code className="bg-background px-1.5 py-0.5 rounded">{"{{article_title}}"}</code>
+                                  <code className="bg-background px-1.5 py-0.5 rounded">{"{{article_excerpt}}"}</code>
+                                  <code className="bg-background px-1.5 py-0.5 rounded">{"{{article_url}}"}</code>
+                                  <code className="bg-background px-1.5 py-0.5 rounded">{"{{site_name}}"}</code>
+                                  <code className="bg-background px-1.5 py-0.5 rounded">{"{{primary_color}}"}</code>
+                                </>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Password Reset Template */}
+                          {activeTemplateTab === "password_reset" && (
+                            <div className="space-y-3">
+                              <div className="space-y-2">
+                                <Label>Subject</Label>
+                                <Input
+                                  value={emailTemplates.email_template_password_reset_subject}
+                                  onChange={(e) => setEmailTemplates({ ...emailTemplates, email_template_password_reset_subject: e.target.value })}
+                                  placeholder="Password Reset Request"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label>Email Body (HTML)</Label>
+                                <Textarea
+                                  value={emailTemplates.email_template_password_reset_body}
+                                  onChange={(e) => setEmailTemplates({ ...emailTemplates, email_template_password_reset_body: e.target.value })}
+                                  rows={12}
+                                  className="font-mono text-xs"
+                                  placeholder="<h2>Password Reset</h2><p>Hello {{user_name}},</p>..."
+                                />
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Welcome Template */}
+                          {activeTemplateTab === "welcome" && (
+                            <div className="space-y-3">
+                              <div className="space-y-2">
+                                <Label>Subject</Label>
+                                <Input
+                                  value={emailTemplates.email_template_welcome_subject}
+                                  onChange={(e) => setEmailTemplates({ ...emailTemplates, email_template_welcome_subject: e.target.value })}
+                                  placeholder="Welcome to {{site_name}}"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label>Email Body (HTML)</Label>
+                                <Textarea
+                                  value={emailTemplates.email_template_welcome_body}
+                                  onChange={(e) => setEmailTemplates({ ...emailTemplates, email_template_welcome_body: e.target.value })}
+                                  rows={12}
+                                  className="font-mono text-xs"
+                                  placeholder="<h2>Welcome!</h2><p>Hello {{user_name}},</p>..."
+                                />
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Notification Template */}
+                          {activeTemplateTab === "notification" && (
+                            <div className="space-y-3">
+                              <div className="space-y-2">
+                                <Label>Subject</Label>
+                                <Input
+                                  value={emailTemplates.email_template_notification_subject}
+                                  onChange={(e) => setEmailTemplates({ ...emailTemplates, email_template_notification_subject: e.target.value })}
+                                  placeholder="New Article: {{article_title}}"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label>Email Body (HTML)</Label>
+                                <Textarea
+                                  value={emailTemplates.email_template_notification_body}
+                                  onChange={(e) => setEmailTemplates({ ...emailTemplates, email_template_notification_body: e.target.value })}
+                                  rows={12}
+                                  className="font-mono text-xs"
+                                  placeholder="<h2>{{article_title}}</h2><p>Hello {{user_name}},</p>..."
+                                />
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Save Templates Button */}
+                          <div className="flex justify-end pt-4 border-t">
+                            <Button onClick={handleSaveEmailTemplates} disabled={templateSaving}>
+                              {templateSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                              Save Templates
                             </Button>
                           </div>
                         </>
@@ -2135,14 +2416,16 @@ const AdminPanel = () => {
                 {urlLinkForm.icon_url && (
                   <div className="flex items-center gap-2 p-2 border rounded-md">
                     <img 
-                      src={urlLinkForm.icon_url} 
+                      src={urlLinkForm.icon_url.startsWith('/') ? `${import.meta.env.VITE_API_URL?.replace('/api', '')}${urlLinkForm.icon_url}` : urlLinkForm.icon_url} 
                       alt="Current favicon" 
-                      className="h-4 w-4"
+                      className="h-6 w-6 object-contain"
                       onError={(e) => {
                         e.currentTarget.style.display = 'none';
                       }}
                     />
-                    <span className="text-sm text-muted-foreground flex-1 truncate">{urlLinkForm.icon_url}</span>
+                    <span className="text-sm text-muted-foreground flex-1 truncate">
+                      {urlLinkForm.icon_url.split('/').pop() || urlLinkForm.icon_url}
+                    </span>
                     <Button 
                       type="button"
                       variant="ghost" 
@@ -2159,12 +2442,16 @@ const AdminPanel = () => {
                   onChange={async (e) => {
                     const file = e.target.files?.[0];
                     if (file) {
-                      // Create a data URL for preview/storage
-                      const reader = new FileReader();
-                      reader.onloadend = () => {
-                        setUrlLinkForm({ ...urlLinkForm, icon_url: reader.result as string });
-                      };
-                      reader.readAsDataURL(file);
+                      try {
+                        const result = await urlCategoriesAPI.uploadLinkIcon(file);
+                        if (result.success && result.data?.url) {
+                          setUrlLinkForm({ ...urlLinkForm, icon_url: result.data.url });
+                        } else {
+                          showError(result.message || "Failed to upload icon");
+                        }
+                      } catch {
+                        showError("Error uploading icon file");
+                      }
                     }
                   }}
                   className="cursor-pointer"
@@ -2277,19 +2564,54 @@ const AdminPanel = () => {
             </div>
             <div className="grid gap-2"><Label>Description</Label><Input value={groupForm.description} onChange={(e) => setGroupForm({ ...groupForm, description: e.target.value })} /></div>
             <div className="grid gap-2">
-              <Label>Members</Label>
-              <ScrollArea className="h-[150px] border rounded-md p-4">
-                <div className="space-y-2">
-                  {users.map((user) => (
-                    <div key={user.id} className="flex items-center space-x-2">
-                      <Checkbox id={`group-member-${user.id}`} checked={groupForm.members.includes(user.id)}
-                        onCheckedChange={(checked) => setGroupForm({ ...groupForm, members: checked ? [...groupForm.members, user.id] : groupForm.members.filter((id) => id !== user.id) })} />
-                      <Label htmlFor={`group-member-${user.id}`} className="cursor-pointer">{user.name} ({user.email})</Label>
-                    </div>
-                  ))}
-                  {users.length === 0 && <p className="text-sm text-muted-foreground">No users available.</p>}
+              <div className="flex items-center justify-between">
+                <Label>Members</Label>
+                <span className="text-xs text-muted-foreground">{groupForm.members.length} selected</span>
+              </div>
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search users by name or email..."
+                  value={groupMemberSearch}
+                  onChange={(e) => setGroupMemberSearch(e.target.value)}
+                  className="pl-8"
+                />
+              </div>
+              {groupMembersLoading ? (
+                <div className="flex items-center justify-center h-[150px] border rounded-md">
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  <span className="text-sm text-muted-foreground">Loading members...</span>
                 </div>
-              </ScrollArea>
+              ) : (
+                <ScrollArea className="h-[200px] border rounded-md p-4">
+                  <div className="space-y-2">
+                    {/* Show selected members first */}
+                    {(() => {
+                      const searchLower = groupMemberSearch.toLowerCase();
+                      const filtered = users.filter(
+                        (user) =>
+                          (user.name?.toLowerCase().includes(searchLower) || user.email?.toLowerCase().includes(searchLower))
+                      );
+                      const selected = filtered.filter(u => groupForm.members.includes(u.id));
+                      const unselected = filtered.filter(u => !groupForm.members.includes(u.id));
+                      const sorted = [...selected, ...unselected];
+                      
+                      if (sorted.length === 0 && groupMemberSearch) {
+                        return <p className="text-sm text-muted-foreground">No users matching "{groupMemberSearch}"</p>;
+                      }
+                      
+                      return sorted.map((user) => (
+                        <div key={user.id} className="flex items-center space-x-2">
+                          <Checkbox id={`group-member-${user.id}`} checked={groupForm.members.includes(user.id)}
+                            onCheckedChange={(checked) => setGroupForm({ ...groupForm, members: checked ? [...groupForm.members, user.id] : groupForm.members.filter((id) => id !== user.id) })} />
+                          <Label htmlFor={`group-member-${user.id}`} className="cursor-pointer">{user.name} ({user.email})</Label>
+                        </div>
+                      ));
+                    })()}
+                    {users.length === 0 && <p className="text-sm text-muted-foreground">No users available.</p>}
+                  </div>
+                </ScrollArea>
+              )}
             </div>
           </div>
           <DialogFooter>

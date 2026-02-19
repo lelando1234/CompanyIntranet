@@ -201,7 +201,7 @@ const SideNavigation = ({
                           >
                             {link.icon_url ? (
                               <img 
-                                src={link.icon_url} 
+                                src={link.icon_url.startsWith('/uploads') ? `${(import.meta.env.VITE_API_URL || '').replace('/api', '')}${link.icon_url}` : link.icon_url} 
                                 alt="" 
                                 className="w-4 h-4 mr-2 flex-shrink-0 object-contain"
                                 onError={(e) => {

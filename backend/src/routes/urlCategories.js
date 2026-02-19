@@ -1,11 +1,42 @@
 const express = require('express');
 const { v4: uuidv4 } = require('uuid');
 const { body, validationResult } = require('express-validator');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 const { query } = require('../database/connection');
 const { verifyToken, requireRole } = require('../middleware/auth');
 const { logAudit } = require('../middleware/audit');
 
 const router = express.Router();
+
+// Configure multer for link icon uploads
+const iconStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = path.join(__dirname, '../../uploads/icons');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const iconUpload = multer({
+  storage: iconStorage,
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|gif|ico|svg|webp/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    if (extname) {
+      return cb(null, true);
+    }
+    cb(new Error('Invalid file type. Only images allowed.'));
+  }
+});
 
 // Get all URL categories with their links (optionally filtered by user's groups)
 router.get('/', async (req, res) => {
@@ -301,6 +332,26 @@ router.delete('/:categoryId/links/:linkId', verifyToken, requireRole('admin', 'e
     res.json({ success: true, message: 'Link deleted successfully' });
   } catch (error) {
     console.error('Delete link error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Upload icon for a URL link
+router.post('/upload-icon', verifyToken, requireRole('admin', 'editor'), iconUpload.single('icon'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No file uploaded' });
+    }
+
+    const iconUrl = `/uploads/icons/${req.file.filename}`;
+
+    res.json({
+      success: true,
+      message: 'Icon uploaded successfully',
+      data: { url: iconUrl }
+    });
+  } catch (error) {
+    console.error('Upload icon error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });

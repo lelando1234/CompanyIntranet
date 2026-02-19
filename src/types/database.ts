@@ -85,6 +85,15 @@ export interface AuditLog {
   created_at: string;
 }
 
+export interface EmailTemplates {
+  email_template_password_reset_subject: string;
+  email_template_password_reset_body: string;
+  email_template_welcome_subject: string;
+  email_template_welcome_body: string;
+  email_template_notification_subject: string;
+  email_template_notification_body: string;
+}
+
 // Database Schema SQL for MariaDB
 export const DATABASE_SCHEMA = `
 -- Users table

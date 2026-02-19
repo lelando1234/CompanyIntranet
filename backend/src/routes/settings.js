@@ -318,6 +318,100 @@ router.post('/email/send-test', verifyToken, requireRole('admin'), async (req, r
   }
 });
 
+// === Email Templates ===
+
+// Get email templates (admin only)
+router.get('/email/templates', verifyToken, requireRole('admin'), async (req, res) => {
+  try {
+    const templateKeys = [
+      'email_template_password_reset_subject',
+      'email_template_password_reset_body',
+      'email_template_welcome_subject',
+      'email_template_welcome_body',
+      'email_template_notification_subject',
+      'email_template_notification_body',
+    ];
+    const placeholders = templateKeys.map(() => '?').join(', ');
+    const settings = await query(
+      `SELECT setting_key, setting_value FROM settings WHERE setting_key IN (${placeholders})`,
+      templateKeys
+    );
+
+    const defaults = {
+      email_template_password_reset_subject: 'Password Reset Request',
+      email_template_password_reset_body: `<h2>Password Reset Request</h2>
+<p>Hello {{user_name}},</p>
+<p>You requested a password reset. Click the link below to reset your password:</p>
+<p><a href="{{reset_url}}" style="display:inline-block;padding:10px 20px;background:{{primary_color}};color:#fff;text-decoration:none;border-radius:5px;">Reset Password</a></p>
+<p>Or copy this URL: {{reset_url}}</p>
+<p>This link will expire in 1 hour.</p>
+<p>If you didn't request this, please ignore this email.</p>`,
+      email_template_welcome_subject: 'Welcome to {{site_name}}',
+      email_template_welcome_body: `<h2>Welcome to {{site_name}}!</h2>
+<p>Hello {{user_name}},</p>
+<p>Your account has been created successfully. You can now log in using your email address.</p>
+<p><a href="{{login_url}}" style="display:inline-block;padding:10px 20px;background:{{primary_color}};color:#fff;text-decoration:none;border-radius:5px;">Log In Now</a></p>
+<p>If you have any questions, please contact your administrator.</p>`,
+      email_template_notification_subject: 'New Article: {{article_title}}',
+      email_template_notification_body: `<h2>{{article_title}}</h2>
+<p>Hello {{user_name}},</p>
+<p>A new article has been published on {{site_name}}:</p>
+<p><strong>{{article_title}}</strong></p>
+<p>{{article_excerpt}}</p>
+<p><a href="{{article_url}}" style="display:inline-block;padding:10px 20px;background:{{primary_color}};color:#fff;text-decoration:none;border-radius:5px;">Read More</a></p>`,
+    };
+
+    const templates = { ...defaults };
+    for (const setting of settings) {
+      templates[setting.setting_key] = setting.setting_value;
+    }
+
+    res.json({ success: true, data: templates });
+  } catch (error) {
+    console.error('Get email templates error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Update email templates (admin only)
+router.put('/email/templates', verifyToken, requireRole('admin'), async (req, res) => {
+  try {
+    const templateFields = [
+      'email_template_password_reset_subject',
+      'email_template_password_reset_body',
+      'email_template_welcome_subject',
+      'email_template_welcome_body',
+      'email_template_notification_subject',
+      'email_template_notification_body',
+    ];
+
+    for (const key of templateFields) {
+      if (req.body[key] !== undefined) {
+        const value = String(req.body[key]);
+        const existing = await query('SELECT id FROM settings WHERE setting_key = ?', [key]);
+        if (existing.length === 0) {
+          const settingId = uuidv4();
+          await query(
+            'INSERT INTO settings (id, setting_key, setting_value, setting_type) VALUES (?, ?, ?, ?)',
+            [settingId, key, value, 'string']
+          );
+        } else {
+          await query(
+            'UPDATE settings SET setting_value = ? WHERE setting_key = ?',
+            [value, key]
+          );
+        }
+      }
+    }
+
+    await logAudit(req.user.id, 'UPDATE_EMAIL_TEMPLATES', 'settings', null, null, { updated_keys: Object.keys(req.body) }, req);
+    res.json({ success: true, message: 'Email templates saved successfully' });
+  } catch (error) {
+    console.error('Update email templates error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
 // Get single setting
 router.get('/:key', async (req, res) => {
   try {

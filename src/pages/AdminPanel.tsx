@@ -1198,21 +1198,30 @@ const AdminPanel = () => {
             </Button>
             <div className="py-2"><p className="text-xs font-semibold text-muted-foreground px-2 mb-2">ADMIN SECTIONS</p></div>
             {[
-              { key: "news", icon: Newspaper, label: "News Articles" },
-              { key: "categories", icon: Tag, label: "News Categories" },
-              { key: "urls", icon: Link2, label: "URL Categories" },
+              { key: "news", icon: Newspaper, label: "News" },
+              { key: "urls", icon: Link2, label: "URLs" },
               { key: "users", icon: Users, label: "Users" },
-              { key: "roles", icon: Shield, label: "User Roles" },
-              { key: "groups", icon: UserPlus, label: "Groups" },
               { key: "faqs", icon: MessageCircleQuestion, label: "FAQs" },
               { key: "email", icon: Mail, label: "Email Settings" },
               { key: "theme", icon: Palette, label: "Theme & Logo" },
-            ].filter(({ key }) => canViewTab(key)).map(({ key, icon: Icon, label }) => (
-              <Button key={key} variant={sidebarTab === key ? "secondary" : "ghost"} className="w-full justify-start"
-                onClick={() => { setSidebarTab(key); setActiveTab(key); }}>
-                <Icon className="mr-2 h-4 w-4" /> {label}
-              </Button>
-            ))}
+            ].filter(({ key }) => canViewTab(key) || (key === "news" && (canViewTab("news") || canViewTab("categories"))) || (key === "users" && (canViewTab("users") || canViewTab("roles") || canViewTab("groups")))).map(({ key, icon: Icon, label }) => {
+              // Determine if this sidebar item should be highlighted
+              const isActive = key === "news" 
+                ? (activeTab === "news" || activeTab === "categories")
+                : key === "users"
+                ? (activeTab === "users" || activeTab === "roles" || activeTab === "groups")
+                : sidebarTab === key;
+              
+              return (
+                <Button key={key} variant={isActive ? "secondary" : "ghost"} className="w-full justify-start"
+                  onClick={() => { 
+                    setSidebarTab(key); 
+                    setActiveTab(key); 
+                  }}>
+                  <Icon className="mr-2 h-4 w-4" /> {label}
+                </Button>
+              );
+            })}
           </div>
           <div className="border-t pt-4 space-y-1">
             <Button variant="ghost" className="w-full justify-start" onClick={() => setIsSettingsDialogOpen(true)}>
@@ -1285,25 +1294,58 @@ const AdminPanel = () => {
             <>
               {backendAvailable === false && <BackendWarning />}
               <Tabs value={activeTab} className="w-full" onValueChange={(val) => { setActiveTab(val); setSidebarTab(val); }}>
-                <div className="flex justify-between items-center mb-6">
-                  <TabsList className="flex-wrap">
-                    {canViewTab("news") && <TabsTrigger value="news">News Articles</TabsTrigger>}
-                    {canViewTab("categories") && <TabsTrigger value="categories">News Categories</TabsTrigger>}
-                    {canViewTab("urls") && <TabsTrigger value="urls">URL Categories</TabsTrigger>}
-                    {canViewTab("users") && <TabsTrigger value="users">Users</TabsTrigger>}
-                    {canViewTab("roles") && <TabsTrigger value="roles">User Roles</TabsTrigger>}
-                    {canViewTab("groups") && <TabsTrigger value="groups">Groups</TabsTrigger>}
-                    {canViewTab("faqs") && <TabsTrigger value="faqs">FAQs</TabsTrigger>}
-                    {canViewTab("email") && <TabsTrigger value="email">Email</TabsTrigger>}
-                    {canViewTab("theme") && <TabsTrigger value="theme">Theme & Logo</TabsTrigger>}
-                  </TabsList>
-                  {activeTab === "news" && canWriteSection("news") && <Button onClick={openNewArticle}><Plus className="mr-2 h-4 w-4" />Add Article</Button>}
-                  {activeTab === "categories" && canWriteSection("categories") && <Button onClick={openNewCategory}><Plus className="mr-2 h-4 w-4" />Add Category</Button>}
-                  {activeTab === "urls" && canWriteSection("urls") && <Button onClick={openNewUrlCat}><Plus className="mr-2 h-4 w-4" />Add Category</Button>}
-                  {activeTab === "users" && canWriteSection("users") && <Button onClick={openNewUser}><Plus className="mr-2 h-4 w-4" />Add User</Button>}
-                  {activeTab === "groups" && canWriteSection("groups") && <Button onClick={openNewGroup}><Plus className="mr-2 h-4 w-4" />Add Group</Button>}
-                  {activeTab === "faqs" && canWriteSection("faqs") && <Button onClick={openNewFAQ}><Plus className="mr-2 h-4 w-4" />Add FAQ</Button>}
-                </div>
+                {/* NEWS SECTION - Articles and Categories */}
+                {(canViewTab("news") || canViewTab("categories")) && (activeTab === "news" || activeTab === "categories") && (
+                  <div className="mb-6">
+                    <div className="flex justify-between items-center mb-4">
+                      <div className="flex gap-2">
+                        <Button variant={activeTab === "news" ? "default" : "outline"} onClick={() => { setActiveTab("news"); setSidebarTab("news"); }}>
+                          News Articles
+                        </Button>
+                        {canViewTab("categories") && (
+                          <Button variant={activeTab === "categories" ? "default" : "outline"} onClick={() => { setActiveTab("categories"); setSidebarTab("categories"); }}>
+                            News Categories
+                          </Button>
+                        )}
+                      </div>
+                      {activeTab === "news" && canWriteSection("news") && <Button onClick={openNewArticle}><Plus className="mr-2 h-4 w-4" />Add Article</Button>}
+                      {activeTab === "categories" && canWriteSection("categories") && <Button onClick={openNewCategory}><Plus className="mr-2 h-4 w-4" />Add Category</Button>}
+                    </div>
+                  </div>
+                )}
+
+                {/* USERS SECTION - Users, Roles, and Groups */}
+                {(canViewTab("users") || canViewTab("roles") || canViewTab("groups")) && (activeTab === "users" || activeTab === "roles" || activeTab === "groups") && (
+                  <div className="mb-6">
+                    <div className="flex justify-between items-center mb-4">
+                      <div className="flex gap-2">
+                        <Button variant={activeTab === "users" ? "default" : "outline"} onClick={() => { setActiveTab("users"); setSidebarTab("users"); }}>
+                          Users
+                        </Button>
+                        {canViewTab("groups") && (
+                          <Button variant={activeTab === "groups" ? "default" : "outline"} onClick={() => { setActiveTab("groups"); setSidebarTab("groups"); }}>
+                            Groups
+                          </Button>
+                        )}
+                        {canViewTab("roles") && (
+                          <Button variant={activeTab === "roles" ? "default" : "outline"} onClick={() => { setActiveTab("roles"); setSidebarTab("roles"); }}>
+                            Roles
+                          </Button>
+                        )}
+                      </div>
+                      {activeTab === "users" && canWriteSection("users") && <Button onClick={openNewUser}><Plus className="mr-2 h-4 w-4" />Add User</Button>}
+                      {activeTab === "groups" && canWriteSection("groups") && <Button onClick={openNewGroup}><Plus className="mr-2 h-4 w-4" />Add Group</Button>}
+                    </div>
+                  </div>
+                )}
+
+                {/* OTHER SECTIONS - Keep their action buttons */}
+                {activeTab !== "news" && activeTab !== "categories" && activeTab !== "users" && activeTab !== "roles" && activeTab !== "groups" && (
+                  <div className="flex justify-end mb-6">
+                    {activeTab === "urls" && canWriteSection("urls") && <Button onClick={openNewUrlCat}><Plus className="mr-2 h-4 w-4" />Add Category</Button>}
+                    {activeTab === "faqs" && canWriteSection("faqs") && <Button onClick={openNewFAQ}><Plus className="mr-2 h-4 w-4" />Add FAQ</Button>}
+                  </div>
+                )}
 
                 {/* NEWS TAB */}
                 {canViewTab("news") && (

@@ -436,6 +436,42 @@ router.post('/:id/attachments', verifyToken, requireRole('admin', 'editor'), upl
   }
 });
 
+// Link existing attachment to article (for attachments uploaded via RichTextEditor)
+router.post('/:id/attachments/link', verifyToken, requireRole('admin', 'editor'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { id: attachmentId, filename, original_name, mime_type, url, size } = req.body;
+
+    // Check if article exists
+    const articles = await query('SELECT id FROM articles WHERE id = ?', [id]);
+    if (articles.length === 0) {
+      return res.status(404).json({ success: false, message: 'Article not found' });
+    }
+
+    // Check if attachment already linked
+    const existing = await query('SELECT id FROM article_attachments WHERE id = ? AND article_id = ?', [attachmentId, id]);
+    if (existing.length > 0) {
+      return res.json({ success: true, message: 'Attachment already linked' });
+    }
+
+    // Link the attachment
+    await query(`
+      INSERT INTO article_attachments (id, article_id, filename, original_name, mime_type, size, url)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `, [attachmentId, id, filename, original_name, mime_type, size || 0, url]);
+
+    res.status(201).json({
+      success: true,
+      message: 'Attachment linked successfully',
+      data: { id: attachmentId }
+    });
+  } catch (error) {
+    console.error('Link attachment error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+
 // Delete attachment
 router.delete('/:id/attachments/:attachmentId', verifyToken, requireRole('admin', 'editor'), async (req, res) => {
   try {

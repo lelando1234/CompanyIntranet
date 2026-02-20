@@ -649,6 +649,46 @@ const AdminPanel = () => {
         ? await updateArticle(editingArticleId, data)
         : await createArticle(data);
       if (result.success) {
+        const articleId = editingArticleId || result.data?.id;
+        
+        // Save attachments to the article
+        if (articleId && articleAttachments.length > 0) {
+          for (const attachment of articleAttachments) {
+            // Only save attachments that are new (have a URL starting with /uploads/attachments)
+            // Skip attachments that already exist in article_attachments table
+            if (attachment.url.startsWith('/uploads/attachments')) {
+              try {
+                const API_BASE_URL = import.meta.env.VITE_API_URL || "";
+                const token = localStorage.getItem('auth_token');
+                
+                // Call backend to link the attachment to the article
+                const attachmentResponse = await fetch(`${API_BASE_URL}/articles/${articleId}/attachments/link`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { Authorization: `Bearer ${token}` } : {})
+                  },
+                  body: JSON.stringify({
+                    id: attachment.id,
+                    filename: attachment.url.split('/').pop(),
+                    original_name: attachment.name,
+                    mime_type: attachment.type,
+                    url: attachment.url,
+                    size: 0 // Size not tracked in RichTextEditor
+                  })
+                });
+                
+                const attachmentResult = await attachmentResponse.json();
+                if (!attachmentResult.success) {
+                  console.error('Failed to link attachment:', attachmentResult.message);
+                }
+              } catch (err) {
+                console.error('Error linking attachment:', err);
+              }
+            }
+          }
+        }
+        
         showSuccess(editingArticleId ? "Article updated" : "Article created");
         setIsNewsDialogOpen(false);
       } else {

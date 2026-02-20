@@ -4,6 +4,7 @@ import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import Image from "@tiptap/extension-image";
 import Link from "@tiptap/extension-link";
+import Youtube from "@tiptap/extension-youtube";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -22,6 +23,7 @@ import {
   Redo,
   Paperclip,
   Upload,
+  Code2,
 } from "lucide-react";
 import {
   Select,
@@ -65,9 +67,11 @@ const RichTextEditor = ({
   const [isImageDialogOpen, setIsImageDialogOpen] = React.useState(false);
   const [isLinkDialogOpen, setIsLinkDialogOpen] = React.useState(false);
   const [isAttachmentDialogOpen, setIsAttachmentDialogOpen] = React.useState(false);
+  const [isEmbedDialogOpen, setIsEmbedDialogOpen] = React.useState(false);
   const [imageUrl, setImageUrl] = React.useState("");
   const [linkUrl, setLinkUrl] = React.useState("");
   const [linkText, setLinkText] = React.useState("");
+  const [embedCode, setEmbedCode] = React.useState("");
   const [imageUploading, setImageUploading] = React.useState(false);
   const [attachmentUploading, setAttachmentUploading] = React.useState(false);
   
@@ -91,6 +95,13 @@ const RichTextEditor = ({
         openOnClick: false,
         HTMLAttributes: {
           class: "text-blue-600 underline cursor-pointer",
+        },
+      }),
+      Youtube.configure({
+        controls: true,
+        nocookie: true,
+        HTMLAttributes: {
+          class: "w-full aspect-video rounded-lg my-4",
         },
       }),
     ],
@@ -240,6 +251,29 @@ const RichTextEditor = ({
     }
   }, [editor, linkUrl, linkText]);
 
+  const addEmbed = useCallback(() => {
+    if (embedCode && editor) {
+      // Check if it's a YouTube URL
+      const youtubeRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+      const match = embedCode.match(youtubeRegex);
+      
+      if (match && match[1]) {
+        // It's a YouTube URL, use the YouTube extension
+        editor.chain().focus().setYoutubeVideo({
+          src: embedCode,
+          width: 640,
+          height: 360,
+        }).run();
+      } else {
+        // It's HTML embed code, insert directly
+        editor.chain().focus().insertContent(embedCode).run();
+      }
+      
+      setEmbedCode("");
+      setIsEmbedDialogOpen(false);
+    }
+  }, [editor, embedCode]);
+
   const openAttachmentDialog = () => {
     setIsAttachmentDialogOpen(true);
   };
@@ -363,6 +397,15 @@ const RichTextEditor = ({
           className="h-8 w-8 p-0"
         >
           <LinkIcon className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setIsEmbedDialogOpen(true)}
+          className="h-8 w-8 p-0"
+          title="Embed Video/HTML"
+        >
+          <Code2 className="h-4 w-4" />
         </Button>
         <Button
           variant="ghost"
@@ -558,6 +601,36 @@ const RichTextEditor = ({
               <Upload className="mr-2 h-4 w-4" />
               {attachmentUploading ? "Uploading..." : "Select File"}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Embed Dialog */}
+      <Dialog open={isEmbedDialogOpen} onOpenChange={setIsEmbedDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Embed Video or HTML</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="embedCode">YouTube URL or HTML Embed Code</Label>
+              <textarea
+                id="embedCode"
+                value={embedCode}
+                onChange={(e) => setEmbedCode(e.target.value)}
+                placeholder="Paste YouTube URL (https://youtube.com/watch?v=...) or HTML embed code"
+                className="min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-y"
+              />
+              <p className="text-xs text-muted-foreground">
+                You can paste a YouTube URL or any HTML embed code (iframe, etc.)
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEmbedDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={addEmbed}>Insert Embed</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

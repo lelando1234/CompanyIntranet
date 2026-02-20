@@ -688,7 +688,18 @@ router.post('/upload/image', verifyToken, imageUpload.single('file'), async (req
 });
 
 // Upload attachment for articles (any authenticated user)
-router.post('/upload/attachment', verifyToken, attachmentUpload.single('file'), async (req, res) => {
+router.post('/upload/attachment', verifyToken, (req, res, next) => {
+  attachmentUpload.single('file')(req, res, (err) => {
+    if (err) {
+      console.error('Multer attachment upload error:', err.message);
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(413).json({ success: false, message: 'File too large. Maximum size is 25MB.' });
+      }
+      return res.status(400).json({ success: false, message: err.message || 'File upload failed' });
+    }
+    next();
+  });
+}, async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ success: false, message: 'No file uploaded' });

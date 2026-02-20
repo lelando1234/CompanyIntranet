@@ -45,7 +45,8 @@ export default function Dashboard() {
 
   const userName = user?.name || "User";
   const userAvatar = user?.avatar || "";
-  const companyLogo = "/logo.png";
+  const [companyLogo, setCompanyLogo] = useState<string>("/logo.png");
+  const [logoSize, setLogoSize] = useState<number>(40);
 
   // Load settings
   useEffect(() => {
@@ -61,6 +62,10 @@ export default function Dashboard() {
           if (result.data.welcome_subtext) setWelcomeSubtext(result.data.welcome_subtext);
           if (result.data.show_welcome !== undefined) setShowWelcome(result.data.show_welcome === true || result.data.show_welcome === 'true');
           if (result.data.copyright_text !== undefined) setCopyrightText(result.data.copyright_text);
+          
+          // Load logo settings
+          if (result.data.logo_url) setCompanyLogo(result.data.logo_url);
+          if (result.data.logo_size) setLogoSize(parseInt(result.data.logo_size));
           
           // Load and apply favicon
           if (result.data.favicon_url) {
@@ -155,7 +160,7 @@ export default function Dashboard() {
       <header className="sticky top-0 z-10 border-b shadow-sm" style={{ backgroundColor: 'var(--header-bg, hsl(var(--background)))', color: 'var(--header-text, inherit)' }}>
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <img src={companyLogo} alt="Company Logo" className="h-8 w-auto" />
+            <img src={companyLogo} alt="Company Logo" style={{ height: logoSize }} className="w-auto" />
             <h1 className="text-xl font-bold hidden md:block">
               {portalName}
             </h1>

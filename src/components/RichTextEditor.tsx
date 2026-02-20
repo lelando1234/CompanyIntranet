@@ -202,8 +202,18 @@ const RichTextEditor = ({
         body: formData,
       });
       
-      const result = await response.json();
-      if (result.success && result.data) {
+      // Safely parse JSON response
+      let result;
+      try {
+        const text = await response.text();
+        result = JSON.parse(text);
+      } catch (parseError) {
+        console.error('Failed to parse upload response. Status:', response.status, 'StatusText:', response.statusText);
+        alert(`Failed to upload attachment (server returned status ${response.status}). The file may be too large or the server may be misconfigured.`);
+        return;
+      }
+      
+      if (response.ok && result.success && result.data) {
         const newAttachment: Attachment = {
           id: result.data.id || Date.now().toString(),
           name: result.data.original_name || file.name,
@@ -215,8 +225,8 @@ const RichTextEditor = ({
         }
         setIsAttachmentDialogOpen(false);
       } else {
-        console.error('Attachment upload failed:', result.message);
-        alert('Failed to upload attachment. Please try again.');
+        console.error('Attachment upload failed:', result.message, 'Status:', response.status);
+        alert(`Failed to upload attachment: ${result.message || 'Unknown error'}. Please try again.`);
       }
     } catch (error) {
       console.error('Attachment upload error:', error);

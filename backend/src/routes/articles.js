@@ -442,7 +442,18 @@ router.delete('/:id', verifyToken, requireRole('admin', 'editor'), async (req, r
 });
 
 // Upload attachment
-router.post('/:id/attachments', verifyToken, requireRole('admin', 'editor'), upload.single('file'), async (req, res) => {
+router.post('/:id/attachments', verifyToken, requireRole('admin', 'editor'), (req, res, next) => {
+  upload.single('file')(req, res, (err) => {
+    if (err) {
+      console.error('Multer article attachment upload error:', err.message);
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(413).json({ success: false, message: 'File too large. Maximum size is 10MB.' });
+      }
+      return res.status(400).json({ success: false, message: err.message || 'File upload failed' });
+    }
+    next();
+  });
+}, async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ success: false, message: 'No file uploaded' });

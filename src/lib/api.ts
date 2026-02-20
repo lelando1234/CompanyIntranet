@@ -328,6 +328,17 @@ export interface ArticleAttachment {
   url: string;
 }
 
+export interface ArticleAttachmentData {
+  id: string;
+  name: string;
+  url: string;
+  type: string;
+  filename?: string;
+  original_name?: string;
+  mime_type?: string;
+  size?: number;
+}
+
 export interface CreateArticleData {
   title: string;
   content: string;
@@ -336,6 +347,7 @@ export interface CreateArticleData {
   status?: 'draft' | 'published';
   featured_image?: string;
   target_groups?: string[];
+  attachments?: ArticleAttachmentData[];
 }
 
 export interface UpdateArticleData {
@@ -346,6 +358,7 @@ export interface UpdateArticleData {
   status?: 'draft' | 'published' | 'archived';
   featured_image?: string;
   target_groups?: string[];
+  attachments?: ArticleAttachmentData[];
 }
 
 export const articlesAPI = {

@@ -290,6 +290,18 @@ router.post('/', verifyToken, requireRole('admin', 'editor'), [
       }
     }
 
+    // Insert attachments if provided in the request body
+    const { attachments } = req.body;
+    if (attachments && Array.isArray(attachments) && attachments.length > 0) {
+      for (const att of attachments) {
+        const attId = att.id || uuidv4();
+        await query(`
+          INSERT INTO article_attachments (id, article_id, filename, original_name, mime_type, size, url)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
+        `, [attId, articleId, att.filename || att.url?.split('/').pop() || '', att.original_name || att.name || '', att.mime_type || att.type || '', att.size || 0, att.url || '']);
+      }
+    }
+
     // Log audit
     await logAudit(req.user.id, 'CREATE_ARTICLE', 'article', articleId, null, { title, status }, req);
 
@@ -352,6 +364,38 @@ router.put('/:id', verifyToken, requireRole('admin', 'editor'), [
       if (target_groups && target_groups.length > 0) {
         for (const groupId of target_groups) {
           await query('INSERT INTO article_groups (article_id, group_id) VALUES (?, ?)', [id, groupId]);
+        }
+      }
+    }
+
+    // Sync attachments if provided in the request body
+    const { attachments } = req.body;
+    if (attachments !== undefined) {
+      // Get existing attachments
+      const existingAttachments = await query('SELECT * FROM article_attachments WHERE article_id = ?', [id]);
+      const existingIds = existingAttachments.map(a => a.id);
+      const newIds = attachments.map(a => a.id).filter(Boolean);
+
+      // Delete attachments that were removed
+      for (const existing of existingAttachments) {
+        if (!newIds.includes(existing.id)) {
+          // Delete file from filesystem
+          const filePath = path.join(__dirname, '../../uploads', existing.url?.replace(/^\/uploads\//, '') || '');
+          if (fs.existsSync(filePath)) {
+            try { fs.unlinkSync(filePath); } catch (e) { console.error('Failed to delete attachment file:', e); }
+          }
+          await query('DELETE FROM article_attachments WHERE id = ?', [existing.id]);
+        }
+      }
+
+      // Add new attachments
+      for (const att of attachments) {
+        if (!existingIds.includes(att.id)) {
+          const attId = att.id || uuidv4();
+          await query(`
+            INSERT INTO article_attachments (id, article_id, filename, original_name, mime_type, size, url)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+          `, [attId, id, att.filename || att.url?.split('/').pop() || '', att.original_name || att.name || '', att.mime_type || att.type || '', att.size || 0, att.url || '']);
         }
       }
     }

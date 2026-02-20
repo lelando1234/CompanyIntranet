@@ -176,7 +176,9 @@ const RichTextEditor = ({
     try {
       const API_BASE_URL = import.meta.env.VITE_API_URL || "";
       if (!API_BASE_URL) {
-        // Fallback: create a local attachment object
+        // No API configured - warn user that attachments won't persist
+        console.warn('No VITE_API_URL configured - attachment will not be saved permanently');
+        alert('Warning: Backend API not configured. Attachment will be lost when you save. Please configure the API URL.');
         const newAttachment: Attachment = {
           id: Date.now().toString(),
           name: file.name,
@@ -218,7 +220,8 @@ const RichTextEditor = ({
       }
     } catch (error) {
       console.error('Attachment upload error:', error);
-      // Fallback to local blob
+      alert('Failed to upload attachment. The file will not be saved permanently. Please check your connection and try again.');
+      // Fallback to local blob - but warn that it won't persist
       const newAttachment: Attachment = {
         id: Date.now().toString(),
         name: file.name,

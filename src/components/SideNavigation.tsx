@@ -61,16 +61,15 @@ interface LinkCategory {
 
 interface SideNavigationProps {
   categories?: LinkCategory[];
-  isCollapsed?: boolean;
+  collapsed?: boolean;
   onToggleCollapse?: () => void;
 }
 
 const SideNavigation = ({
   categories: propCategories,
-  isCollapsed = false,
+  collapsed = false,
   onToggleCollapse = () => {},
 }: SideNavigationProps) => {
-  const [collapsed, setCollapsed] = useState(isCollapsed);
   const [apiCategories, setApiCategories] = useState<LinkCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
@@ -119,12 +118,16 @@ const SideNavigation = ({
   const categories = propCategories || apiCategories;
 
   const handleToggleCollapse = () => {
-    setCollapsed(!collapsed);
     onToggleCollapse();
   };
 
   const handleLinkClick = (url: string) => {
-    window.open(url, "_blank");
+    // Add protocol if missing
+    let finalUrl = url;
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      finalUrl = 'https://' + url;
+    }
+    window.open(finalUrl, "_blank");
   };
 
   return (
@@ -138,7 +141,7 @@ const SideNavigation = ({
           variant="ghost"
           size="icon"
           onClick={handleToggleCollapse}
-          className={`${collapsed ? "mx-auto" : ""}`}
+          className={`hover:bg-primary hover:text-primary-foreground transition-colors ${collapsed ? "mx-auto" : ""}`}
         >
           {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
         </Button>

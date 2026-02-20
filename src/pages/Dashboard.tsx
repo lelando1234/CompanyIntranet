@@ -318,30 +318,12 @@ export default function Dashboard() {
       {/* Main Content */}
       <div className="flex flex-1 overflow-hidden">
         {/* Side Navigation - Desktop */}
-        <div
-          className={`hidden md:block border-r overflow-y-auto transition-all duration-300 ${
-            isSidebarCollapsed ? 'w-0' : 'w-64'
-          }`}
-          style={{ backgroundColor: 'var(--sidebar-bg, hsl(var(--background)))', color: 'var(--sidebar-text, inherit)' }}
-        >
-          <div className={isSidebarCollapsed ? 'hidden' : 'block'}>
-            <SideNavigation />
-          </div>
+        <div className="hidden md:block">
+          <SideNavigation 
+            onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+            collapsed={isSidebarCollapsed}
+          />
         </div>
-
-        {/* Sidebar Toggle Button - Desktop */}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-          className="hidden md:flex absolute left-0 top-20 z-10 h-8 w-8 rounded-full border bg-background shadow-md hover:bg-accent"
-          style={{ 
-            left: isSidebarCollapsed ? '0' : '256px',
-            transition: 'left 0.3s ease'
-          }}
-        >
-          {isSidebarCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-        </Button>
 
         {/* Mobile Navigation Overlay */}
         {isMobileMenuOpen && (

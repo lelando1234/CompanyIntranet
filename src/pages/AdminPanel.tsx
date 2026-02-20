@@ -296,7 +296,7 @@ const AdminPanel = () => {
     email: "",
     password: "",
     confirmPassword: "",
-    role: "user" as string,
+    role: "user" as "user" | "admin" | "editor",
     department: "",
     phone: "",
     groups: [] as string[],
@@ -2568,7 +2568,7 @@ const AdminPanel = () => {
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label>Role</Label>
-                <Select value={userForm.role} onValueChange={(val) => setUserForm({ ...userForm, role: val as any })}>
+                <Select value={userForm.role} onValueChange={(val) => setUserForm({ ...userForm, role: val as "user" | "admin" | "editor" })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {customRoles.map((role) => (

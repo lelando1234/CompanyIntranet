@@ -1,7 +1,7 @@
 // API Configuration
 // In the Tempo canvas environment there is no backend running, so any real fetch will fail.
 // Default to an empty base URL and allow the app to gracefully fall back to local/default UI.
-import type { User, EmailTemplates } from "@/types/database";
+import type { User } from "@/types/database";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "";
 

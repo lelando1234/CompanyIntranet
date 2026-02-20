@@ -233,7 +233,14 @@ router.delete('/:id', verifyToken, requireRole('admin', 'editor'), async (req, r
 // Create link in category
 router.post('/:categoryId/links', verifyToken, requireRole('admin', 'editor'), [
   body('title').notEmpty().trim(),
-  body('url').isURL()
+  body('url').isURL({
+    require_protocol: false,
+    require_valid_protocol: false,
+    require_host: true,
+    require_tld: false,
+    allow_underscores: true,
+    allow_protocol_relative_urls: false
+  })
 ], async (req, res) => {
   try {
     const errors = validationResult(req);

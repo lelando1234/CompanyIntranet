@@ -544,6 +544,20 @@ export const urlCategoriesAPI = {
   deleteLink: (categoryId: string, linkId: string) =>
     apiFetch(`/url-categories/${categoryId}/links/${linkId}`, { method: 'DELETE' }),
 
+  // Reorder categories
+  reorderCategories: (categoryIds: string[]) =>
+    apiFetch('/url-categories/reorder', {
+      method: 'POST',
+      body: JSON.stringify({ categoryIds }),
+    }),
+
+  // Reorder links within a category
+  reorderLinks: (categoryId: string, linkIds: string[]) =>
+    apiFetch(`/url-categories/${categoryId}/links/reorder`, {
+      method: 'POST',
+      body: JSON.stringify({ linkIds }),
+    }),
+
   uploadLinkIcon: async (file: File) => {
     const token = getAuthToken();
     const formData = new FormData();

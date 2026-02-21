@@ -62,6 +62,7 @@ import {
   Download,
   Upload,
   ExternalLink,
+  GripVertical,
 } from "lucide-react";
 import {
   Dialog,
@@ -109,6 +110,23 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
 import { Toaster } from "@/components/ui/toaster";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import {
   useUsers,
   useGroups,
@@ -231,6 +249,218 @@ const GroupMemberPopover = ({ groupId, groupName, users }: { groupId: string; gr
   );
 };
 
+// Sortable URL Category Component
+interface SortableUrlCategoryProps {
+  cat: URLCategory;
+  onEdit: (cat: URLCategory) => void;
+  onDelete: (id: string) => void;
+  onAddLink: (catId: string) => void;
+  onEditLink: (catId: string, link: URLLink) => void;
+  onDeleteLink: (catId: string, linkId: string) => void;
+  onReorderLinks: (catId: string, linkIds: string[]) => void;
+}
+
+const SortableUrlCategory = ({
+  cat,
+  onEdit,
+  onDelete,
+  onAddLink,
+  onEditLink,
+  onDeleteLink,
+  onReorderLinks,
+}: SortableUrlCategoryProps) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({ id: cat.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id && cat.links) {
+      const oldIndex = cat.links.findIndex((link) => link.id === active.id);
+      const newIndex = cat.links.findIndex((link) => link.id === over.id);
+
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const newLinks = arrayMove(cat.links, oldIndex, newIndex);
+        const linkIds = newLinks.map((link) => link.id);
+        onReorderLinks(cat.id, linkIds);
+      }
+    }
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className="border rounded-md p-4">
+      <div className="flex justify-between items-start mb-4">
+        <div className="flex items-start gap-2 flex-1">
+          <div
+            {...attributes}
+            {...listeners}
+            className="cursor-grab active:cursor-grabbing mt-1"
+          >
+            <GripVertical className="h-5 w-5 text-muted-foreground" />
+          </div>
+          <div className="flex-1">
+            <h3 className="text-lg font-medium">{cat.name}</h3>
+            <p className="text-sm text-muted-foreground">{cat.description}</p>
+            <div className="mt-2">
+              {cat.target_groups && cat.target_groups.length > 0 ? (
+                <div className="flex flex-wrap gap-1">
+                  <span className="text-xs text-muted-foreground mr-1">Visible to:</span>
+                  {cat.target_groups.map((g) => (
+                    <Badge key={g.id} variant="outline" className="text-xs">
+                      {g.name}
+                    </Badge>
+                  ))}
+                </div>
+              ) : (
+                <span className="text-xs text-muted-foreground">Visible to: All users</span>
+              )}
+            </div>
+          </div>
+        </div>
+        <div className="flex space-x-2">
+          <Button variant="outline" size="sm" onClick={() => onEdit(cat)}>
+            <Edit2 className="mr-2 h-4 w-4" />Edit
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => onAddLink(cat.id)}>
+            <Plus className="mr-2 h-4 w-4" />Add Link
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-destructive"
+            onClick={() => onDelete(cat.id)}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+      {cat.links && cat.links.length > 0 && (
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <div className="border rounded-md">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-12"></TableHead>
+                  <TableHead>Title</TableHead>
+                  <TableHead>URL</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <SortableContext
+                  items={cat.links.map((link) => link.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  {cat.links.map((link) => (
+                    <SortableUrlLink
+                      key={link.id}
+                      link={link}
+                      categoryId={cat.id}
+                      onEdit={onEditLink}
+                      onDelete={onDeleteLink}
+                    />
+                  ))}
+                </SortableContext>
+              </TableBody>
+            </Table>
+          </div>
+        </DndContext>
+      )}
+    </div>
+  );
+};
+
+// Sortable URL Link Component
+interface SortableUrlLinkProps {
+  link: URLLink;
+  categoryId: string;
+  onEdit: (catId: string, link: URLLink) => void;
+  onDelete: (catId: string, linkId: string) => void;
+}
+
+const SortableUrlLink = ({
+  link,
+  categoryId,
+  onEdit,
+  onDelete,
+}: SortableUrlLinkProps) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({ id: link.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <TableRow ref={setNodeRef} style={style}>
+      <TableCell>
+        <div
+          {...attributes}
+          {...listeners}
+          className="cursor-grab active:cursor-grabbing"
+        >
+          <GripVertical className="h-4 w-4 text-muted-foreground" />
+        </div>
+      </TableCell>
+      <TableCell>{link.title}</TableCell>
+      <TableCell>
+        <a
+          href={link.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-600 hover:underline truncate block max-w-md"
+        >
+          {link.url}
+        </a>
+      </TableCell>
+      <TableCell className="text-right">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => onEdit(categoryId, link)}
+        >
+          <Edit2 className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-destructive"
+          onClick={() => onDelete(categoryId, link.id)}
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </TableCell>
+    </TableRow>
+  );
+};
+
 const AdminPanel = () => {
   const navigate = useNavigate();
   const { user: authUser, logout } = useAuth();
@@ -258,6 +488,14 @@ const AdminPanel = () => {
     updateLink,
     deleteLink,
   } = useURLCategories();
+
+  // Drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   // Dialog States
   const [isNewsDialogOpen, setIsNewsDialogOpen] = useState(false);
@@ -727,6 +965,51 @@ const AdminPanel = () => {
     if (!confirm("Delete this link?")) return;
     const result = await deleteLink(catId, linkId);
     if (result.success) showSuccess("Deleted"); else showError(result.message || "Failed");
+  };
+
+  // Reorder handlers
+  const handleReorderCategories = async (categoryIds: string[]) => {
+    try {
+      const result = await urlCategoriesAPI.reorderCategories(categoryIds);
+      if (result.success) {
+        showSuccess("Categories reordered");
+        fetchURLCategories();
+      } else {
+        showError(result.message || "Failed to reorder");
+      }
+    } catch {
+      showError("An error occurred");
+    }
+  };
+
+  const handleReorderLinks = async (catId: string, linkIds: string[]) => {
+    try {
+      const result = await urlCategoriesAPI.reorderLinks(catId, linkIds);
+      if (result.success) {
+        showSuccess("Links reordered");
+        fetchURLCategories();
+      } else {
+        showError(result.message || "Failed to reorder");
+      }
+    } catch {
+      showError("An error occurred");
+    }
+  };
+
+  // Drag end handler for categories
+  const handleCategoryDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = urlCategories.findIndex((cat) => cat.id === active.id);
+      const newIndex = urlCategories.findIndex((cat) => cat.id === over.id);
+
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const newCategories = arrayMove(urlCategories, oldIndex, newIndex);
+        const categoryIds = newCategories.map((cat) => cat.id);
+        handleReorderCategories(categoryIds);
+      }
+    }
   };
 
   // --- USERS CRUD ---
@@ -1485,57 +1768,38 @@ const AdminPanel = () => {
                   <Card>
                     <CardHeader>
                       <CardTitle>Manage URL Categories</CardTitle>
-                      <CardDescription>Organize internal links into categories.</CardDescription>
+                      <CardDescription>Organize internal links into categories. Drag to reorder.</CardDescription>
                     </CardHeader>
                     <CardContent>
                       {urlCategoriesError && <ErrorBanner message={urlCategoriesError} />}
                       {urlCategoriesLoading ? <LoadingSection /> : urlCategories.length === 0 ? (
                         <p className="text-center text-muted-foreground py-8">No URL categories yet.</p>
                       ) : (
-                        <div className="space-y-6">
-                          {urlCategories.map((cat) => (
-                            <div key={cat.id} className="border rounded-md p-4">
-                              <div className="flex justify-between items-start mb-4">
-                                <div>
-                                  <h3 className="text-lg font-medium">{cat.name}</h3>
-                                  <p className="text-sm text-muted-foreground">{cat.description}</p>
-                                  <div className="mt-2">
-                                    {cat.target_groups && cat.target_groups.length > 0 ? (
-                                      <div className="flex flex-wrap gap-1">
-                                        <span className="text-xs text-muted-foreground mr-1">Visible to:</span>
-                                        {cat.target_groups.map((g) => <Badge key={g.id} variant="outline" className="text-xs">{g.name}</Badge>)}
-                                      </div>
-                                    ) : <span className="text-xs text-muted-foreground">Visible to: All users</span>}
-                                  </div>
-                                </div>
-                                <div className="flex space-x-2">
-                                  <Button variant="outline" size="sm" onClick={() => openEditUrlCat(cat)}><Edit2 className="mr-2 h-4 w-4" />Edit</Button>
-                                  <Button variant="outline" size="sm" onClick={() => openNewUrlLink(cat.id)}><Plus className="mr-2 h-4 w-4" />Add Link</Button>
-                                  <Button variant="outline" size="sm" className="text-destructive" onClick={() => handleDeleteUrlCat(cat.id)}><Trash2 className="h-4 w-4" /></Button>
-                                </div>
-                              </div>
-                              {cat.links && cat.links.length > 0 && (
-                                <div className="border rounded-md">
-                                  <Table>
-                                    <TableHeader><TableRow><TableHead>Title</TableHead><TableHead>URL</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
-                                    <TableBody>
-                                      {cat.links.map((link) => (
-                                        <TableRow key={link.id}>
-                                          <TableCell>{link.title}</TableCell>
-                                          <TableCell><a href={link.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate block max-w-md">{link.url}</a></TableCell>
-                                          <TableCell className="text-right">
-                                            <Button variant="ghost" size="sm" onClick={() => openEditUrlLink(cat.id, link)}><Edit2 className="h-4 w-4" /></Button>
-                                            <Button variant="ghost" size="sm" className="text-destructive" onClick={() => handleDeleteUrlLink(cat.id, link.id)}><Trash2 className="h-4 w-4" /></Button>
-                                          </TableCell>
-                                        </TableRow>
-                                      ))}
-                                    </TableBody>
-                                  </Table>
-                                </div>
-                              )}
+                        <DndContext
+                          sensors={sensors}
+                          collisionDetection={closestCenter}
+                          onDragEnd={handleCategoryDragEnd}
+                        >
+                          <SortableContext
+                            items={urlCategories.map((cat) => cat.id)}
+                            strategy={verticalListSortingStrategy}
+                          >
+                            <div className="space-y-6">
+                              {urlCategories.map((cat) => (
+                                <SortableUrlCategory
+                                  key={cat.id}
+                                  cat={cat}
+                                  onEdit={openEditUrlCat}
+                                  onDelete={handleDeleteUrlCat}
+                                  onAddLink={openNewUrlLink}
+                                  onEditLink={openEditUrlLink}
+                                  onDeleteLink={handleDeleteUrlLink}
+                                  onReorderLinks={handleReorderLinks}
+                                />
+                              ))}
                             </div>
-                          ))}
-                        </div>
+                          </SortableContext>
+                        </DndContext>
                       )}
                     </CardContent>
                   </Card>

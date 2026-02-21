@@ -363,4 +363,59 @@ router.post('/upload-icon', verifyToken, requireRole('admin', 'editor'), iconUpl
   }
 });
 
+// Reorder URL categories
+router.post('/reorder', verifyToken, requireRole('admin', 'editor'), async (req, res) => {
+  try {
+    const { categoryIds } = req.body;
+
+    if (!categoryIds || !Array.isArray(categoryIds)) {
+      return res.status(400).json({ success: false, message: 'categoryIds array is required' });
+    }
+
+    // Update sort_order for each category
+    for (let i = 0; i < categoryIds.length; i++) {
+      await query('UPDATE url_categories SET sort_order = ? WHERE id = ?', [i, categoryIds[i]]);
+    }
+
+    // Log audit
+    await logAudit(req.user.id, 'REORDER_URL_CATEGORIES', 'url_category', null, null, { categoryIds }, req);
+
+    res.json({ success: true, message: 'Categories reordered successfully' });
+  } catch (error) {
+    console.error('Reorder categories error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Reorder links within a category
+router.post('/:categoryId/links/reorder', verifyToken, requireRole('admin', 'editor'), async (req, res) => {
+  try {
+    const { categoryId } = req.params;
+    const { linkIds } = req.body;
+
+    if (!linkIds || !Array.isArray(linkIds)) {
+      return res.status(400).json({ success: false, message: 'linkIds array is required' });
+    }
+
+    // Check if category exists
+    const category = await query('SELECT id FROM url_categories WHERE id = ?', [categoryId]);
+    if (category.length === 0) {
+      return res.status(404).json({ success: false, message: 'URL category not found' });
+    }
+
+    // Update sort_order for each link
+    for (let i = 0; i < linkIds.length; i++) {
+      await query('UPDATE url_links SET sort_order = ? WHERE id = ? AND category_id = ?', [i, linkIds[i], categoryId]);
+    }
+
+    // Log audit
+    await logAudit(req.user.id, 'REORDER_URL_LINKS', 'url_link', categoryId, null, { linkIds }, req);
+
+    res.json({ success: true, message: 'Links reordered successfully' });
+  } catch (error) {
+    console.error('Reorder links error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
 module.exports = router;

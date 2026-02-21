@@ -140,21 +140,35 @@ const NewsFeed = ({ articles = [], useApi = false, externalSearchTerm = "" }: Ne
       });
       
       if (result.success && result.data) {
-        const mappedArticles: NewsArticle[] = result.data.articles.map((article: Article) => ({
-          id: article.id,
-          title: article.title,
-          content: article.content,
-          author: article.author_name || 'Unknown',
-          date: article.published_at ? new Date(article.published_at).toISOString().split('T')[0] : article.created_at.split('T')[0],
-          category: article.category_name || 'General',
-          previewText: article.excerpt || article.content.substring(0, 150) + '...',
-          attachments: article.attachments?.map(att => ({
-            id: att.id,
-            name: att.original_name,
-            url: att.url,
-            type: att.mime_type
-          }))
-        }));
+        const mappedArticles: NewsArticle[] = result.data.articles.map((article: Article) => {
+          // Helper to strip HTML tags for preview
+          const stripHtml = (html: string) => {
+            const tmp = document.createElement('div');
+            tmp.innerHTML = html;
+            return tmp.textContent || tmp.innerText || '';
+          };
+          
+          const plainContent = stripHtml(article.content);
+          const previewText = article.excerpt 
+            ? stripHtml(article.excerpt) 
+            : (plainContent.substring(0, 150) + (plainContent.length > 150 ? '...' : ''));
+          
+          return {
+            id: article.id,
+            title: article.title,
+            content: article.content,
+            author: article.author_name || 'Unknown',
+            date: article.published_at ? new Date(article.published_at).toISOString().split('T')[0] : article.created_at.split('T')[0],
+            category: article.category_name || 'General',
+            previewText,
+            attachments: article.attachments?.map(att => ({
+              id: att.id,
+              name: att.original_name,
+              url: att.url,
+              type: att.mime_type
+            }))
+          };
+        });
         console.log('[DEBUG NewsFeed] Mapped articles:', mappedArticles.length);
         setApiArticles(mappedArticles);
         setTotalPages(result.data.pagination.pages || 1);

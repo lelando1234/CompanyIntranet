@@ -5,6 +5,7 @@ import Underline from "@tiptap/extension-underline";
 import Image from "@tiptap/extension-image";
 import Link from "@tiptap/extension-link";
 import Youtube from "@tiptap/extension-youtube";
+import { Node } from "@tiptap/core";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -24,6 +25,7 @@ import {
   Paperclip,
   Upload,
   Code2,
+  Images,
 } from "lucide-react";
 import {
   Select,
@@ -43,6 +45,93 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { settingsAPI } from "@/lib/api";
+
+// Custom TipTap extension for image carousel
+const ImageCarousel = Node.create({
+  name: "imageCarousel",
+
+  group: "block",
+
+  atom: true,
+
+  addAttributes() {
+    return {
+      images: {
+        default: [],
+        parseHTML: element => {
+          const imagesAttr = element.getAttribute("data-images");
+          return imagesAttr ? JSON.parse(imagesAttr) : [];
+        },
+        renderHTML: attributes => {
+          return {
+            "data-images": JSON.stringify(attributes.images),
+          };
+        },
+      },
+    };
+  },
+
+  parseHTML() {
+    return [
+      {
+        tag: "div[data-type=\"image-carousel\"]",
+      },
+    ];
+  },
+
+  renderHTML({ HTMLAttributes }) {
+    const images = HTMLAttributes["data-images"] ? JSON.parse(HTMLAttributes["data-images"]) : [];
+    
+    return [
+      "div",
+      {
+        "data-type": "image-carousel",
+        "data-images": HTMLAttributes["data-images"],
+        class: "image-carousel-wrapper my-4",
+      },
+      [
+        "div",
+        { class: "image-carousel-container relative max-w-3xl mx-auto" },
+        ...images.map((src: string, index: number) => [
+          "img",
+          {
+            src,
+            alt: `Slide ${index + 1}`,
+            class: index === 0 ? "carousel-image block" : "carousel-image hidden",
+            style: "width: 100%; height: auto; border-radius: 8px;",
+          },
+        ]),
+        [
+          "button",
+          {
+            class: "carousel-prev absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 shadow-lg",
+            onclick: "const container = this.parentElement; const images = container.querySelectorAll('.carousel-image'); let current = Array.from(images).findIndex(img => !img.classList.contains('hidden')); images[current].classList.add('hidden'); current = (current - 1 + images.length) % images.length; images[current].classList.remove('hidden');",
+          },
+          "←",
+        ],
+        [
+          "button",
+          {
+            class: "carousel-next absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 shadow-lg",
+            onclick: "const container = this.parentElement; const images = container.querySelectorAll('.carousel-image'); let current = Array.from(images).findIndex(img => !img.classList.contains('hidden')); images[current].classList.add('hidden'); current = (current + 1) % images.length; images[current].classList.remove('hidden');",
+          },
+          "→",
+        ],
+      ],
+    ];
+  },
+
+  addCommands() {
+    return {
+      setImageCarousel: (images: string[]) => ({ commands }) => {
+        return commands.insertContent({
+          type: this.name,
+          attrs: { images },
+        });
+      },
+    };
+  },
+});
 
 interface Attachment {
   id: string;
@@ -68,15 +157,20 @@ const RichTextEditor = ({
   const [isLinkDialogOpen, setIsLinkDialogOpen] = React.useState(false);
   const [isAttachmentDialogOpen, setIsAttachmentDialogOpen] = React.useState(false);
   const [isEmbedDialogOpen, setIsEmbedDialogOpen] = React.useState(false);
+  const [isCarouselDialogOpen, setIsCarouselDialogOpen] = React.useState(false);
   const [imageUrl, setImageUrl] = React.useState("");
   const [linkUrl, setLinkUrl] = React.useState("");
   const [linkText, setLinkText] = React.useState("");
   const [embedCode, setEmbedCode] = React.useState("");
+  const [carouselImages, setCarouselImages] = React.useState<string[]>([]);
+  const [carouselImageInput, setCarouselImageInput] = React.useState("");
   const [imageUploading, setImageUploading] = React.useState(false);
   const [attachmentUploading, setAttachmentUploading] = React.useState(false);
+  const [carouselUploading, setCarouselUploading] = React.useState(false);
   
   const imageFileRef = useRef<HTMLInputElement>(null);
   const attachmentFileRef = useRef<HTMLInputElement>(null);
+  const carouselFileRef = useRef<HTMLInputElement>(null);
 
   const editor = useEditor({
     extensions: [
@@ -104,6 +198,7 @@ const RichTextEditor = ({
           class: "w-full aspect-video rounded-lg my-4",
         },
       }),
+      ImageCarousel,
     ],
     content,
     onUpdate: ({ editor }) => {
@@ -287,6 +382,71 @@ const RichTextEditor = ({
     }
   }, [editor, embedCode]);
 
+  const handleCarouselImageUpload = useCallback(async (files: FileList) => {
+    if (!files || files.length === 0 || !editor) return;
+    
+    setCarouselUploading(true);
+    const uploadedUrls: string[] = [];
+    
+    try {
+      const API_BASE_URL = import.meta.env.VITE_API_URL || "";
+      
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        
+        if (!API_BASE_URL) {
+          // Fallback: create local blob URLs
+          uploadedUrls.push(URL.createObjectURL(file));
+          continue;
+        }
+        
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const token = localStorage.getItem('auth_token');
+        const response = await fetch(`${API_BASE_URL}/settings/upload/image`, {
+          method: 'POST',
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          body: formData,
+        });
+        
+        const result = await response.json();
+        if (result.success && result.data?.url) {
+          uploadedUrls.push(result.data.url);
+        } else {
+          console.error('Image upload failed:', result.message);
+          uploadedUrls.push(URL.createObjectURL(file));
+        }
+      }
+      
+      setCarouselImages([...carouselImages, ...uploadedUrls]);
+    } catch (error) {
+      console.error('Carousel upload error:', error);
+      alert('Some images failed to upload. Please try again.');
+    } finally {
+      setCarouselUploading(false);
+    }
+  }, [editor, carouselImages]);
+
+  const addCarouselImage = useCallback(() => {
+    if (carouselImageInput) {
+      setCarouselImages([...carouselImages, carouselImageInput]);
+      setCarouselImageInput("");
+    }
+  }, [carouselImages, carouselImageInput]);
+
+  const removeCarouselImage = useCallback((index: number) => {
+    setCarouselImages(carouselImages.filter((_, i) => i !== index));
+  }, [carouselImages]);
+
+  const insertCarousel = useCallback(() => {
+    if (carouselImages.length > 0 && editor) {
+      editor.chain().focus().setImageCarousel(carouselImages).run();
+      setCarouselImages([]);
+      setIsCarouselDialogOpen(false);
+    }
+  }, [editor, carouselImages]);
+
   const openAttachmentDialog = () => {
     setIsAttachmentDialogOpen(true);
   };
@@ -402,6 +562,15 @@ const RichTextEditor = ({
           className="h-8 w-8 p-0"
         >
           <ImageIcon className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setIsCarouselDialogOpen(true)}
+          className="h-8 w-8 p-0"
+          title="Insert Image Carousel"
+        >
+          <Images className="h-4 w-4" />
         </Button>
         <Button
           variant="ghost"
@@ -645,6 +814,141 @@ const RichTextEditor = ({
             </Button>
             <Button onClick={addEmbed}>Insert Embed</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Carousel Dialog */}
+      <Dialog open={isCarouselDialogOpen} onOpenChange={setIsCarouselDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Insert Image Carousel</DialogTitle>
+          </DialogHeader>
+          <Tabs defaultValue="upload" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="upload">Upload Images</TabsTrigger>
+              <TabsTrigger value="url">Add by URL</TabsTrigger>
+            </TabsList>
+            <TabsContent value="upload" className="space-y-4">
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label>Select Multiple Images</Label>
+                  <Input
+                    ref={carouselFileRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={(e) => {
+                      const files = e.target.files;
+                      if (files) handleCarouselImageUpload(files);
+                    }}
+                    disabled={carouselUploading}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Select multiple images to add to the carousel
+                  </p>
+                </div>
+                {carouselImages.length > 0 && (
+                  <div className="grid gap-2">
+                    <Label>Selected Images ({carouselImages.length})</Label>
+                    <div className="grid grid-cols-3 gap-2 max-h-60 overflow-y-auto p-2 border rounded">
+                      {carouselImages.map((url, index) => (
+                        <div key={index} className="relative group">
+                          <img
+                            src={url}
+                            alt={`Slide ${index + 1}`}
+                            className="w-full h-24 object-cover rounded"
+                          />
+                          <button
+                            onClick={() => removeCarouselImage(index)}
+                            className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => {
+                  setIsCarouselDialogOpen(false);
+                  setCarouselImages([]);
+                }} disabled={carouselUploading}>
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={insertCarousel}
+                  disabled={carouselImages.length === 0 || carouselUploading}
+                >
+                  {carouselUploading ? "Uploading..." : "Insert Carousel"}
+                </Button>
+              </DialogFooter>
+            </TabsContent>
+            <TabsContent value="url" className="space-y-4">
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="carouselImageUrl">Image URL</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="carouselImageUrl"
+                      value={carouselImageInput}
+                      onChange={(e) => setCarouselImageInput(e.target.value)}
+                      placeholder="https://example.com/image.jpg"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          addCarouselImage();
+                        }
+                      }}
+                    />
+                    <Button onClick={addCarouselImage} disabled={!carouselImageInput}>
+                      Add
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Add images one by one using their URLs
+                  </p>
+                </div>
+                {carouselImages.length > 0 && (
+                  <div className="grid gap-2">
+                    <Label>Selected Images ({carouselImages.length})</Label>
+                    <div className="grid grid-cols-3 gap-2 max-h-60 overflow-y-auto p-2 border rounded">
+                      {carouselImages.map((url, index) => (
+                        <div key={index} className="relative group">
+                          <img
+                            src={url}
+                            alt={`Slide ${index + 1}`}
+                            className="w-full h-24 object-cover rounded"
+                          />
+                          <button
+                            onClick={() => removeCarouselImage(index)}
+                            className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => {
+                  setIsCarouselDialogOpen(false);
+                  setCarouselImages([]);
+                }}>
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={insertCarousel}
+                  disabled={carouselImages.length === 0}
+                >
+                  Insert Carousel
+                </Button>
+              </DialogFooter>
+            </TabsContent>
+          </Tabs>
         </DialogContent>
       </Dialog>
     </div>

@@ -290,6 +290,18 @@ router.post('/', verifyToken, requireRole('admin', 'editor'), [
       }
     }
 
+    // Insert attachments if provided in the request body
+    const { attachments } = req.body;
+    if (attachments && Array.isArray(attachments) && attachments.length > 0) {
+      for (const att of attachments) {
+        const attId = att.id || uuidv4();
+        await query(`
+          INSERT INTO article_attachments (id, article_id, filename, original_name, mime_type, size, url)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
+        `, [attId, articleId, att.filename || att.url?.split('/').pop() || '', att.original_name || att.name || '', att.mime_type || att.type || '', att.size || 0, att.url || '']);
+      }
+    }
+
     // Log audit
     await logAudit(req.user.id, 'CREATE_ARTICLE', 'article', articleId, null, { title, status }, req);
 
@@ -356,6 +368,38 @@ router.put('/:id', verifyToken, requireRole('admin', 'editor'), [
       }
     }
 
+    // Sync attachments if provided in the request body
+    const { attachments } = req.body;
+    if (attachments !== undefined) {
+      // Get existing attachments
+      const existingAttachments = await query('SELECT * FROM article_attachments WHERE article_id = ?', [id]);
+      const existingIds = existingAttachments.map(a => a.id);
+      const newIds = attachments.map(a => a.id).filter(Boolean);
+
+      // Delete attachments that were removed
+      for (const existing of existingAttachments) {
+        if (!newIds.includes(existing.id)) {
+          // Delete file from filesystem
+          const filePath = path.join(__dirname, '../../uploads', existing.url?.replace(/^\/uploads\//, '') || '');
+          if (fs.existsSync(filePath)) {
+            try { fs.unlinkSync(filePath); } catch (e) { console.error('Failed to delete attachment file:', e); }
+          }
+          await query('DELETE FROM article_attachments WHERE id = ?', [existing.id]);
+        }
+      }
+
+      // Add new attachments
+      for (const att of attachments) {
+        if (!existingIds.includes(att.id)) {
+          const attId = att.id || uuidv4();
+          await query(`
+            INSERT INTO article_attachments (id, article_id, filename, original_name, mime_type, size, url)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+          `, [attId, id, att.filename || att.url?.split('/').pop() || '', att.original_name || att.name || '', att.mime_type || att.type || '', att.size || 0, att.url || '']);
+        }
+      }
+    }
+
     // Log audit
     await logAudit(req.user.id, 'UPDATE_ARTICLE', 'article', id, existing[0], req.body, req);
 
@@ -398,7 +442,18 @@ router.delete('/:id', verifyToken, requireRole('admin', 'editor'), async (req, r
 });
 
 // Upload attachment
-router.post('/:id/attachments', verifyToken, requireRole('admin', 'editor'), upload.single('file'), async (req, res) => {
+router.post('/:id/attachments', verifyToken, requireRole('admin', 'editor'), (req, res, next) => {
+  upload.single('file')(req, res, (err) => {
+    if (err) {
+      console.error('Multer article attachment upload error:', err.message);
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(413).json({ success: false, message: 'File too large. Maximum size is 10MB.' });
+      }
+      return res.status(400).json({ success: false, message: err.message || 'File upload failed' });
+    }
+    next();
+  });
+}, async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ success: false, message: 'No file uploaded' });
@@ -435,6 +490,42 @@ router.post('/:id/attachments', verifyToken, requireRole('admin', 'editor'), upl
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });
+
+// Link existing attachment to article (for attachments uploaded via RichTextEditor)
+router.post('/:id/attachments/link', verifyToken, requireRole('admin', 'editor'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { id: attachmentId, filename, original_name, mime_type, url, size } = req.body;
+
+    // Check if article exists
+    const articles = await query('SELECT id FROM articles WHERE id = ?', [id]);
+    if (articles.length === 0) {
+      return res.status(404).json({ success: false, message: 'Article not found' });
+    }
+
+    // Check if attachment already linked
+    const existing = await query('SELECT id FROM article_attachments WHERE id = ? AND article_id = ?', [attachmentId, id]);
+    if (existing.length > 0) {
+      return res.json({ success: true, message: 'Attachment already linked' });
+    }
+
+    // Link the attachment
+    await query(`
+      INSERT INTO article_attachments (id, article_id, filename, original_name, mime_type, size, url)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `, [attachmentId, id, filename, original_name, mime_type, size || 0, url]);
+
+    res.status(201).json({
+      success: true,
+      message: 'Attachment linked successfully',
+      data: { id: attachmentId }
+    });
+  } catch (error) {
+    console.error('Link attachment error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
 
 // Delete attachment
 router.delete('/:id/attachments/:attachmentId', verifyToken, requireRole('admin', 'editor'), async (req, res) => {

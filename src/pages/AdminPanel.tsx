@@ -42,6 +42,27 @@ import {
   X,
   Shield,
   XCircle,
+  Link,
+  Globe,
+  BookOpen,
+  FileText,
+  Briefcase,
+  Heart,
+  Star,
+  Folder,
+  Clock,
+  MapPin,
+  Calendar,
+  Phone,
+  Zap,
+  Database,
+  Code,
+  Video,
+  Music,
+  Download,
+  Upload,
+  ExternalLink,
+  GripVertical,
 } from "lucide-react";
 import {
   Dialog,
@@ -70,6 +91,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -89,6 +111,23 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
 import { Toaster } from "@/components/ui/toaster";
 import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import {
   useUsers,
   useGroups,
   useArticles,
@@ -98,9 +137,11 @@ import {
 } from "@/hooks/useApi";
 import {
   articlesAPI,
+  groupsAPI,
   settingsAPI,
   faqsAPI,
   categoriesAPI,
+  urlCategoriesAPI,
   type CreateUserData,
   type UpdateUserData,
   type CreateArticleData,
@@ -113,6 +154,7 @@ import {
   type CreateCategoryData,
   type UpdateCategoryData,
   type EmailSettings,
+  type EmailTemplates,
 } from "@/lib/api";
 import type { User } from "@/types/database";
 
@@ -148,6 +190,277 @@ const defaultRolePermissions: RolePermsMap = {
   },
 };
 
+// Component to show group members in a popover
+const GroupMemberPopover = ({ groupId, groupName, users }: { groupId: string; groupName: string; users: User[] }) => {
+  const [members, setMembers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchMembers = async () => {
+      setLoading(true);
+      try {
+        const result = await groupsAPI.getById(groupId);
+        if (result.success && result.data?.members) {
+          const memberIds = result.data.members.map((m: any) => typeof m === "string" ? m : m.id);
+          const matchedUsers = users.filter(u => memberIds.includes(u.id));
+          // Also include members from the API response that might not be in the users list
+          const apiMembers = result.data.members
+            .filter((m: any) => typeof m !== "string" && !matchedUsers.find(u => u.id === m.id))
+            .map((m: any) => m);
+          setMembers([...matchedUsers, ...apiMembers]);
+        }
+      } catch (err) {
+        console.error("Failed to fetch group members:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchMembers();
+  }, [groupId, users]);
+
+  return (
+    <div className="p-3">
+      <p className="font-semibold text-sm mb-2">{groupName} — Members</p>
+      {loading ? (
+        <div className="flex items-center justify-center py-4">
+          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+          <span className="text-sm text-muted-foreground">Loading...</span>
+        </div>
+      ) : members.length === 0 ? (
+        <p className="text-sm text-muted-foreground py-2">No members in this group.</p>
+      ) : (
+        <ScrollArea className={members.length > 5 ? "h-[200px]" : ""}>
+          <div className="space-y-2">
+            {members.map((member) => (
+              <div key={member.id} className="flex items-center gap-2 text-sm">
+                <Avatar className="h-6 w-6">
+                  <AvatarFallback className="text-xs">{(member.name || member.email || "?").charAt(0).toUpperCase()}</AvatarFallback>
+                </Avatar>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium truncate">{member.name || "Unnamed"}</p>
+                  <p className="text-xs text-muted-foreground truncate">{member.email}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </ScrollArea>
+      )}
+    </div>
+  );
+};
+
+// Sortable URL Category Component
+interface SortableUrlCategoryProps {
+  cat: URLCategory;
+  onEdit: (cat: URLCategory) => void;
+  onDelete: (id: string) => void;
+  onAddLink: (catId: string) => void;
+  onEditLink: (catId: string, link: URLLink) => void;
+  onDeleteLink: (catId: string, linkId: string) => void;
+  onReorderLinks: (catId: string, linkIds: string[]) => void;
+}
+
+const SortableUrlCategory = ({
+  cat,
+  onEdit,
+  onDelete,
+  onAddLink,
+  onEditLink,
+  onDeleteLink,
+  onReorderLinks,
+}: SortableUrlCategoryProps) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({ id: cat.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id && cat.links) {
+      const oldIndex = cat.links.findIndex((link) => link.id === active.id);
+      const newIndex = cat.links.findIndex((link) => link.id === over.id);
+
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const newLinks = arrayMove(cat.links, oldIndex, newIndex);
+        const linkIds = newLinks.map((link) => link.id);
+        onReorderLinks(cat.id, linkIds);
+      }
+    }
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className="border rounded-md p-4">
+      <div className="flex justify-between items-start mb-4">
+        <div className="flex items-start gap-2 flex-1">
+          <div
+            {...attributes}
+            {...listeners}
+            className="cursor-grab active:cursor-grabbing mt-1"
+          >
+            <GripVertical className="h-5 w-5 text-muted-foreground" />
+          </div>
+          <div className="flex-1">
+            <h3 className="text-lg font-medium">{cat.name}</h3>
+            <p className="text-sm text-muted-foreground">{cat.description}</p>
+            <div className="mt-2">
+              {cat.target_groups && cat.target_groups.length > 0 ? (
+                <div className="flex flex-wrap gap-1">
+                  <span className="text-xs text-muted-foreground mr-1">Visible to:</span>
+                  {cat.target_groups.map((g) => (
+                    <Badge key={g.id} variant="outline" className="text-xs">
+                      {g.name}
+                    </Badge>
+                  ))}
+                </div>
+              ) : (
+                <span className="text-xs text-muted-foreground">Visible to: All users</span>
+              )}
+            </div>
+          </div>
+        </div>
+        <div className="flex space-x-2">
+          <Button variant="outline" size="sm" onClick={() => onEdit(cat)}>
+            <Edit2 className="mr-2 h-4 w-4" />Edit
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => onAddLink(cat.id)}>
+            <Plus className="mr-2 h-4 w-4" />Add Link
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-destructive"
+            onClick={() => onDelete(cat.id)}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+      {cat.links && cat.links.length > 0 && (
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <div className="border rounded-md">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-12"></TableHead>
+                  <TableHead>Title</TableHead>
+                  <TableHead>URL</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <SortableContext
+                  items={cat.links.map((link) => link.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  {cat.links.map((link) => (
+                    <SortableUrlLink
+                      key={link.id}
+                      link={link}
+                      categoryId={cat.id}
+                      onEdit={onEditLink}
+                      onDelete={onDeleteLink}
+                    />
+                  ))}
+                </SortableContext>
+              </TableBody>
+            </Table>
+          </div>
+        </DndContext>
+      )}
+    </div>
+  );
+};
+
+// Sortable URL Link Component
+interface SortableUrlLinkProps {
+  link: URLLink;
+  categoryId: string;
+  onEdit: (catId: string, link: URLLink) => void;
+  onDelete: (catId: string, linkId: string) => void;
+}
+
+const SortableUrlLink = ({
+  link,
+  categoryId,
+  onEdit,
+  onDelete,
+}: SortableUrlLinkProps) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({ id: link.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <TableRow ref={setNodeRef} style={style}>
+      <TableCell>
+        <div
+          {...attributes}
+          {...listeners}
+          className="cursor-grab active:cursor-grabbing"
+        >
+          <GripVertical className="h-4 w-4 text-muted-foreground" />
+        </div>
+      </TableCell>
+      <TableCell>{link.title}</TableCell>
+      <TableCell>
+        <a
+          href={link.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-600 hover:underline truncate block max-w-md"
+        >
+          {link.url}
+        </a>
+      </TableCell>
+      <TableCell className="text-right">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => onEdit(categoryId, link)}
+        >
+          <Edit2 className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-destructive"
+          onClick={() => onDelete(categoryId, link.id)}
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </TableCell>
+    </TableRow>
+  );
+};
+
 const AdminPanel = () => {
   const navigate = useNavigate();
   const { user: authUser, logout } = useAuth();
@@ -175,6 +488,14 @@ const AdminPanel = () => {
     updateLink,
     deleteLink,
   } = useURLCategories();
+
+  // Drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   // Dialog States
   const [isNewsDialogOpen, setIsNewsDialogOpen] = useState(false);
@@ -213,7 +534,7 @@ const AdminPanel = () => {
     email: "",
     password: "",
     confirmPassword: "",
-    role: "user" as string,
+    role: "user" as "user" | "admin" | "editor",
     department: "",
     phone: "",
     groups: [] as string[],
@@ -229,9 +550,11 @@ const AdminPanel = () => {
     members: [] as string[],
     permissions: [] as string[],
   });
+  const [groupMemberSearch, setGroupMemberSearch] = useState("");
+  const [groupMembersLoading, setGroupMembersLoading] = useState(false);
 
   const [urlCatForm, setUrlCatForm] = useState({ name: "", description: "", icon: "Link", target_groups: [] as string[] });
-  const [urlLinkForm, setUrlLinkForm] = useState({ title: "", url: "", description: "", is_external: true });
+  const [urlLinkForm, setUrlLinkForm] = useState({ title: "", url: "", description: "", icon_url: "", is_external: true });
 
   const [faqForm, setFaqForm] = useState({
     question: "",
@@ -269,6 +592,19 @@ const AdminPanel = () => {
   const [emailTestResult, setEmailTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [testEmailAddress, setTestEmailAddress] = useState("");
   const [showSmtpPassword, setShowSmtpPassword] = useState(false);
+
+  // Email template state
+  const [emailTemplates, setEmailTemplates] = useState({
+    email_template_password_reset_subject: "Password Reset Request",
+    email_template_password_reset_body: `<h2>Password Reset Request</h2>\n<p>Hello {{user_name}},</p>\n<p>You requested a password reset. Click the link below to reset your password:</p>\n<p><a href="{{reset_url}}" style="display:inline-block;padding:10px 20px;background:{{primary_color}};color:#fff;text-decoration:none;border-radius:5px;">Reset Password</a></p>\n<p>Or copy this URL: {{reset_url}}</p>\n<p>This link will expire in 1 hour.</p>\n<p>If you didn't request this, please ignore this email.</p>`,
+    email_template_welcome_subject: "Welcome to {{site_name}}",
+    email_template_welcome_body: `<h2>Welcome to {{site_name}}!</h2>\n<p>Hello {{user_name}},</p>\n<p>Your account has been created successfully.</p>\n<p><a href="{{login_url}}" style="display:inline-block;padding:10px 20px;background:{{primary_color}};color:#fff;text-decoration:none;border-radius:5px;">Log In Now</a></p>`,
+    email_template_notification_subject: "New Article: {{article_title}}",
+    email_template_notification_body: `<h2>{{article_title}}</h2>\n<p>Hello {{user_name}},</p>\n<p>A new article has been published on {{site_name}}.</p>\n<p><a href="{{article_url}}" style="display:inline-block;padding:10px 20px;background:{{primary_color}};color:#fff;text-decoration:none;border-radius:5px;">Read More</a></p>`,
+  });
+  const [templateLoading, setTemplateLoading] = useState(false);
+  const [templateSaving, setTemplateSaving] = useState(false);
+  const [activeTemplateTab, setActiveTemplateTab] = useState("password_reset");
 
   // Role management state
   const [rolePermissions, setRolePermissions] = useState<RolePermsMap>(defaultRolePermissions);
@@ -539,6 +875,23 @@ const AdminPanel = () => {
     }
     setSubmitting(true);
     try {
+      // Filter out blob: URLs - these are local-only and can't be persisted
+      const persistableAttachments = articleAttachments.filter(
+        (att) => !att.url.startsWith('blob:')
+      );
+      
+      // Map attachments to the format the backend expects
+      const attachmentsData = persistableAttachments.map((att) => ({
+        id: att.id,
+        name: att.name,
+        original_name: att.name,
+        filename: att.url.split('/').pop() || '',
+        mime_type: att.type,
+        url: att.url,
+        type: att.type,
+        size: 0,
+      }));
+
       const data: any = {
         title: articleForm.title,
         content: articleForm.content,
@@ -546,6 +899,7 @@ const AdminPanel = () => {
         category_id: articleForm.category_id || undefined,
         status: articleForm.status,
         target_groups: articleForm.target_groups,
+        attachments: attachmentsData,
       };
       const result = editingArticleId
         ? await updateArticle(editingArticleId, data)
@@ -593,8 +947,8 @@ const AdminPanel = () => {
   };
 
   // URL Links
-  const openNewUrlLink = (catId: string) => { setEditingUrlLinkId(null); setEditingUrlCatForLink(catId); setUrlLinkForm({ title: "", url: "", description: "", is_external: true }); setIsUrlDialogOpen(true); };
-  const openEditUrlLink = (catId: string, link: URLLink) => { setEditingUrlLinkId(link.id); setEditingUrlCatForLink(catId); setUrlLinkForm({ title: link.title, url: link.url, description: link.description || "", is_external: link.is_external }); setIsUrlDialogOpen(true); };
+  const openNewUrlLink = (catId: string) => { setEditingUrlLinkId(null); setEditingUrlCatForLink(catId); setUrlLinkForm({ title: "", url: "", description: "", icon_url: "", is_external: true }); setIsUrlDialogOpen(true); };
+  const openEditUrlLink = (catId: string, link: URLLink) => { setEditingUrlLinkId(link.id); setEditingUrlCatForLink(catId); setUrlLinkForm({ title: link.title, url: link.url, description: link.description || "", icon_url: (link as any).icon_url || "", is_external: link.is_external }); setIsUrlDialogOpen(true); };
 
   const handleSaveUrlLink = async () => {
     if (!urlLinkForm.title.trim() || !urlLinkForm.url.trim() || !editingUrlCatForLink) { showError("Title and URL required"); return; }
@@ -611,6 +965,51 @@ const AdminPanel = () => {
     if (!confirm("Delete this link?")) return;
     const result = await deleteLink(catId, linkId);
     if (result.success) showSuccess("Deleted"); else showError(result.message || "Failed");
+  };
+
+  // Reorder handlers
+  const handleReorderCategories = async (categoryIds: string[]) => {
+    try {
+      const result = await urlCategoriesAPI.reorderCategories(categoryIds);
+      if (result.success) {
+        showSuccess("Categories reordered");
+        fetchURLCategories();
+      } else {
+        showError(result.message || "Failed to reorder");
+      }
+    } catch {
+      showError("An error occurred");
+    }
+  };
+
+  const handleReorderLinks = async (catId: string, linkIds: string[]) => {
+    try {
+      const result = await urlCategoriesAPI.reorderLinks(catId, linkIds);
+      if (result.success) {
+        showSuccess("Links reordered");
+        fetchURLCategories();
+      } else {
+        showError(result.message || "Failed to reorder");
+      }
+    } catch {
+      showError("An error occurred");
+    }
+  };
+
+  // Drag end handler for categories
+  const handleCategoryDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = urlCategories.findIndex((cat) => cat.id === active.id);
+      const newIndex = urlCategories.findIndex((cat) => cat.id === over.id);
+
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const newCategories = arrayMove(urlCategories, oldIndex, newIndex);
+        const categoryIds = newCategories.map((cat) => cat.id);
+        handleReorderCategories(categoryIds);
+      }
+    }
   };
 
   // --- USERS CRUD ---
@@ -698,11 +1097,25 @@ const AdminPanel = () => {
   };
 
   // --- GROUPS CRUD ---
-  const openNewGroup = () => { setEditingGroupId(null); setGroupForm({ name: "", description: "", color: "#3B82F6", members: [], permissions: [] }); setIsGroupDialogOpen(true); };
-  const openEditGroup = (group: Group) => {
+  const openNewGroup = () => { setEditingGroupId(null); setGroupForm({ name: "", description: "", color: "#3B82F6", members: [], permissions: [] }); setGroupMemberSearch(""); setIsGroupDialogOpen(true); };
+  const openEditGroup = async (group: Group) => {
     setEditingGroupId(group.id);
-    setGroupForm({ name: group.name, description: group.description || "", color: group.color || "#3B82F6", members: group.members?.map((m: any) => typeof m === "string" ? m : m.id) || [], permissions: group.permissions || [] });
+    setGroupForm({ name: group.name, description: group.description || "", color: group.color || "#3B82F6", members: [], permissions: group.permissions || [] });
+    setGroupMemberSearch("");
+    setGroupMembersLoading(true);
     setIsGroupDialogOpen(true);
+    try {
+      const result = await groupsAPI.getById(group.id);
+      if (result.success && result.data) {
+        const fetchedGroup = result.data;
+        const memberIds = fetchedGroup.members?.map((m: any) => typeof m === "string" ? m : m.id) || [];
+        setGroupForm(prev => ({ ...prev, members: memberIds }));
+      }
+    } catch (err) {
+      console.error("Failed to fetch group members:", err);
+    } finally {
+      setGroupMembersLoading(false);
+    }
   };
 
   const handleSaveGroup = async () => {
@@ -946,8 +1359,40 @@ const AdminPanel = () => {
   useEffect(() => {
     if (activeTab === "email" && backendAvailable) {
       fetchEmailSettings();
+      fetchEmailTemplates();
     }
   }, [activeTab, backendAvailable]);
+
+  // --- EMAIL TEMPLATES ---
+  const fetchEmailTemplates = async () => {
+    setTemplateLoading(true);
+    try {
+      const result = await settingsAPI.getEmailTemplates();
+      if (result.success && result.data) {
+        setEmailTemplates(prev => ({ ...prev, ...result.data }));
+      }
+    } catch (error) {
+      console.error("Failed to fetch email templates:", error);
+    } finally {
+      setTemplateLoading(false);
+    }
+  };
+
+  const handleSaveEmailTemplates = async () => {
+    setTemplateSaving(true);
+    try {
+      const result = await settingsAPI.updateEmailTemplates(emailTemplates);
+      if (result.success) {
+        showSuccess("Email templates saved");
+      } else {
+        showError(result.message || "Failed to save email templates");
+      }
+    } catch {
+      showError("Error saving email templates");
+    } finally {
+      setTemplateSaving(false);
+    }
+  };
 
   // --- LOGO ---
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1054,21 +1499,30 @@ const AdminPanel = () => {
             </Button>
             <div className="py-2"><p className="text-xs font-semibold text-muted-foreground px-2 mb-2">ADMIN SECTIONS</p></div>
             {[
-              { key: "news", icon: Newspaper, label: "News Articles" },
-              { key: "categories", icon: Tag, label: "News Categories" },
-              { key: "urls", icon: Link2, label: "URL Categories" },
+              { key: "news", icon: Newspaper, label: "News" },
+              { key: "urls", icon: Link2, label: "URLs" },
               { key: "users", icon: Users, label: "Users" },
-              { key: "roles", icon: Shield, label: "User Roles" },
-              { key: "groups", icon: UserPlus, label: "Groups" },
               { key: "faqs", icon: MessageCircleQuestion, label: "FAQs" },
               { key: "email", icon: Mail, label: "Email Settings" },
               { key: "theme", icon: Palette, label: "Theme & Logo" },
-            ].filter(({ key }) => canViewTab(key)).map(({ key, icon: Icon, label }) => (
-              <Button key={key} variant={sidebarTab === key ? "secondary" : "ghost"} className="w-full justify-start"
-                onClick={() => { setSidebarTab(key); setActiveTab(key); }}>
-                <Icon className="mr-2 h-4 w-4" /> {label}
-              </Button>
-            ))}
+            ].filter(({ key }) => canViewTab(key) || (key === "news" && (canViewTab("news") || canViewTab("categories"))) || (key === "users" && (canViewTab("users") || canViewTab("roles") || canViewTab("groups")))).map(({ key, icon: Icon, label }) => {
+              // Determine if this sidebar item should be highlighted
+              const isActive = key === "news" 
+                ? (activeTab === "news" || activeTab === "categories")
+                : key === "users"
+                ? (activeTab === "users" || activeTab === "roles" || activeTab === "groups")
+                : sidebarTab === key;
+              
+              return (
+                <Button key={key} variant={isActive ? "secondary" : "ghost"} className="w-full justify-start"
+                  onClick={() => { 
+                    setSidebarTab(key); 
+                    setActiveTab(key); 
+                  }}>
+                  <Icon className="mr-2 h-4 w-4" /> {label}
+                </Button>
+              );
+            })}
           </div>
           <div className="border-t pt-4 space-y-1">
             <Button variant="ghost" className="w-full justify-start" onClick={() => setIsSettingsDialogOpen(true)}>
@@ -1141,25 +1595,58 @@ const AdminPanel = () => {
             <>
               {backendAvailable === false && <BackendWarning />}
               <Tabs value={activeTab} className="w-full" onValueChange={(val) => { setActiveTab(val); setSidebarTab(val); }}>
-                <div className="flex justify-between items-center mb-6">
-                  <TabsList className="flex-wrap">
-                    {canViewTab("news") && <TabsTrigger value="news">News Articles</TabsTrigger>}
-                    {canViewTab("categories") && <TabsTrigger value="categories">News Categories</TabsTrigger>}
-                    {canViewTab("urls") && <TabsTrigger value="urls">URL Categories</TabsTrigger>}
-                    {canViewTab("users") && <TabsTrigger value="users">Users</TabsTrigger>}
-                    {canViewTab("roles") && <TabsTrigger value="roles">User Roles</TabsTrigger>}
-                    {canViewTab("groups") && <TabsTrigger value="groups">Groups</TabsTrigger>}
-                    {canViewTab("faqs") && <TabsTrigger value="faqs">FAQs</TabsTrigger>}
-                    {canViewTab("email") && <TabsTrigger value="email">Email</TabsTrigger>}
-                    {canViewTab("theme") && <TabsTrigger value="theme">Theme & Logo</TabsTrigger>}
-                  </TabsList>
-                  {activeTab === "news" && canWriteSection("news") && <Button onClick={openNewArticle}><Plus className="mr-2 h-4 w-4" />Add Article</Button>}
-                  {activeTab === "categories" && canWriteSection("categories") && <Button onClick={openNewCategory}><Plus className="mr-2 h-4 w-4" />Add Category</Button>}
-                  {activeTab === "urls" && canWriteSection("urls") && <Button onClick={openNewUrlCat}><Plus className="mr-2 h-4 w-4" />Add Category</Button>}
-                  {activeTab === "users" && canWriteSection("users") && <Button onClick={openNewUser}><Plus className="mr-2 h-4 w-4" />Add User</Button>}
-                  {activeTab === "groups" && canWriteSection("groups") && <Button onClick={openNewGroup}><Plus className="mr-2 h-4 w-4" />Add Group</Button>}
-                  {activeTab === "faqs" && canWriteSection("faqs") && <Button onClick={openNewFAQ}><Plus className="mr-2 h-4 w-4" />Add FAQ</Button>}
-                </div>
+                {/* NEWS SECTION - Articles and Categories */}
+                {(canViewTab("news") || canViewTab("categories")) && (activeTab === "news" || activeTab === "categories") && (
+                  <div className="mb-6">
+                    <div className="flex justify-between items-center mb-4">
+                      <div className="flex gap-2">
+                        <Button variant={activeTab === "news" ? "default" : "outline"} onClick={() => { setActiveTab("news"); setSidebarTab("news"); }}>
+                          News Articles
+                        </Button>
+                        {canViewTab("categories") && (
+                          <Button variant={activeTab === "categories" ? "default" : "outline"} onClick={() => { setActiveTab("categories"); setSidebarTab("categories"); }}>
+                            News Categories
+                          </Button>
+                        )}
+                      </div>
+                      {activeTab === "news" && canWriteSection("news") && <Button onClick={openNewArticle}><Plus className="mr-2 h-4 w-4" />Add Article</Button>}
+                      {activeTab === "categories" && canWriteSection("categories") && <Button onClick={openNewCategory}><Plus className="mr-2 h-4 w-4" />Add Category</Button>}
+                    </div>
+                  </div>
+                )}
+
+                {/* USERS SECTION - Users, Roles, and Groups */}
+                {(canViewTab("users") || canViewTab("roles") || canViewTab("groups")) && (activeTab === "users" || activeTab === "roles" || activeTab === "groups") && (
+                  <div className="mb-6">
+                    <div className="flex justify-between items-center mb-4">
+                      <div className="flex gap-2">
+                        <Button variant={activeTab === "users" ? "default" : "outline"} onClick={() => { setActiveTab("users"); setSidebarTab("users"); }}>
+                          Users
+                        </Button>
+                        {canViewTab("groups") && (
+                          <Button variant={activeTab === "groups" ? "default" : "outline"} onClick={() => { setActiveTab("groups"); setSidebarTab("groups"); }}>
+                            Groups
+                          </Button>
+                        )}
+                        {canViewTab("roles") && (
+                          <Button variant={activeTab === "roles" ? "default" : "outline"} onClick={() => { setActiveTab("roles"); setSidebarTab("roles"); }}>
+                            Roles
+                          </Button>
+                        )}
+                      </div>
+                      {activeTab === "users" && canWriteSection("users") && <Button onClick={openNewUser}><Plus className="mr-2 h-4 w-4" />Add User</Button>}
+                      {activeTab === "groups" && canWriteSection("groups") && <Button onClick={openNewGroup}><Plus className="mr-2 h-4 w-4" />Add Group</Button>}
+                    </div>
+                  </div>
+                )}
+
+                {/* OTHER SECTIONS - Keep their action buttons */}
+                {activeTab !== "news" && activeTab !== "categories" && activeTab !== "users" && activeTab !== "roles" && activeTab !== "groups" && (
+                  <div className="flex justify-end mb-6">
+                    {activeTab === "urls" && canWriteSection("urls") && <Button onClick={openNewUrlCat}><Plus className="mr-2 h-4 w-4" />Add Category</Button>}
+                    {activeTab === "faqs" && canWriteSection("faqs") && <Button onClick={openNewFAQ}><Plus className="mr-2 h-4 w-4" />Add FAQ</Button>}
+                  </div>
+                )}
 
                 {/* NEWS TAB */}
                 {canViewTab("news") && (
@@ -1281,57 +1768,38 @@ const AdminPanel = () => {
                   <Card>
                     <CardHeader>
                       <CardTitle>Manage URL Categories</CardTitle>
-                      <CardDescription>Organize internal links into categories.</CardDescription>
+                      <CardDescription>Organize internal links into categories. Drag to reorder.</CardDescription>
                     </CardHeader>
                     <CardContent>
                       {urlCategoriesError && <ErrorBanner message={urlCategoriesError} />}
                       {urlCategoriesLoading ? <LoadingSection /> : urlCategories.length === 0 ? (
                         <p className="text-center text-muted-foreground py-8">No URL categories yet.</p>
                       ) : (
-                        <div className="space-y-6">
-                          {urlCategories.map((cat) => (
-                            <div key={cat.id} className="border rounded-md p-4">
-                              <div className="flex justify-between items-start mb-4">
-                                <div>
-                                  <h3 className="text-lg font-medium">{cat.name}</h3>
-                                  <p className="text-sm text-muted-foreground">{cat.description}</p>
-                                  <div className="mt-2">
-                                    {cat.target_groups && cat.target_groups.length > 0 ? (
-                                      <div className="flex flex-wrap gap-1">
-                                        <span className="text-xs text-muted-foreground mr-1">Visible to:</span>
-                                        {cat.target_groups.map((g) => <Badge key={g.id} variant="outline" className="text-xs">{g.name}</Badge>)}
-                                      </div>
-                                    ) : <span className="text-xs text-muted-foreground">Visible to: All users</span>}
-                                  </div>
-                                </div>
-                                <div className="flex space-x-2">
-                                  <Button variant="outline" size="sm" onClick={() => openEditUrlCat(cat)}><Edit2 className="mr-2 h-4 w-4" />Edit</Button>
-                                  <Button variant="outline" size="sm" onClick={() => openNewUrlLink(cat.id)}><Plus className="mr-2 h-4 w-4" />Add Link</Button>
-                                  <Button variant="outline" size="sm" className="text-destructive" onClick={() => handleDeleteUrlCat(cat.id)}><Trash2 className="h-4 w-4" /></Button>
-                                </div>
-                              </div>
-                              {cat.links && cat.links.length > 0 && (
-                                <div className="border rounded-md">
-                                  <Table>
-                                    <TableHeader><TableRow><TableHead>Title</TableHead><TableHead>URL</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
-                                    <TableBody>
-                                      {cat.links.map((link) => (
-                                        <TableRow key={link.id}>
-                                          <TableCell>{link.title}</TableCell>
-                                          <TableCell><a href={link.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate block max-w-md">{link.url}</a></TableCell>
-                                          <TableCell className="text-right">
-                                            <Button variant="ghost" size="sm" onClick={() => openEditUrlLink(cat.id, link)}><Edit2 className="h-4 w-4" /></Button>
-                                            <Button variant="ghost" size="sm" className="text-destructive" onClick={() => handleDeleteUrlLink(cat.id, link.id)}><Trash2 className="h-4 w-4" /></Button>
-                                          </TableCell>
-                                        </TableRow>
-                                      ))}
-                                    </TableBody>
-                                  </Table>
-                                </div>
-                              )}
+                        <DndContext
+                          sensors={sensors}
+                          collisionDetection={closestCenter}
+                          onDragEnd={handleCategoryDragEnd}
+                        >
+                          <SortableContext
+                            items={urlCategories.map((cat) => cat.id)}
+                            strategy={verticalListSortingStrategy}
+                          >
+                            <div className="space-y-6">
+                              {urlCategories.map((cat) => (
+                                <SortableUrlCategory
+                                  key={cat.id}
+                                  cat={cat}
+                                  onEdit={openEditUrlCat}
+                                  onDelete={handleDeleteUrlCat}
+                                  onAddLink={openNewUrlLink}
+                                  onEditLink={openEditUrlLink}
+                                  onDeleteLink={handleDeleteUrlLink}
+                                  onReorderLinks={handleReorderLinks}
+                                />
+                              ))}
                             </div>
-                          ))}
-                        </div>
+                          </SortableContext>
+                        </DndContext>
                       )}
                     </CardContent>
                   </Card>
@@ -1604,7 +2072,16 @@ const AdminPanel = () => {
                                   <TableCell className="font-medium">{group.name}</TableCell>
                                   <TableCell>{group.description || "—"}</TableCell>
                                   <TableCell><div className="flex items-center gap-2"><div className="h-4 w-4 rounded-full" style={{ backgroundColor: group.color }} />{group.color}</div></TableCell>
-                                  <TableCell><Badge variant="outline">{group.member_count || 0} members</Badge></TableCell>
+                                  <TableCell>
+                                    <Popover>
+                                      <PopoverTrigger asChild>
+                                        <Badge variant="outline" className="cursor-pointer hover:bg-accent transition-colors">{group.member_count || 0} members</Badge>
+                                      </PopoverTrigger>
+                                      <PopoverContent className="w-72 p-0" align="start">
+                                        <GroupMemberPopover groupId={group.id} groupName={group.name} users={users} />
+                                      </PopoverContent>
+                                    </Popover>
+                                  </TableCell>
                                   <TableCell className="text-right">
                                     <Button variant="ghost" size="sm" onClick={() => openEditGroup(group)}><Edit2 className="h-4 w-4" /></Button>
                                     <Button variant="ghost" size="sm" className="text-destructive" onClick={() => handleDeleteGroup(group.id)}><Trash2 className="h-4 w-4" /></Button>
@@ -1775,6 +2252,154 @@ const AdminPanel = () => {
                             <Button onClick={handleSaveEmailSettings} disabled={emailSaving}>
                               {emailSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                               Save Email Settings
+                            </Button>
+                          </div>
+                        </>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Email Templates */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2"><FileText className="h-5 w-5" />Email Templates</CardTitle>
+                      <CardDescription>Customize the email templates sent for password resets, welcome emails, and notifications. Use variables like {"{{user_name}}"}, {"{{reset_url}}"}, {"{{site_name}}"}, {"{{primary_color}}"} in your templates.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {templateLoading ? (
+                        <div className="flex justify-center py-6"><Loader2 className="h-6 w-6 animate-spin" /></div>
+                      ) : (
+                        <>
+                          {/* Template selector tabs */}
+                          <div className="flex gap-2 border-b pb-2">
+                            {[
+                              { key: "password_reset", label: "Password Reset" },
+                              { key: "welcome", label: "Welcome Email" },
+                              { key: "notification", label: "Notification" },
+                            ].map(({ key, label }) => (
+                              <Button
+                                key={key}
+                                variant={activeTemplateTab === key ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => setActiveTemplateTab(key)}
+                              >
+                                {label}
+                              </Button>
+                            ))}
+                          </div>
+
+                          {/* Available variables info */}
+                          <div className="bg-muted/50 rounded-md p-3 text-xs text-muted-foreground">
+                            <p className="font-medium text-foreground mb-1">Available Variables:</p>
+                            <div className="flex flex-wrap gap-2">
+                              {activeTemplateTab === "password_reset" && (
+                                <>
+                                  <code className="bg-background px-1.5 py-0.5 rounded">{"{{user_name}}"}</code>
+                                  <code className="bg-background px-1.5 py-0.5 rounded">{"{{user_email}}"}</code>
+                                  <code className="bg-background px-1.5 py-0.5 rounded">{"{{reset_url}}"}</code>
+                                  <code className="bg-background px-1.5 py-0.5 rounded">{"{{site_name}}"}</code>
+                                  <code className="bg-background px-1.5 py-0.5 rounded">{"{{primary_color}}"}</code>
+                                </>
+                              )}
+                              {activeTemplateTab === "welcome" && (
+                                <>
+                                  <code className="bg-background px-1.5 py-0.5 rounded">{"{{user_name}}"}</code>
+                                  <code className="bg-background px-1.5 py-0.5 rounded">{"{{user_email}}"}</code>
+                                  <code className="bg-background px-1.5 py-0.5 rounded">{"{{login_url}}"}</code>
+                                  <code className="bg-background px-1.5 py-0.5 rounded">{"{{site_name}}"}</code>
+                                  <code className="bg-background px-1.5 py-0.5 rounded">{"{{primary_color}}"}</code>
+                                </>
+                              )}
+                              {activeTemplateTab === "notification" && (
+                                <>
+                                  <code className="bg-background px-1.5 py-0.5 rounded">{"{{user_name}}"}</code>
+                                  <code className="bg-background px-1.5 py-0.5 rounded">{"{{article_title}}"}</code>
+                                  <code className="bg-background px-1.5 py-0.5 rounded">{"{{article_excerpt}}"}</code>
+                                  <code className="bg-background px-1.5 py-0.5 rounded">{"{{article_url}}"}</code>
+                                  <code className="bg-background px-1.5 py-0.5 rounded">{"{{site_name}}"}</code>
+                                  <code className="bg-background px-1.5 py-0.5 rounded">{"{{primary_color}}"}</code>
+                                </>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Password Reset Template */}
+                          {activeTemplateTab === "password_reset" && (
+                            <div className="space-y-3">
+                              <div className="space-y-2">
+                                <Label>Subject</Label>
+                                <Input
+                                  value={emailTemplates.email_template_password_reset_subject}
+                                  onChange={(e) => setEmailTemplates({ ...emailTemplates, email_template_password_reset_subject: e.target.value })}
+                                  placeholder="Password Reset Request"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label>Email Body (HTML)</Label>
+                                <Textarea
+                                  value={emailTemplates.email_template_password_reset_body}
+                                  onChange={(e) => setEmailTemplates({ ...emailTemplates, email_template_password_reset_body: e.target.value })}
+                                  rows={12}
+                                  className="font-mono text-xs"
+                                  placeholder="<h2>Password Reset</h2><p>Hello {{user_name}},</p>..."
+                                />
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Welcome Template */}
+                          {activeTemplateTab === "welcome" && (
+                            <div className="space-y-3">
+                              <div className="space-y-2">
+                                <Label>Subject</Label>
+                                <Input
+                                  value={emailTemplates.email_template_welcome_subject}
+                                  onChange={(e) => setEmailTemplates({ ...emailTemplates, email_template_welcome_subject: e.target.value })}
+                                  placeholder="Welcome to {{site_name}}"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label>Email Body (HTML)</Label>
+                                <Textarea
+                                  value={emailTemplates.email_template_welcome_body}
+                                  onChange={(e) => setEmailTemplates({ ...emailTemplates, email_template_welcome_body: e.target.value })}
+                                  rows={12}
+                                  className="font-mono text-xs"
+                                  placeholder="<h2>Welcome!</h2><p>Hello {{user_name}},</p>..."
+                                />
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Notification Template */}
+                          {activeTemplateTab === "notification" && (
+                            <div className="space-y-3">
+                              <div className="space-y-2">
+                                <Label>Subject</Label>
+                                <Input
+                                  value={emailTemplates.email_template_notification_subject}
+                                  onChange={(e) => setEmailTemplates({ ...emailTemplates, email_template_notification_subject: e.target.value })}
+                                  placeholder="New Article: {{article_title}}"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label>Email Body (HTML)</Label>
+                                <Textarea
+                                  value={emailTemplates.email_template_notification_body}
+                                  onChange={(e) => setEmailTemplates({ ...emailTemplates, email_template_notification_body: e.target.value })}
+                                  rows={12}
+                                  className="font-mono text-xs"
+                                  placeholder="<h2>{{article_title}}</h2><p>Hello {{user_name}},</p>..."
+                                />
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Save Templates Button */}
+                          <div className="flex justify-end pt-4 border-t">
+                            <Button onClick={handleSaveEmailTemplates} disabled={templateSaving}>
+                              {templateSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                              Save Templates
                             </Button>
                           </div>
                         </>
@@ -2027,6 +2652,45 @@ const AdminPanel = () => {
             <div className="grid gap-2"><Label>Name *</Label><Input value={urlCatForm.name} onChange={(e) => setUrlCatForm({ ...urlCatForm, name: e.target.value })} /></div>
             <div className="grid gap-2"><Label>Description</Label><Input value={urlCatForm.description} onChange={(e) => setUrlCatForm({ ...urlCatForm, description: e.target.value })} /></div>
             <div className="grid gap-2">
+              <Label>Icon</Label>
+              <Select value={urlCatForm.icon} onValueChange={(value) => setUrlCatForm({ ...urlCatForm, icon: value })}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="max-h-[300px]">
+                  <SelectItem value="Link"><span className="flex items-center gap-2"><Link className="h-4 w-4" /> Link</span></SelectItem>
+                  <SelectItem value="Link2"><span className="flex items-center gap-2"><Link2 className="h-4 w-4" /> Link2</span></SelectItem>
+                  <SelectItem value="Globe"><span className="flex items-center gap-2"><Globe className="h-4 w-4" /> Globe</span></SelectItem>
+                  <SelectItem value="BookOpen"><span className="flex items-center gap-2"><BookOpen className="h-4 w-4" /> Book</span></SelectItem>
+                  <SelectItem value="FileText"><span className="flex items-center gap-2"><FileText className="h-4 w-4" /> File</span></SelectItem>
+                  <SelectItem value="Briefcase"><span className="flex items-center gap-2"><Briefcase className="h-4 w-4" /> Briefcase</span></SelectItem>
+                  <SelectItem value="Heart"><span className="flex items-center gap-2"><Heart className="h-4 w-4" /> Heart</span></SelectItem>
+                  <SelectItem value="Star"><span className="flex items-center gap-2"><Star className="h-4 w-4" /> Star</span></SelectItem>
+                  <SelectItem value="Folder"><span className="flex items-center gap-2"><Folder className="h-4 w-4" /> Folder</span></SelectItem>
+                  <SelectItem value="HelpCircle"><span className="flex items-center gap-2"><HelpCircle className="h-4 w-4" /> Help</span></SelectItem>
+                  <SelectItem value="Settings"><span className="flex items-center gap-2"><Settings className="h-4 w-4" /> Settings</span></SelectItem>
+                  <SelectItem value="Users"><span className="flex items-center gap-2"><Users className="h-4 w-4" /> Users</span></SelectItem>
+                  <SelectItem value="Mail"><span className="flex items-center gap-2"><Mail className="h-4 w-4" /> Mail</span></SelectItem>
+                  <SelectItem value="Phone"><span className="flex items-center gap-2"><Phone className="h-4 w-4" /> Phone</span></SelectItem>
+                  <SelectItem value="MapPin"><span className="flex items-center gap-2"><MapPin className="h-4 w-4" /> Location</span></SelectItem>
+                  <SelectItem value="Calendar"><span className="flex items-center gap-2"><Calendar className="h-4 w-4" /> Calendar</span></SelectItem>
+                  <SelectItem value="Clock"><span className="flex items-center gap-2"><Clock className="h-4 w-4" /> Clock</span></SelectItem>
+                  <SelectItem value="Shield"><span className="flex items-center gap-2"><Shield className="h-4 w-4" /> Shield</span></SelectItem>
+                  <SelectItem value="Zap"><span className="flex items-center gap-2"><Zap className="h-4 w-4" /> Lightning</span></SelectItem>
+                  <SelectItem value="Database"><span className="flex items-center gap-2"><Database className="h-4 w-4" /> Database</span></SelectItem>
+                  <SelectItem value="Code"><span className="flex items-center gap-2"><Code className="h-4 w-4" /> Code</span></SelectItem>
+                  <SelectItem value="Image"><span className="flex items-center gap-2"><ImageIcon className="h-4 w-4" /> Image</span></SelectItem>
+                  <SelectItem value="Video"><span className="flex items-center gap-2"><Video className="h-4 w-4" /> Video</span></SelectItem>
+                  <SelectItem value="Music"><span className="flex items-center gap-2"><Music className="h-4 w-4" /> Music</span></SelectItem>
+                  <SelectItem value="Download"><span className="flex items-center gap-2"><Download className="h-4 w-4" /> Download</span></SelectItem>
+                  <SelectItem value="Upload"><span className="flex items-center gap-2"><Upload className="h-4 w-4" /> Upload</span></SelectItem>
+                  <SelectItem value="Search"><span className="flex items-center gap-2"><Search className="h-4 w-4" /> Search</span></SelectItem>
+                  <SelectItem value="Home"><span className="flex items-center gap-2"><Home className="h-4 w-4" /> Home</span></SelectItem>
+                  <SelectItem value="ExternalLink"><span className="flex items-center gap-2"><ExternalLink className="h-4 w-4" /> External Link</span></SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
               <Label>Visible to Groups (leave empty for all users)</Label>
               <ScrollArea className="h-[120px] border rounded-md p-3">
                 <div className="space-y-2">
@@ -2070,6 +2734,55 @@ const AdminPanel = () => {
           <div className="grid gap-4 py-4">
             <div className="grid gap-2"><Label>Title *</Label><Input value={urlLinkForm.title} onChange={(e) => setUrlLinkForm({ ...urlLinkForm, title: e.target.value })} /></div>
             <div className="grid gap-2"><Label>URL *</Label><Input value={urlLinkForm.url} onChange={(e) => setUrlLinkForm({ ...urlLinkForm, url: e.target.value })} placeholder="https://..." /></div>
+            <div className="grid gap-2">
+              <Label>Favicon Icon (optional)</Label>
+              <div className="space-y-2">
+                {urlLinkForm.icon_url && (
+                  <div className="flex items-center gap-2 p-2 border rounded-md">
+                    <img 
+                      src={urlLinkForm.icon_url.startsWith('/') ? `${import.meta.env.VITE_API_URL?.replace('/api', '')}${urlLinkForm.icon_url}` : urlLinkForm.icon_url} 
+                      alt="Current favicon" 
+                      className="h-6 w-6 object-contain"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                    <span className="text-sm text-muted-foreground flex-1 truncate">
+                      {urlLinkForm.icon_url.split('/').pop() || urlLinkForm.icon_url}
+                    </span>
+                    <Button 
+                      type="button"
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => setUrlLinkForm({ ...urlLinkForm, icon_url: "" })}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+                <Input 
+                  type="file"
+                  accept="image/*,.ico"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      try {
+                        const result = await urlCategoriesAPI.uploadLinkIcon(file);
+                        if (result.success && result.data?.url) {
+                          setUrlLinkForm({ ...urlLinkForm, icon_url: result.data.url });
+                        } else {
+                          showError(result.message || "Failed to upload icon");
+                        }
+                      } catch {
+                        showError("Error uploading icon file");
+                      }
+                    }
+                  }}
+                  className="cursor-pointer"
+                />
+                <p className="text-xs text-muted-foreground">Upload a small image or .ico file to display as favicon (16x16px recommended)</p>
+              </div>
+            </div>
             <div className="grid gap-2"><Label>Description</Label><Input value={urlLinkForm.description} onChange={(e) => setUrlLinkForm({ ...urlLinkForm, description: e.target.value })} /></div>
             <div className="flex items-center space-x-2">
               <Checkbox id="isExternal" checked={urlLinkForm.is_external} onCheckedChange={(checked) => setUrlLinkForm({ ...urlLinkForm, is_external: !!checked })} />
@@ -2119,7 +2832,7 @@ const AdminPanel = () => {
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label>Role</Label>
-                <Select value={userForm.role} onValueChange={(val) => setUserForm({ ...userForm, role: val as any })}>
+                <Select value={userForm.role} onValueChange={(val) => setUserForm({ ...userForm, role: val as "user" | "admin" | "editor" })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {customRoles.map((role) => (
@@ -2175,19 +2888,54 @@ const AdminPanel = () => {
             </div>
             <div className="grid gap-2"><Label>Description</Label><Input value={groupForm.description} onChange={(e) => setGroupForm({ ...groupForm, description: e.target.value })} /></div>
             <div className="grid gap-2">
-              <Label>Members</Label>
-              <ScrollArea className="h-[150px] border rounded-md p-4">
-                <div className="space-y-2">
-                  {users.map((user) => (
-                    <div key={user.id} className="flex items-center space-x-2">
-                      <Checkbox id={`group-member-${user.id}`} checked={groupForm.members.includes(user.id)}
-                        onCheckedChange={(checked) => setGroupForm({ ...groupForm, members: checked ? [...groupForm.members, user.id] : groupForm.members.filter((id) => id !== user.id) })} />
-                      <Label htmlFor={`group-member-${user.id}`} className="cursor-pointer">{user.name} ({user.email})</Label>
-                    </div>
-                  ))}
-                  {users.length === 0 && <p className="text-sm text-muted-foreground">No users available.</p>}
+              <div className="flex items-center justify-between">
+                <Label>Members</Label>
+                <span className="text-xs text-muted-foreground">{groupForm.members.length} selected</span>
+              </div>
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search users by name or email..."
+                  value={groupMemberSearch}
+                  onChange={(e) => setGroupMemberSearch(e.target.value)}
+                  className="pl-8"
+                />
+              </div>
+              {groupMembersLoading ? (
+                <div className="flex items-center justify-center h-[150px] border rounded-md">
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  <span className="text-sm text-muted-foreground">Loading members...</span>
                 </div>
-              </ScrollArea>
+              ) : (
+                <ScrollArea className="h-[200px] border rounded-md p-4">
+                  <div className="space-y-2">
+                    {/* Show selected members first */}
+                    {(() => {
+                      const searchLower = groupMemberSearch.toLowerCase();
+                      const filtered = users.filter(
+                        (user) =>
+                          (user.name?.toLowerCase().includes(searchLower) || user.email?.toLowerCase().includes(searchLower))
+                      );
+                      const selected = filtered.filter(u => groupForm.members.includes(u.id));
+                      const unselected = filtered.filter(u => !groupForm.members.includes(u.id));
+                      const sorted = [...selected, ...unselected];
+                      
+                      if (sorted.length === 0 && groupMemberSearch) {
+                        return <p className="text-sm text-muted-foreground">No users matching "{groupMemberSearch}"</p>;
+                      }
+                      
+                      return sorted.map((user) => (
+                        <div key={user.id} className="flex items-center space-x-2">
+                          <Checkbox id={`group-member-${user.id}`} checked={groupForm.members.includes(user.id)}
+                            onCheckedChange={(checked) => setGroupForm({ ...groupForm, members: checked ? [...groupForm.members, user.id] : groupForm.members.filter((id) => id !== user.id) })} />
+                          <Label htmlFor={`group-member-${user.id}`} className="cursor-pointer">{user.name} ({user.email})</Label>
+                        </div>
+                      ));
+                    })()}
+                    {users.length === 0 && <p className="text-sm text-muted-foreground">No users available.</p>}
+                  </div>
+                </ScrollArea>
+              )}
             </div>
           </div>
           <DialogFooter>

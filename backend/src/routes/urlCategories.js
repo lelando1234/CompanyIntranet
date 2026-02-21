@@ -1,11 +1,42 @@
 const express = require('express');
 const { v4: uuidv4 } = require('uuid');
 const { body, validationResult } = require('express-validator');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 const { query } = require('../database/connection');
 const { verifyToken, requireRole } = require('../middleware/auth');
 const { logAudit } = require('../middleware/audit');
 
 const router = express.Router();
+
+// Configure multer for link icon uploads
+const iconStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = path.join(__dirname, '../../uploads/icons');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const iconUpload = multer({
+  storage: iconStorage,
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|gif|ico|svg|webp/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    if (extname) {
+      return cb(null, true);
+    }
+    cb(new Error('Invalid file type. Only images allowed.'));
+  }
+});
 
 // Get all URL categories with their links (optionally filtered by user's groups)
 router.get('/', async (req, res) => {
@@ -202,7 +233,14 @@ router.delete('/:id', verifyToken, requireRole('admin', 'editor'), async (req, r
 // Create link in category
 router.post('/:categoryId/links', verifyToken, requireRole('admin', 'editor'), [
   body('title').notEmpty().trim(),
-  body('url').isURL()
+  body('url').isURL({
+    require_protocol: false,
+    require_valid_protocol: false,
+    require_host: true,
+    require_tld: false,
+    allow_underscores: true,
+    allow_protocol_relative_urls: false
+  })
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -211,7 +249,7 @@ router.post('/:categoryId/links', verifyToken, requireRole('admin', 'editor'), [
     }
 
     const { categoryId } = req.params;
-    const { title, url, description, icon, sort_order, is_external } = req.body;
+    const { title, url, description, icon, icon_url, sort_order, is_external } = req.body;
 
     // Check if category exists
     const category = await query('SELECT id FROM url_categories WHERE id = ?', [categoryId]);
@@ -222,9 +260,9 @@ router.post('/:categoryId/links', verifyToken, requireRole('admin', 'editor'), [
     const linkId = uuidv4();
 
     await query(`
-      INSERT INTO url_links (id, category_id, title, url, description, icon, sort_order, is_external)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `, [linkId, categoryId, title, url, description || null, icon || null, sort_order || 0, is_external !== false]);
+      INSERT INTO url_links (id, category_id, title, url, description, icon, icon_url, sort_order, is_external)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [linkId, categoryId, title, url, description || null, icon || null, icon_url || null, sort_order || 0, is_external !== false]);
 
     // Log audit
     await logAudit(req.user.id, 'CREATE_URL_LINK', 'url_link', linkId, null, { title, url }, req);
@@ -244,7 +282,7 @@ router.post('/:categoryId/links', verifyToken, requireRole('admin', 'editor'), [
 router.put('/:categoryId/links/:linkId', verifyToken, requireRole('admin', 'editor'), async (req, res) => {
   try {
     const { categoryId, linkId } = req.params;
-    const { title, url, description, icon, sort_order, is_external } = req.body;
+    const { title, url, description, icon, icon_url, sort_order, is_external } = req.body;
 
     const existing = await query(
       'SELECT * FROM url_links WHERE id = ? AND category_id = ?',
@@ -261,6 +299,7 @@ router.put('/:categoryId/links/:linkId', verifyToken, requireRole('admin', 'edit
     if (url) { updates.push('url = ?'); params.push(url); }
     if (description !== undefined) { updates.push('description = ?'); params.push(description); }
     if (icon !== undefined) { updates.push('icon = ?'); params.push(icon); }
+    if (icon_url !== undefined) { updates.push('icon_url = ?'); params.push(icon_url); }
     if (sort_order !== undefined) { updates.push('sort_order = ?'); params.push(sort_order); }
     if (is_external !== undefined) { updates.push('is_external = ?'); params.push(is_external); }
 
@@ -300,6 +339,81 @@ router.delete('/:categoryId/links/:linkId', verifyToken, requireRole('admin', 'e
     res.json({ success: true, message: 'Link deleted successfully' });
   } catch (error) {
     console.error('Delete link error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Upload icon for a URL link
+router.post('/upload-icon', verifyToken, requireRole('admin', 'editor'), iconUpload.single('icon'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No file uploaded' });
+    }
+
+    const iconUrl = `/uploads/icons/${req.file.filename}`;
+
+    res.json({
+      success: true,
+      message: 'Icon uploaded successfully',
+      data: { url: iconUrl }
+    });
+  } catch (error) {
+    console.error('Upload icon error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Reorder URL categories
+router.post('/reorder', verifyToken, requireRole('admin', 'editor'), async (req, res) => {
+  try {
+    const { categoryIds } = req.body;
+
+    if (!categoryIds || !Array.isArray(categoryIds)) {
+      return res.status(400).json({ success: false, message: 'categoryIds array is required' });
+    }
+
+    // Update sort_order for each category
+    for (let i = 0; i < categoryIds.length; i++) {
+      await query('UPDATE url_categories SET sort_order = ? WHERE id = ?', [i, categoryIds[i]]);
+    }
+
+    // Log audit
+    await logAudit(req.user.id, 'REORDER_URL_CATEGORIES', 'url_category', null, null, { categoryIds }, req);
+
+    res.json({ success: true, message: 'Categories reordered successfully' });
+  } catch (error) {
+    console.error('Reorder categories error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Reorder links within a category
+router.post('/:categoryId/links/reorder', verifyToken, requireRole('admin', 'editor'), async (req, res) => {
+  try {
+    const { categoryId } = req.params;
+    const { linkIds } = req.body;
+
+    if (!linkIds || !Array.isArray(linkIds)) {
+      return res.status(400).json({ success: false, message: 'linkIds array is required' });
+    }
+
+    // Check if category exists
+    const category = await query('SELECT id FROM url_categories WHERE id = ?', [categoryId]);
+    if (category.length === 0) {
+      return res.status(404).json({ success: false, message: 'URL category not found' });
+    }
+
+    // Update sort_order for each link
+    for (let i = 0; i < linkIds.length; i++) {
+      await query('UPDATE url_links SET sort_order = ? WHERE id = ? AND category_id = ?', [i, linkIds[i], categoryId]);
+    }
+
+    // Log audit
+    await logAudit(req.user.id, 'REORDER_URL_LINKS', 'url_link', categoryId, null, { linkIds }, req);
+
+    res.json({ success: true, message: 'Links reordered successfully' });
+  } catch (error) {
+    console.error('Reorder links error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });

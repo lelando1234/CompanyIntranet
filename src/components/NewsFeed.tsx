@@ -1,5 +1,15 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Search, Filter, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Paperclip, Loader2 } from "lucide-react";
+import {
+  Search,
+  Filter,
+  ChevronDown,
+  ChevronUp,
+  ChevronLeft,
+  ChevronRight,
+  Paperclip,
+  Loader2,
+  FileText,
+} from "lucide-react";
 import {
   Card,
   CardContent,
@@ -12,7 +22,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { articlesAPI, categoriesAPI, Article, Category } from "@/lib/api";
+import { articlesAPI, categoriesAPI, type Article, type Category } from "@/lib/api";
+import PDFViewer from "@/components/PDFViewer";
 
 interface Attachment {
   id: string;
@@ -53,6 +64,11 @@ const NewsFeed = ({ articles = [], useApi = false, externalSearchTerm = "" }: Ne
   const [totalPages, setTotalPages] = useState(1);
   const [totalArticles, setTotalArticles] = useState(0);
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
+  // PDF Viewer state
+  const [pdfViewerOpen, setPdfViewerOpen] = useState(false);
+  const [currentPdfUrl, setCurrentPdfUrl] = useState("");
+  const [currentPdfName, setCurrentPdfName] = useState("");
 
   // Debounce search term to avoid API calls on every keystroke
   useEffect(() => {
@@ -124,21 +140,35 @@ const NewsFeed = ({ articles = [], useApi = false, externalSearchTerm = "" }: Ne
       });
       
       if (result.success && result.data) {
-        const mappedArticles: NewsArticle[] = result.data.articles.map((article: Article) => ({
-          id: article.id,
-          title: article.title,
-          content: article.content,
-          author: article.author_name || 'Unknown',
-          date: article.published_at ? new Date(article.published_at).toISOString().split('T')[0] : article.created_at.split('T')[0],
-          category: article.category_name || 'General',
-          previewText: article.excerpt || article.content.substring(0, 150) + '...',
-          attachments: article.attachments?.map(att => ({
-            id: att.id,
-            name: att.original_name,
-            url: att.url,
-            type: att.mime_type
-          }))
-        }));
+        const mappedArticles: NewsArticle[] = result.data.articles.map((article: Article) => {
+          // Helper to strip HTML tags for preview
+          const stripHtml = (html: string) => {
+            const tmp = document.createElement('div');
+            tmp.innerHTML = html;
+            return tmp.textContent || tmp.innerText || '';
+          };
+          
+          const plainContent = stripHtml(article.content);
+          const previewText = article.excerpt 
+            ? stripHtml(article.excerpt) 
+            : (plainContent.substring(0, 150) + (plainContent.length > 150 ? '...' : ''));
+          
+          return {
+            id: article.id,
+            title: article.title,
+            content: article.content,
+            author: article.author_name || 'Unknown',
+            date: article.published_at ? new Date(article.published_at).toISOString().split('T')[0] : article.created_at.split('T')[0],
+            category: article.category_name || 'General',
+            previewText,
+            attachments: article.attachments?.map(att => ({
+              id: att.id,
+              name: att.original_name,
+              url: att.url,
+              type: att.mime_type
+            }))
+          };
+        });
         console.log('[DEBUG NewsFeed] Mapped articles:', mappedArticles.length);
         setApiArticles(mappedArticles);
         setTotalPages(result.data.pagination.pages || 1);
@@ -276,6 +306,19 @@ const NewsFeed = ({ articles = [], useApi = false, externalSearchTerm = "" }: Ne
     );
   };
 
+  // Check if attachment is a PDF
+  const isPDF = (attachment: Attachment): boolean => {
+    return attachment.type.toLowerCase().includes('pdf') || 
+           attachment.name.toLowerCase().endsWith('.pdf');
+  };
+
+  // Open PDF in viewer
+  const openPDF = (url: string, name: string) => {
+    setCurrentPdfUrl(url);
+    setCurrentPdfName(name);
+    setPdfViewerOpen(true);
+  };
+
   const goToPage = (page: number) => {
     const maxPages = useApi ? totalPages : clientTotalPages;
     if (page >= 1 && page <= maxPages) {
@@ -389,18 +432,38 @@ const NewsFeed = ({ articles = [], useApi = false, externalSearchTerm = "" }: Ne
                     <div className="mt-4 pt-4 border-t">
                       <p className="text-sm font-medium mb-2">Attachments:</p>
                       <div className="flex flex-wrap gap-2">
-                        {article.attachments.map((attachment) => (
-                          <a
-                            key={attachment.id}
-                            href={attachment.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-2 px-3 py-1.5 bg-muted border rounded-md text-sm hover:bg-muted/80 transition-colors"
-                          >
-                            <Paperclip className="h-3 w-3" />
-                            <span className="truncate max-w-[150px]">{attachment.name}</span>
-                          </a>
-                        ))}
+                        {article.attachments.map((attachment) => {
+                          const isPdf = isPDF(attachment);
+                          
+                          if (isPdf) {
+                            return (
+                              <button
+                                key={attachment.id}
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  openPDF(attachment.url, attachment.name);
+                                }}
+                                className="flex items-center gap-2 px-3 py-1.5 bg-muted border rounded-md text-sm hover:bg-muted/80 transition-colors"
+                              >
+                                <FileText className="h-3 w-3 text-red-600" />
+                                <span className="truncate max-w-[150px]">{attachment.name}</span>
+                              </button>
+                            );
+                          }
+                          
+                          return (
+                            <a
+                              key={attachment.id}
+                              href={attachment.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-2 px-3 py-1.5 bg-muted border rounded-md text-sm hover:bg-muted/80 transition-colors"
+                            >
+                              <Paperclip className="h-3 w-3" />
+                              <span className="truncate max-w-[150px]">{attachment.name}</span>
+                            </a>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
@@ -483,6 +546,14 @@ const NewsFeed = ({ articles = [], useApi = false, externalSearchTerm = "" }: Ne
           </p>
         </div>
       )}
+      
+      {/* PDF Viewer Dialog */}
+      <PDFViewer
+        fileUrl={currentPdfUrl}
+        fileName={currentPdfName}
+        isOpen={pdfViewerOpen}
+        onClose={() => setPdfViewerOpen(false)}
+      />
     </div>
   );
 };

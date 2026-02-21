@@ -328,6 +328,17 @@ export interface ArticleAttachment {
   url: string;
 }
 
+export interface ArticleAttachmentData {
+  id: string;
+  name: string;
+  url: string;
+  type: string;
+  filename?: string;
+  original_name?: string;
+  mime_type?: string;
+  size?: number;
+}
+
 export interface CreateArticleData {
   title: string;
   content: string;
@@ -336,6 +347,7 @@ export interface CreateArticleData {
   status?: 'draft' | 'published';
   featured_image?: string;
   target_groups?: string[];
+  attachments?: ArticleAttachmentData[];
 }
 
 export interface UpdateArticleData {
@@ -346,6 +358,7 @@ export interface UpdateArticleData {
   status?: 'draft' | 'published' | 'archived';
   featured_image?: string;
   target_groups?: string[];
+  attachments?: ArticleAttachmentData[];
 }
 
 export const articlesAPI = {
@@ -481,6 +494,7 @@ export interface CreateURLLinkData {
   url: string;
   description?: string;
   icon?: string;
+  icon_url?: string;
   sort_order?: number;
   is_external?: boolean;
 }
@@ -529,6 +543,38 @@ export const urlCategoriesAPI = {
 
   deleteLink: (categoryId: string, linkId: string) =>
     apiFetch(`/url-categories/${categoryId}/links/${linkId}`, { method: 'DELETE' }),
+
+  // Reorder categories
+  reorderCategories: (categoryIds: string[]) =>
+    apiFetch('/url-categories/reorder', {
+      method: 'POST',
+      body: JSON.stringify({ categoryIds }),
+    }),
+
+  // Reorder links within a category
+  reorderLinks: (categoryId: string, linkIds: string[]) =>
+    apiFetch(`/url-categories/${categoryId}/links/reorder`, {
+      method: 'POST',
+      body: JSON.stringify({ linkIds }),
+    }),
+
+  uploadLinkIcon: async (file: File) => {
+    const token = getAuthToken();
+    const formData = new FormData();
+    formData.append('icon', file);
+
+    if (!API_BASE_URL) {
+      return { success: false, message: 'Backend not configured' };
+    }
+
+    const response = await fetch(`${API_BASE_URL}/url-categories/upload-icon`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    });
+
+    return response.json();
+  },
 };
 
 // ============ SETTINGS API ============
@@ -554,6 +600,15 @@ export interface EmailSettings {
   from_email: string;
   from_name: string;
   email_enabled: boolean;
+}
+
+export interface EmailTemplates {
+  email_template_password_reset_subject: string;
+  email_template_password_reset_body: string;
+  email_template_welcome_subject: string;
+  email_template_welcome_body: string;
+  email_template_notification_subject: string;
+  email_template_notification_body: string;
 }
 
 export const settingsAPI = {
@@ -626,6 +681,15 @@ export const settingsAPI = {
     apiFetch('/settings/email/send-test', {
       method: 'POST',
       body: JSON.stringify({ to: toEmail }),
+    }),
+
+  // Email Templates
+  getEmailTemplates: () => apiFetch<EmailTemplates>('/settings/email/templates'),
+
+  updateEmailTemplates: (data: Partial<EmailTemplates>) =>
+    apiFetch('/settings/email/templates', {
+      method: 'PUT',
+      body: JSON.stringify(data),
     }),
 
   // Audit log

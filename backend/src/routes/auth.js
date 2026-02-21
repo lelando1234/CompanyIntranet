@@ -271,19 +271,53 @@ router.post('/forgot-password', [
         const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
         const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}`;
 
+        // Load email templates from settings
+        const templateSettings = await query(
+          "SELECT setting_key, setting_value FROM settings WHERE setting_key IN ('email_template_password_reset_subject', 'email_template_password_reset_body')"
+        );
+        const templates = {};
+        templateSettings.forEach(s => { templates[s.setting_key] = s.setting_value; });
+
+        // Load site name and primary color for template variables
+        const siteSettings = await query(
+          "SELECT setting_key, setting_value FROM settings WHERE setting_key IN ('site_name')"
+        );
+        const siteConfig = {};
+        siteSettings.forEach(s => { siteConfig[s.setting_key] = s.setting_value; });
+
+        const themeRows = await query('SELECT primary_color FROM theme_settings WHERE is_active = TRUE LIMIT 1');
+        const primaryColor = themeRows.length > 0 ? themeRows[0].primary_color : '#2563eb';
+
+        const defaultSubject = 'Password Reset Request';
+        const defaultBody = `<h2>Password Reset Request</h2>
+<p>Hello {{user_name}},</p>
+<p>You requested a password reset. Click the link below to reset your password:</p>
+<p><a href="{{reset_url}}" style="display:inline-block;padding:10px 20px;background:{{primary_color}};color:#fff;text-decoration:none;border-radius:5px;">Reset Password</a></p>
+<p>Or copy this URL: {{reset_url}}</p>
+<p>This link will expire in 1 hour.</p>
+<p>If you didn't request this, please ignore this email.</p>`;
+
+        let emailSubject = templates.email_template_password_reset_subject || defaultSubject;
+        let emailBody = templates.email_template_password_reset_body || defaultBody;
+
+        // Replace template variables
+        const replaceVars = (text) => {
+          return text
+            .replace(/\{\{user_name\}\}/g, user.name)
+            .replace(/\{\{reset_url\}\}/g, resetUrl)
+            .replace(/\{\{site_name\}\}/g, siteConfig.site_name || 'Company Portal')
+            .replace(/\{\{primary_color\}\}/g, primaryColor)
+            .replace(/\{\{user_email\}\}/g, email);
+        };
+
+        emailSubject = replaceVars(emailSubject);
+        emailBody = replaceVars(emailBody);
+
         await transporter.sendMail({
           from: `"${smtp.from_name || 'Company Portal'}" <${smtp.from_email || smtp.smtp_user}>`,
           to: email,
-          subject: 'Password Reset Request',
-          html: `
-            <h2>Password Reset Request</h2>
-            <p>Hello ${user.name},</p>
-            <p>You requested a password reset. Click the link below to reset your password:</p>
-            <p><a href="${resetUrl}" style="display:inline-block;padding:10px 20px;background:#2563eb;color:#fff;text-decoration:none;border-radius:5px;">Reset Password</a></p>
-            <p>Or copy this URL: ${resetUrl}</p>
-            <p>This link will expire in 1 hour.</p>
-            <p>If you didn't request this, please ignore this email.</p>
-          `,
+          subject: emailSubject,
+          html: emailBody,
         });
 
         console.log(`Password reset email sent to ${email}`);

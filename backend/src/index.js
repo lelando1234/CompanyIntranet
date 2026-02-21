@@ -102,6 +102,21 @@ app.get('/api/health', async (req, res) => {
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error('Error:', err);
+  
+  // Handle Multer errors specifically
+  if (err.code === 'LIMIT_FILE_SIZE') {
+    return res.status(413).json({
+      success: false,
+      message: 'File too large. Please upload a smaller file.'
+    });
+  }
+  if (err.name === 'MulterError') {
+    return res.status(400).json({
+      success: false,
+      message: err.message || 'File upload error'
+    });
+  }
+  
   res.status(err.status || 500).json({
     success: false,
     message: err.message || 'Internal server error',

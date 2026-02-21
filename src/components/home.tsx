@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ArrowRight, AlertCircle, Loader2, WifiOff, Mail, ArrowLeft, CheckCircle } from "lucide-react";
-import { authAPI } from "@/lib/api";
+import { authAPI, settingsAPI } from "@/lib/api";
 
 function Home() {
   const navigate = useNavigate();
@@ -33,6 +33,7 @@ function Home() {
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [portalName, setPortalName] = useState("Company Portal");
+  const [logoUrl, setLogoUrl] = useState<string>("/logo.png");
   
   // Forgot password state
   const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
@@ -48,6 +49,20 @@ function Home() {
     if (currentTitle && currentTitle !== 'Vite + React + TS' && currentTitle !== 'Vite App') {
       setPortalName(currentTitle);
     }
+  }, []);
+
+  // Load logo from settings
+  useEffect(() => {
+    const loadLogo = async () => {
+      try {
+        const result = await settingsAPI.getAll();
+        if (result.success && result.data) {
+          if (result.data.logo_url) setLogoUrl(result.data.logo_url);
+          if (result.data.site_name) setPortalName(result.data.site_name);
+        }
+      } catch { /* use defaults */ }
+    };
+    loadLogo();
   }, []);
 
   // Load theme colors from localStorage
@@ -147,7 +162,7 @@ function Home() {
                 }}
               />
               <img
-                src="/logo.png"
+                src={logoUrl}
                 alt="Company Logo"
                 className="h-20 w-auto relative"
                 onError={(e) => {

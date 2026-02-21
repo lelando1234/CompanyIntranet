@@ -49,6 +49,7 @@ interface LinkItem {
   title: string;
   url: string;
   icon?: string;
+  icon_url?: string;
 }
 
 interface LinkCategory {
@@ -60,16 +61,15 @@ interface LinkCategory {
 
 interface SideNavigationProps {
   categories?: LinkCategory[];
-  isCollapsed?: boolean;
+  collapsed?: boolean;
   onToggleCollapse?: () => void;
 }
 
 const SideNavigation = ({
   categories: propCategories,
-  isCollapsed = false,
+  collapsed = false,
   onToggleCollapse = () => {},
 }: SideNavigationProps) => {
-  const [collapsed, setCollapsed] = useState(isCollapsed);
   const [apiCategories, setApiCategories] = useState<LinkCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
@@ -100,6 +100,7 @@ const SideNavigation = ({
               title: link.title,
               url: link.url,
               icon: link.icon,
+              icon_url: link.icon_url,
             })),
           }));
           setApiCategories(mapped);
@@ -117,12 +118,16 @@ const SideNavigation = ({
   const categories = propCategories || apiCategories;
 
   const handleToggleCollapse = () => {
-    setCollapsed(!collapsed);
     onToggleCollapse();
   };
 
   const handleLinkClick = (url: string) => {
-    window.open(url, "_blank");
+    // Add protocol if missing
+    let finalUrl = url;
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      finalUrl = 'https://' + url;
+    }
+    window.open(finalUrl, "_blank");
   };
 
   return (
@@ -136,7 +141,7 @@ const SideNavigation = ({
           variant="ghost"
           size="icon"
           onClick={handleToggleCollapse}
-          className={`${collapsed ? "mx-auto" : ""}`}
+          className={`hover:bg-primary hover:text-primary-foreground transition-colors ${collapsed ? "mx-auto" : ""}`}
         >
           {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
         </Button>
@@ -197,7 +202,17 @@ const SideNavigation = ({
                             className="w-full justify-start text-sm font-normal py-1.5 h-auto"
                             onClick={() => handleLinkClick(link.url)}
                           >
-                            {LinkIcon ? (
+                            {link.icon_url ? (
+                              <img 
+                                src={link.icon_url.startsWith('/uploads') ? `${(import.meta.env.VITE_API_URL || '').replace('/api', '')}${link.icon_url}` : link.icon_url} 
+                                alt="" 
+                                className="w-4 h-4 mr-2 flex-shrink-0 object-contain"
+                                onError={(e) => {
+                                  // Fallback to icon if image fails to load
+                                  e.currentTarget.style.display = 'none';
+                                }}
+                              />
+                            ) : LinkIcon ? (
                               <LinkIcon size={14} className="mr-2 flex-shrink-0" />
                             ) : (
                               <ExternalLink size={14} className="mr-2 flex-shrink-0" />

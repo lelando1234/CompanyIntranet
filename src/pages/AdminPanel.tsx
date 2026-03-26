@@ -63,7 +63,9 @@ import {
   Upload,
   ExternalLink,
   GripVertical,
+  PenLine,
 } from "lucide-react";
+import SignaturePreview, { generateSignatureHTML } from "@/components/SignaturePreview";
 import {
   Dialog,
   DialogContent,
@@ -140,6 +142,10 @@ import {
   groupsAPI,
   settingsAPI,
   faqsAPI,
+  signaturesAPI,
+  signatureCompaniesAPI,
+  signatureDepartmentsAPI,
+  type CreateSignatureCompanyData,
   categoriesAPI,
   urlCategoriesAPI,
   type CreateUserData,
@@ -155,13 +161,17 @@ import {
   type UpdateCategoryData,
   type EmailSettings,
   type EmailTemplates,
+  type EmailSignature,
+  type CreateSignatureData,
+  type SignatureCompany,
+  type SignatureDepartment,
 } from "@/lib/api";
 import type { User } from "@/types/database";
 
 type SectionPerms = { read: boolean; write: boolean; delete: boolean };
 type RolePermsMap = Record<string, Record<string, SectionPerms>>;
 
-const defaultSections = ["news", "users", "groups", "categories", "urls", "faqs", "email", "theme"];
+const defaultSections = ["news", "users", "groups", "categories", "urls", "faqs", "email", "theme", "signatures"];
 
 const makeDefaultPerms = (allTrue = false): Record<string, SectionPerms> =>
   Object.fromEntries(defaultSections.map((s) => [s, { read: allTrue, write: allTrue, delete: allTrue }]));
@@ -177,6 +187,7 @@ const defaultRolePermissions: RolePermsMap = {
     faqs: { read: true, write: true, delete: false },
     email: { read: false, write: false, delete: false },
     theme: { read: false, write: false, delete: false },
+    signatures: { read: true, write: false, delete: false },
   },
   user: {
     news: { read: true, write: false, delete: false },
@@ -187,6 +198,7 @@ const defaultRolePermissions: RolePermsMap = {
     faqs: { read: true, write: false, delete: false },
     email: { read: false, write: false, delete: false },
     theme: { read: false, write: false, delete: false },
+    signatures: { read: true, write: false, delete: false },
   },
 };
 
@@ -507,6 +519,8 @@ const AdminPanel = () => {
   const [isUrlCatDialogOpen, setIsUrlCatDialogOpen] = useState(false);
   const [isFAQDialogOpen, setIsFAQDialogOpen] = useState(false);
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
+  const [isSignatureDialogOpen, setIsSignatureDialogOpen] = useState(false);
+  const [isAssignSignatureDialogOpen, setIsAssignSignatureDialogOpen] = useState(false);
 
   // Edit IDs
   const [editingArticleId, setEditingArticleId] = useState<string | null>(null);
@@ -517,6 +531,8 @@ const AdminPanel = () => {
   const [editingUrlCatForLink, setEditingUrlCatForLink] = useState<string | null>(null);
   const [editingFAQId, setEditingFAQId] = useState<string | null>(null);
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+  const [editingSignatureId, setEditingSignatureId] = useState<string | null>(null);
+  const [assigningSignatureId, setAssigningSignatureId] = useState<string | null>(null);
 
   // Form states
   const [articleForm, setArticleForm] = useState({
@@ -565,6 +581,45 @@ const AdminPanel = () => {
   });
   const [faqs, setFaqs] = useState<any[]>([]);
   const [faqsLoading, setFaqsLoading] = useState(false);
+
+  // Signatures state
+  const defaultSignatureForm: CreateSignatureData = {
+    name: "", full_name: "", job_title: "", department: "", company_name: "",
+    phone: "", mobile: "", email: "", website_url: "", office_address: "",
+    show_profile_photo: false, show_company_logo: false,
+    social_linkedin: "", social_twitter: "", social_facebook: "",
+    social_instagram: "", social_github: "", social_youtube: "",
+    social_custom_url: "", social_custom_label: "",
+    template: "horizontal", primary_color: "#0080ff", font_family: "Arial",
+    assigned_to: null,
+  };
+  const [signatures, setSignatures] = useState<EmailSignature[]>([]);
+  const [signaturesLoading, setSignaturesLoading] = useState(false);
+  const [signatureForm, setSignatureForm] = useState<CreateSignatureData>(defaultSignatureForm);
+  const [signatureAssignSearch, setSignatureAssignSearch] = useState("");
+
+  // Signature sub-tab
+  const [sigSubTab, setSigSubTab] = useState("signatures");
+
+  // Companies state
+  const [companies, setCompanies] = useState<SignatureCompany[]>([]);
+  const [companiesLoading, setCompaniesLoading] = useState(false);
+  const [isCompanyDialogOpen, setIsCompanyDialogOpen] = useState(false);
+  const [editingCompanyId, setEditingCompanyId] = useState<string | null>(null);
+  const [companyForm, setCompanyForm] = useState<CreateSignatureCompanyData>({ name: "", address: "", telephone: "", logo_url: "", website_url: "", disclaimer_text: "" });
+  const [companyLogoUploading, setCompanyLogoUploading] = useState(false);
+
+  // Signature-level photo + company logo tracking for preview
+  const [sigPhotoPreviewUrl, setSigPhotoPreviewUrl] = useState<string>("");
+  const [selectedCompanyLogoUrl, setSelectedCompanyLogoUrl] = useState<string>("");
+  const [sigPhotoUploading, setSigPhotoUploading] = useState(false);
+
+  // Departments state
+  const [departments, setDepartments] = useState<SignatureDepartment[]>([]);
+  const [departmentsLoading, setDepartmentsLoading] = useState(false);
+  const [isDepartmentDialogOpen, setIsDepartmentDialogOpen] = useState(false);
+  const [editingDepartmentId, setEditingDepartmentId] = useState<string | null>(null);
+  const [departmentName, setDepartmentName] = useState("");
 
   // News Category form state
   const [categoryForm, setCategoryForm] = useState({
@@ -657,6 +712,7 @@ const AdminPanel = () => {
     faqs: "faqs",
     email: "email",
     theme: "theme",
+    signatures: "signatures",
   };
 
   const canViewTab = (tabValue: string): boolean => {
@@ -737,7 +793,7 @@ const AdminPanel = () => {
 
   // Set initial active tab to first visible tab when permissions load
   useEffect(() => {
-    const allTabs = ["news", "categories", "urls", "users", "roles", "groups", "faqs", "email", "theme"];
+    const allTabs = ["news", "categories", "urls", "users", "roles", "groups", "faqs", "email", "theme", "signatures"];
     const visibleTabs = allTabs.filter(tab => canViewTab(tab));
     if (visibleTabs.length > 0 && !canViewTab(activeTab)) {
       setActiveTab(visibleTabs[0]);
@@ -816,6 +872,15 @@ const AdminPanel = () => {
   useEffect(() => {
     if (activeTab === "faqs" && backendAvailable) {
       fetchFAQs();
+    }
+  }, [activeTab, backendAvailable]);
+
+  // Load Signatures (+ companies/departments) when tab is opened
+  useEffect(() => {
+    if (activeTab === "signatures" && backendAvailable) {
+      fetchSignatures();
+      fetchCompanies();
+      fetchDepartments();
     }
   }, [activeTab, backendAvailable]);
 
@@ -1207,6 +1272,206 @@ const AdminPanel = () => {
     }
   };
 
+  // --- SIGNATURES CRUD ---
+  const fetchSignatures = async () => {
+    setSignaturesLoading(true);
+    try {
+      const result = await signaturesAPI.getAll();
+      if (result.success && result.data) setSignatures(result.data as EmailSignature[]);
+    } catch (error) {
+      console.error("Failed to fetch signatures:", error);
+    } finally {
+      setSignaturesLoading(false);
+    }
+  };
+
+  const openNewSignature = () => {
+    setEditingSignatureId(null);
+    setSignatureForm({ ...defaultSignatureForm });
+    setSigPhotoPreviewUrl("");
+    setSelectedCompanyLogoUrl("");
+    setIsSignatureDialogOpen(true);
+  };
+
+  const openEditSignature = (sig: EmailSignature) => {
+    setEditingSignatureId(sig.id);
+    setSignatureForm({
+      name: sig.name,
+      full_name: sig.full_name || "",
+      job_title: sig.job_title || "",
+      department: sig.department || "",
+      company_name: sig.company_name || "",
+      phone: sig.phone || "",
+      mobile: sig.mobile || "",
+      email: sig.email || "",
+      website_url: sig.website_url || "",
+      office_address: sig.office_address || "",
+      show_profile_photo: !!sig.show_profile_photo,
+      show_company_logo: !!sig.show_company_logo,
+      social_linkedin: sig.social_linkedin || "",
+      social_twitter: sig.social_twitter || "",
+      social_facebook: sig.social_facebook || "",
+      social_instagram: sig.social_instagram || "",
+      social_github: sig.social_github || "",
+      social_youtube: sig.social_youtube || "",
+      social_custom_url: sig.social_custom_url || "",
+      social_custom_label: sig.social_custom_label || "",
+      template: sig.template,
+      primary_color: sig.primary_color,
+      font_family: sig.font_family,
+      assigned_to: sig.assigned_to,
+      custom_photo_url: sig.custom_photo_url || "",
+      disclaimer_text: sig.disclaimer_text || "",
+    });
+    setSigPhotoPreviewUrl(sig.custom_photo_url || "");
+    // Restore company logo if one is set
+    const matchedCo = companies.find(c => c.name === sig.company_name);
+    setSelectedCompanyLogoUrl(matchedCo?.logo_url || "");
+    setIsSignatureDialogOpen(true);
+  };
+
+  const handleSaveSignature = async () => {
+    if (!signatureForm.name?.trim()) { showError("Signature name is required"); return; }
+    setSubmitting(true);
+    try {
+      const result = editingSignatureId
+        ? await signaturesAPI.update(editingSignatureId, signatureForm)
+        : await signaturesAPI.create(signatureForm);
+      if (result.success) {
+        showSuccess(editingSignatureId ? "Signature updated" : "Signature created");
+        setIsSignatureDialogOpen(false);
+        await fetchSignatures();
+      } else {
+        showError(result.message || "Failed to save signature");
+      }
+    } catch { showError("Error saving signature"); }
+    finally { setSubmitting(false); }
+  };
+
+  const handleDeleteSignature = async (id: string) => {
+    if (!confirm("Delete this signature? This cannot be undone.")) return;
+    try {
+      const result = await signaturesAPI.delete(id);
+      if (result.success) { showSuccess("Signature deleted"); await fetchSignatures(); }
+      else showError(result.message || "Failed to delete signature");
+    } catch { showError("Error deleting signature"); }
+  };
+
+  const handleAssignSignature = async (userId: string) => {
+    if (!assigningSignatureId) return;
+    try {
+      const result = await signaturesAPI.assign(assigningSignatureId, userId);
+      if (result.success) {
+        showSuccess("Signature assigned");
+        setIsAssignSignatureDialogOpen(false);
+        setAssigningSignatureId(null);
+        await fetchSignatures();
+      } else {
+        showError(result.message || "Failed to assign signature");
+      }
+    } catch { showError("Error assigning signature"); }
+  };
+
+  const handleUnassignSignature = async (sigId: string) => {
+    try {
+      const result = await signaturesAPI.unassign(sigId);
+      if (result.success) { showSuccess("Signature unassigned"); await fetchSignatures(); }
+      else showError(result.message || "Failed to unassign");
+    } catch { showError("Error unassigning signature"); }
+  };
+
+  // --- COMPANIES CRUD ---
+  const fetchCompanies = async () => {
+    setCompaniesLoading(true);
+    try {
+      const result = await signatureCompaniesAPI.getAll();
+      if (result.success && result.data) setCompanies(result.data as SignatureCompany[]);
+    } catch { console.error("Failed to fetch companies"); }
+    finally { setCompaniesLoading(false); }
+  };
+
+  const openNewCompany = () => {
+    setEditingCompanyId(null);
+    setCompanyForm({ name: "", address: "", telephone: "", logo_url: "", website_url: "", disclaimer_text: "" });
+    setIsCompanyDialogOpen(true);
+  };
+
+  const openEditCompany = (c: SignatureCompany) => {
+    setEditingCompanyId(c.id);
+    setCompanyForm({ name: c.name, address: c.address || "", telephone: c.telephone || "", logo_url: c.logo_url || "", website_url: c.website_url || "", disclaimer_text: c.disclaimer_text || "" });
+    setIsCompanyDialogOpen(true);
+  };
+
+  const handleSaveCompany = async () => {
+    if (!companyForm.name.trim()) { showError("Company name is required"); return; }
+    setSubmitting(true);
+    try {
+      const result = editingCompanyId
+        ? await signatureCompaniesAPI.update(editingCompanyId, companyForm)
+        : await signatureCompaniesAPI.create(companyForm);
+      if (result.success) {
+        showSuccess(editingCompanyId ? "Company updated" : "Company created");
+        setIsCompanyDialogOpen(false);
+        await fetchCompanies();
+      } else { showError(result.message || "Failed to save company"); }
+    } catch { showError("Error saving company"); }
+    finally { setSubmitting(false); }
+  };
+
+  const handleDeleteCompany = async (id: string) => {
+    try {
+      const result = await signatureCompaniesAPI.delete(id);
+      if (result.success) { showSuccess("Company deleted"); await fetchCompanies(); }
+      else showError(result.message || "Failed to delete");
+    } catch { showError("Error deleting company"); }
+  };
+
+  // --- DEPARTMENTS CRUD ---
+  const fetchDepartments = async () => {
+    setDepartmentsLoading(true);
+    try {
+      const result = await signatureDepartmentsAPI.getAll();
+      if (result.success && result.data) setDepartments(result.data as SignatureDepartment[]);
+    } catch { console.error("Failed to fetch departments"); }
+    finally { setDepartmentsLoading(false); }
+  };
+
+  const openNewDepartment = () => {
+    setEditingDepartmentId(null);
+    setDepartmentName("");
+    setIsDepartmentDialogOpen(true);
+  };
+
+  const openEditDepartment = (d: SignatureDepartment) => {
+    setEditingDepartmentId(d.id);
+    setDepartmentName(d.name);
+    setIsDepartmentDialogOpen(true);
+  };
+
+  const handleSaveDepartment = async () => {
+    if (!departmentName.trim()) { showError("Department name is required"); return; }
+    setSubmitting(true);
+    try {
+      const result = editingDepartmentId
+        ? await signatureDepartmentsAPI.update(editingDepartmentId, departmentName)
+        : await signatureDepartmentsAPI.create(departmentName);
+      if (result.success) {
+        showSuccess(editingDepartmentId ? "Department updated" : "Department created");
+        setIsDepartmentDialogOpen(false);
+        await fetchDepartments();
+      } else { showError(result.message || "Failed to save department"); }
+    } catch { showError("Error saving department"); }
+    finally { setSubmitting(false); }
+  };
+
+  const handleDeleteDepartment = async (id: string) => {
+    try {
+      const result = await signatureDepartmentsAPI.delete(id);
+      if (result.success) { showSuccess("Department deleted"); await fetchDepartments(); }
+      else showError(result.message || "Failed to delete");
+    } catch { showError("Error deleting department"); }
+  };
+
   // --- NEWS CATEGORIES CRUD ---
   const fetchNewsCategories = async () => {
     setNewsCategoriesLoading(true);
@@ -1505,6 +1770,7 @@ const AdminPanel = () => {
               { key: "faqs", icon: MessageCircleQuestion, label: "FAQs" },
               { key: "email", icon: Mail, label: "Email Settings" },
               { key: "theme", icon: Palette, label: "Theme & Logo" },
+              { key: "signatures", icon: PenLine, label: "Signatures" },
             ].filter(({ key }) => canViewTab(key) || (key === "news" && (canViewTab("news") || canViewTab("categories"))) || (key === "users" && (canViewTab("users") || canViewTab("roles") || canViewTab("groups")))).map(({ key, icon: Icon, label }) => {
               // Determine if this sidebar item should be highlighted
               const isActive = key === "news" 
@@ -1645,6 +1911,9 @@ const AdminPanel = () => {
                   <div className="flex justify-end mb-6">
                     {activeTab === "urls" && canWriteSection("urls") && <Button onClick={openNewUrlCat}><Plus className="mr-2 h-4 w-4" />Add Category</Button>}
                     {activeTab === "faqs" && canWriteSection("faqs") && <Button onClick={openNewFAQ}><Plus className="mr-2 h-4 w-4" />Add FAQ</Button>}
+                    {activeTab === "signatures" && canWriteSection("signatures") && sigSubTab === "signatures" && <Button onClick={openNewSignature}><Plus className="mr-2 h-4 w-4" />Add Signature</Button>}
+                    {activeTab === "signatures" && canWriteSection("signatures") && sigSubTab === "companies" && <Button onClick={openNewCompany}><Plus className="mr-2 h-4 w-4" />Add Company</Button>}
+                    {activeTab === "signatures" && canWriteSection("signatures") && sigSubTab === "departments" && <Button onClick={openNewDepartment}><Plus className="mr-2 h-4 w-4" />Add Department</Button>}
                   </div>
                 )}
 
@@ -2557,6 +2826,181 @@ const AdminPanel = () => {
                   </Card>
                 </TabsContent>
                 )}
+
+                {/* SIGNATURES TAB */}
+                {canViewTab("signatures") && (
+                <TabsContent value="signatures" className="space-y-4">
+                  {/* Sub-navigation */}
+                  <div className="flex gap-1 border-b pb-2">
+                    {(["signatures", "companies", "departments"] as const).map((tab) => (
+                      <button key={tab} type="button"
+                        className={`px-4 py-1.5 text-sm rounded-md capitalize transition-colors ${sigSubTab === tab ? "bg-primary text-primary-foreground font-medium" : "text-muted-foreground hover:text-foreground hover:bg-muted"}`}
+                        onClick={() => setSigSubTab(tab)}>
+                        {tab}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Signatures list */}
+                  {sigSubTab === "signatures" && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Email Signatures</CardTitle>
+                      <CardDescription>Create and manage HTML email signatures. Each signature can be assigned to one user.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {signaturesLoading ? (
+                        <LoadingSection />
+                      ) : (
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Name</TableHead>
+                              <TableHead>Template</TableHead>
+                              <TableHead>Assigned To</TableHead>
+                              <TableHead className="w-28">Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {signatures.length === 0 ? (
+                              <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">No signatures yet. Click "Add Signature" to create one.</TableCell></TableRow>
+                            ) : (
+                              signatures.map((sig) => (
+                                <TableRow key={sig.id}>
+                                  <TableCell className="font-medium">{sig.name}</TableCell>
+                                  <TableCell><Badge variant="outline" className="capitalize">{sig.template}</Badge></TableCell>
+                                  <TableCell>
+                                    {sig.assigned_user_name ? (
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-sm">{sig.assigned_user_name}</span>
+                                        {canWriteSection("signatures") && (
+                                          <Button variant="ghost" size="sm" className="h-6 px-2 text-destructive hover:text-destructive" onClick={() => handleUnassignSignature(sig.id)}>
+                                            <X className="h-3 w-3" />
+                                          </Button>
+                                        )}
+                                      </div>
+                                    ) : canWriteSection("signatures") ? (
+                                      <Button variant="outline" size="sm" onClick={() => { setAssigningSignatureId(sig.id); setSignatureAssignSearch(""); setIsAssignSignatureDialogOpen(true); }}>
+                                        <UserPlus className="mr-1 h-3 w-3" />Assign User
+                                      </Button>
+                                    ) : (
+                                      <span className="text-muted-foreground text-sm">Unassigned</span>
+                                    )}
+                                  </TableCell>
+                                  <TableCell>
+                                    <div className="flex gap-1">
+                                      <Button variant="ghost" size="sm" onClick={() => openEditSignature(sig)}><Edit2 className="h-4 w-4" /></Button>
+                                      {canDeleteSection("signatures") && (
+                                        <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => handleDeleteSignature(sig.id)}><Trash2 className="h-4 w-4" /></Button>
+                                      )}
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              ))
+                            )}
+                          </TableBody>
+                        </Table>
+                      )}
+                    </CardContent>
+                  </Card>
+                  )}
+
+                  {/* Companies list */}
+                  {sigSubTab === "companies" && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Companies</CardTitle>
+                      <CardDescription>Configure companies to auto-populate signature fields when creating a signature.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {companiesLoading ? (
+                        <LoadingSection />
+                      ) : (
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Name</TableHead>
+                              <TableHead>Telephone</TableHead>
+                              <TableHead>Address</TableHead>
+                              <TableHead className="w-24">Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {companies.length === 0 ? (
+                              <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">No companies yet. Click "Add Company" to create one.</TableCell></TableRow>
+                            ) : (
+                              companies.map((c) => (
+                                <TableRow key={c.id}>
+                                  <TableCell>
+                                    <div className="flex items-center gap-2">
+                                      {c.logo_url && <img src={c.logo_url} alt="" className="h-6 w-6 object-contain rounded" />}
+                                      <span className="font-medium">{c.name}</span>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="text-sm text-muted-foreground">{c.telephone || "—"}</TableCell>
+                                  <TableCell className="text-sm text-muted-foreground max-w-xs truncate">{c.address || "—"}</TableCell>
+                                  <TableCell>
+                                    <div className="flex gap-1">
+                                      <Button variant="ghost" size="sm" onClick={() => openEditCompany(c)}><Edit2 className="h-4 w-4" /></Button>
+                                      {canDeleteSection("signatures") && (
+                                        <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => handleDeleteCompany(c.id)}><Trash2 className="h-4 w-4" /></Button>
+                                      )}
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              ))
+                            )}
+                          </TableBody>
+                        </Table>
+                      )}
+                    </CardContent>
+                  </Card>
+                  )}
+
+                  {/* Departments list */}
+                  {sigSubTab === "departments" && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Departments</CardTitle>
+                      <CardDescription>Configure departments available as a dropdown when creating a signature.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {departmentsLoading ? (
+                        <LoadingSection />
+                      ) : (
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Department Name</TableHead>
+                              <TableHead className="w-24">Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {departments.length === 0 ? (
+                              <TableRow><TableCell colSpan={2} className="text-center text-muted-foreground py-8">No departments yet. Click "Add Department" to create one.</TableCell></TableRow>
+                            ) : (
+                              departments.map((d) => (
+                                <TableRow key={d.id}>
+                                  <TableCell className="font-medium">{d.name}</TableCell>
+                                  <TableCell>
+                                    <div className="flex gap-1">
+                                      <Button variant="ghost" size="sm" onClick={() => openEditDepartment(d)}><Edit2 className="h-4 w-4" /></Button>
+                                      {canDeleteSection("signatures") && (
+                                        <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => handleDeleteDepartment(d.id)}><Trash2 className="h-4 w-4" /></Button>
+                                      )}
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              ))
+                            )}
+                          </TableBody>
+                        </Table>
+                      )}
+                    </CardContent>
+                  </Card>
+                  )}
+                </TabsContent>
+                )}
               </Tabs>
             </>
           )}
@@ -3072,6 +3516,378 @@ const AdminPanel = () => {
             <Button onClick={handleSaveFAQ} disabled={submitting}>
               {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {editingFAQId ? "Save Changes" : "Create FAQ"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* SIGNATURE CREATE/EDIT DIALOG */}
+      <Dialog open={isSignatureDialogOpen} onOpenChange={setIsSignatureDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editingSignatureId ? "Edit Signature" : "New Email Signature"}</DialogTitle>
+            <DialogDescription>{editingSignatureId ? "Update signature details." : "Create a new email signature template."}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-6 py-2">
+            {/* Basic Info */}
+            <div>
+              <h3 className="text-sm font-semibold mb-3 text-muted-foreground uppercase tracking-wide">Basic Info</h3>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="col-span-2 grid gap-1">
+                  <Label>Signature Label <span className="text-destructive">*</span></Label>
+                  <Input placeholder="e.g. Sales Team - John" value={signatureForm.name} onChange={(e) => setSignatureForm({ ...signatureForm, name: e.target.value })} />
+                  <p className="text-xs text-muted-foreground">Internal name only — not shown in the signature itself.</p>
+                </div>
+                <div className="grid gap-1">
+                  <Label>Full Name</Label>
+                  <Input placeholder="John Smith" value={signatureForm.full_name || ""} onChange={(e) => setSignatureForm({ ...signatureForm, full_name: e.target.value })} />
+                </div>
+                <div className="grid gap-1">
+                  <Label>Job Title</Label>
+                  <Input placeholder="Software Engineer" value={signatureForm.job_title || ""} onChange={(e) => setSignatureForm({ ...signatureForm, job_title: e.target.value })} />
+                </div>
+                <div className="grid gap-1">
+                  <Label>Department</Label>
+                  {departments.length > 0 ? (
+                    <Select value={signatureForm.department || ""} onValueChange={(v) => setSignatureForm({ ...signatureForm, department: v === "__none__" ? "" : v })}>
+                      <SelectTrigger><SelectValue placeholder="Select department" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">— None —</SelectItem>
+                        {departments.map((d) => <SelectItem key={d.id} value={d.name}>{d.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input placeholder="Engineering" value={signatureForm.department || ""} onChange={(e) => setSignatureForm({ ...signatureForm, department: e.target.value })} />
+                  )}
+                </div>
+                <div className="grid gap-1">
+                  <Label>Company</Label>
+                  {companies.length > 0 ? (
+                    <Select
+                      value={signatureForm.company_name || ""}
+                      onValueChange={(v) => {
+                        if (v === "__none__") {
+                          setSignatureForm({ ...signatureForm, company_name: "", office_address: "", phone: "", website_url: "", disclaimer_text: "" });
+                          setSelectedCompanyLogoUrl("");
+                        } else {
+                          const co = companies.find((c) => c.name === v);
+                          setSignatureForm({
+                            ...signatureForm,
+                            company_name: v,
+                            office_address: co?.address || signatureForm.office_address,
+                            phone: co?.telephone || signatureForm.phone,
+                            website_url: co?.website_url || signatureForm.website_url,
+                            disclaimer_text: co?.disclaimer_text || signatureForm.disclaimer_text,
+                          });
+                          setSelectedCompanyLogoUrl(co?.logo_url || "");
+                        }
+                      }}
+                    >
+                      <SelectTrigger><SelectValue placeholder="Select company" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">— None —</SelectItem>
+                        {companies.map((c) => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input placeholder="Acme Corp" value={signatureForm.company_name || ""} onChange={(e) => setSignatureForm({ ...signatureForm, company_name: e.target.value })} />
+                  )}
+                </div>
+              </div>
+            </div>
+            {/* Contact */}
+            <div>
+              <h3 className="text-sm font-semibold mb-3 text-muted-foreground uppercase tracking-wide">Contact Details</h3>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="grid gap-1">
+                  <Label>Phone</Label>
+                  <Input placeholder="+27 11 000 0000" value={signatureForm.phone || ""} onChange={(e) => setSignatureForm({ ...signatureForm, phone: e.target.value })} />
+                </div>
+                <div className="grid gap-1">
+                  <Label>Mobile</Label>
+                  <Input placeholder="+27 82 000 0000" value={signatureForm.mobile || ""} onChange={(e) => setSignatureForm({ ...signatureForm, mobile: e.target.value })} />
+                </div>
+                <div className="grid gap-1">
+                  <Label>Email</Label>
+                  <Input type="email" placeholder="john@company.com" value={signatureForm.email || ""} onChange={(e) => setSignatureForm({ ...signatureForm, email: e.target.value })} />
+                </div>
+                <div className="grid gap-1">
+                  <Label>Website</Label>
+                  <Input placeholder="https://company.com" value={signatureForm.website_url || ""} onChange={(e) => setSignatureForm({ ...signatureForm, website_url: e.target.value })} />
+                </div>
+                <div className="col-span-2 grid gap-1">
+                  <Label>Office Address</Label>
+                  <Textarea placeholder={"15 Alice Lane\nSandton, 2196\nGauteng"} rows={3} value={signatureForm.office_address || ""} onChange={(e) => setSignatureForm({ ...signatureForm, office_address: e.target.value })} />
+                </div>
+              </div>
+            </div>
+            {/* Social Media */}
+            <div>
+              <h3 className="text-sm font-semibold mb-3 text-muted-foreground uppercase tracking-wide">Social Media Links</h3>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { key: "social_linkedin", label: "LinkedIn URL" },
+                  { key: "social_twitter", label: "Twitter / X URL" },
+                  { key: "social_facebook", label: "Facebook URL" },
+                  { key: "social_instagram", label: "Instagram URL" },
+                  { key: "social_github", label: "GitHub URL" },
+                  { key: "social_youtube", label: "YouTube URL" },
+                ].map(({ key, label }) => (
+                  <div key={key} className="grid gap-1">
+                    <Label>{label}</Label>
+                    <Input placeholder="https://..." value={(signatureForm as any)[key] || ""} onChange={(e) => setSignatureForm({ ...signatureForm, [key]: e.target.value })} />
+                  </div>
+                ))}
+                <div className="grid gap-1">
+                  <Label>Custom Link URL</Label>
+                  <Input placeholder="https://..." value={signatureForm.social_custom_url || ""} onChange={(e) => setSignatureForm({ ...signatureForm, social_custom_url: e.target.value })} />
+                </div>
+                <div className="grid gap-1">
+                  <Label>Custom Link Label</Label>
+                  <Input placeholder="Portfolio" value={signatureForm.social_custom_label || ""} onChange={(e) => setSignatureForm({ ...signatureForm, social_custom_label: e.target.value })} />
+                </div>
+              </div>
+            </div>
+            {/* Design */}
+            <div>
+              <h3 className="text-sm font-semibold mb-3 text-muted-foreground uppercase tracking-wide">Design</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2 grid gap-2">
+                  <Label>Template Layout</Label>
+                  <div className="grid grid-cols-4 gap-2">
+                    {(["horizontal", "vertical", "compact", "modern"] as const).map((t) => (
+                      <button key={t} type="button"
+                        className={`border-2 rounded-md p-3 text-sm capitalize text-center transition-colors ${signatureForm.template === t ? "border-primary bg-primary/10 font-semibold" : "border-border hover:border-primary/50"}`}
+                        onClick={() => setSignatureForm({ ...signatureForm, template: t })}>
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="grid gap-1">
+                  <Label>Primary Color</Label>
+                  <div className="flex gap-2 items-center">
+                    <input type="color" value={signatureForm.primary_color || "#0080ff"} onChange={(e) => setSignatureForm({ ...signatureForm, primary_color: e.target.value })} className="w-10 h-9 rounded border cursor-pointer p-0.5" />
+                    <Input value={signatureForm.primary_color || "#0080ff"} onChange={(e) => setSignatureForm({ ...signatureForm, primary_color: e.target.value })} placeholder="#0080ff" className="flex-1" />
+                  </div>
+                </div>
+                <div className="grid gap-1">
+                  <Label>Font Family</Label>
+                  <Select value={signatureForm.font_family || "Arial"} onValueChange={(v) => setSignatureForm({ ...signatureForm, font_family: v as any })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {["Arial", "Georgia", "Verdana", "Helvetica"].map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Switch checked={!!signatureForm.show_profile_photo} onCheckedChange={(v) => setSignatureForm({ ...signatureForm, show_profile_photo: v })} id="sig-photo" />
+                  <Label htmlFor="sig-photo" className="cursor-pointer">Show Profile Photo</Label>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Switch checked={!!signatureForm.show_company_logo} onCheckedChange={(v) => setSignatureForm({ ...signatureForm, show_company_logo: v })} id="sig-logo" />
+                  <Label htmlFor="sig-logo" className="cursor-pointer">Show Company Logo</Label>
+                </div>
+                {/* Signature Photo Upload */}
+                <div className="col-span-2 grid gap-1">
+                  <Label>Signature Photo</Label>
+                  <div className="flex items-center gap-3">
+                    {sigPhotoPreviewUrl && (
+                      <img src={sigPhotoPreviewUrl.startsWith('blob:') ? sigPhotoPreviewUrl : `http://localhost:3001${sigPhotoPreviewUrl}`}
+                        alt="Photo" className="h-12 w-12 rounded-full object-cover border" />
+                    )}
+                    <label className="cursor-pointer">
+                      <div className="flex items-center gap-2 px-3 py-2 border rounded-md text-sm hover:bg-muted transition-colors">
+                        {sigPhotoUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                        {sigPhotoPreviewUrl ? "Change Photo" : "Upload Photo"}
+                      </div>
+                      <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                        const file = e.target.files?.[0]; if (!file) return;
+                        setSigPhotoPreviewUrl(URL.createObjectURL(file));
+                        setSigPhotoUploading(true);
+                        try {
+                          const result = await signaturesAPI.uploadPhoto(file);
+                          if (result.success && result.data) {
+                            setSignatureForm(f => ({ ...f, custom_photo_url: result.data!.photo_url }));
+                            setSigPhotoPreviewUrl(result.data.photo_url);
+                          } else { showError(result.message || "Upload failed"); }
+                        } catch { showError("Photo upload error"); }
+                        finally { setSigPhotoUploading(false); }
+                      }} />
+                    </label>
+                    {sigPhotoPreviewUrl && (
+                      <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => { setSigPhotoPreviewUrl(""); setSignatureForm(f => ({ ...f, custom_photo_url: "" })); }}>
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">Upload a custom photo for this signature (overrides profile photo in preview).</p>
+                </div>
+              </div>
+            </div>
+            {/* Live Preview */}
+            <div>
+              <h3 className="text-sm font-semibold mb-3 text-muted-foreground uppercase tracking-wide">Live Preview</h3>
+              <SignaturePreview
+                signature={signatureForm}
+                userAvatarUrl={sigPhotoPreviewUrl ? (sigPhotoPreviewUrl.startsWith('blob:') ? sigPhotoPreviewUrl : `http://localhost:3001${sigPhotoPreviewUrl}`) : undefined}
+                companyLogoUrl={selectedCompanyLogoUrl ? `http://localhost:3001${selectedCompanyLogoUrl}` : undefined}
+                disclaimerText={signatureForm.disclaimer_text}
+              />
+              <Button variant="outline" size="sm" className="mt-2" onClick={() => {
+                const html = generateSignatureHTML(signatureForm, sigPhotoPreviewUrl || undefined, selectedCompanyLogoUrl ? `http://localhost:3001${selectedCompanyLogoUrl}` : undefined, signatureForm.disclaimer_text);
+                navigator.clipboard.writeText(html).then(() => showSuccess("HTML copied to clipboard!"));
+              }}>
+                Copy HTML
+              </Button>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsSignatureDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSaveSignature} disabled={submitting}>
+              {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {editingSignatureId ? "Save Changes" : "Create Signature"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ASSIGN SIGNATURE DIALOG */}
+      <Dialog open={isAssignSignatureDialogOpen} onOpenChange={setIsAssignSignatureDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Assign Signature to User</DialogTitle>
+            <DialogDescription>Select a user to assign this email signature to. Only users without an existing signature are shown.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input className="pl-9" placeholder="Search users..." value={signatureAssignSearch} onChange={(e) => setSignatureAssignSearch(e.target.value)} />
+            </div>
+            <ScrollArea className="h-64 border rounded-md">
+              {users
+                .filter(u => u.status === "active" && !signatures.some(s => s.assigned_to === u.id))
+                .filter(u => !signatureAssignSearch || u.name.toLowerCase().includes(signatureAssignSearch.toLowerCase()) || u.email.toLowerCase().includes(signatureAssignSearch.toLowerCase()))
+                .map(u => (
+                  <div key={u.id} className="flex items-center justify-between p-3 border-b last:border-b-0 hover:bg-muted/50">
+                    <div className="flex items-center gap-2">
+                      <Avatar className="h-7 w-7">
+                        <AvatarImage src={u.avatar || ""} />
+                        <AvatarFallback className="text-xs">{u.name?.charAt(0).toUpperCase()}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="text-sm font-medium">{u.name}</p>
+                        <p className="text-xs text-muted-foreground">{u.email}</p>
+                      </div>
+                    </div>
+                    <Button size="sm" onClick={() => handleAssignSignature(u.id)}>Assign</Button>
+                  </div>
+                ))}
+              {users.filter(u => u.status === "active" && !signatures.some(s => s.assigned_to === u.id)).length === 0 && (
+                <p className="text-center text-muted-foreground text-sm py-8">All active users already have signatures assigned.</p>
+              )}
+            </ScrollArea>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAssignSignatureDialogOpen(false)}>Cancel</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* COMPANY CREATE/EDIT DIALOG */}
+      <Dialog open={isCompanyDialogOpen} onOpenChange={setIsCompanyDialogOpen}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editingCompanyId ? "Edit Company" : "Add Company"}</DialogTitle>
+            <DialogDescription>Company details auto-populate when selected while creating a signature.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="grid gap-1">
+              <Label>Company Name <span className="text-destructive">*</span></Label>
+              <Input placeholder="Acme (Pty) Ltd" value={companyForm.name} onChange={(e) => setCompanyForm({ ...companyForm, name: e.target.value })} />
+            </div>
+            <div className="grid gap-1">
+              <Label>Company Logo</Label>
+              <div className="flex items-center gap-3">
+                {companyForm.logo_url && (
+                  <img src={companyForm.logo_url.startsWith('/uploads') ? `http://localhost:3001${companyForm.logo_url}` : companyForm.logo_url}
+                    alt="Logo" className="h-10 w-24 object-contain border rounded p-1 bg-white" />
+                )}
+                <label className="cursor-pointer flex-1">
+                  <div className="flex items-center gap-2 px-3 py-2 border rounded-md text-sm hover:bg-muted transition-colors w-fit">
+                    {companyLogoUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                    {companyForm.logo_url ? "Change Logo" : "Upload Logo"}
+                  </div>
+                  <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                    const file = e.target.files?.[0]; if (!file) return;
+                    setCompanyLogoUploading(true);
+                    try {
+                      const result = await signatureCompaniesAPI.uploadLogo(file);
+                      if (result.success && result.data) setCompanyForm(f => ({ ...f, logo_url: result.data!.logo_url }));
+                      else showError(result.message || "Upload failed");
+                    } catch { showError("Logo upload error"); }
+                    finally { setCompanyLogoUploading(false); }
+                  }} />
+                </label>
+                {companyForm.logo_url && (
+                  <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => setCompanyForm(f => ({ ...f, logo_url: "" }))}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            </div>
+            <div className="grid gap-1">
+              <Label>Website</Label>
+              <Input placeholder="https://company.com" value={companyForm.website_url || ""} onChange={(e) => setCompanyForm({ ...companyForm, website_url: e.target.value })} />
+            </div>
+            <div className="grid gap-1">
+              <Label>Telephone</Label>
+              <Input placeholder="+27 11 000 0000" value={companyForm.telephone || ""} onChange={(e) => setCompanyForm({ ...companyForm, telephone: e.target.value })} />
+            </div>
+            <div className="grid gap-1">
+              <Label>Address</Label>
+              <Textarea placeholder={"15 Alice Lane\nSandton, 2196\nGauteng"} rows={3} value={companyForm.address || ""} onChange={(e) => setCompanyForm({ ...companyForm, address: e.target.value })} />
+            </div>
+            <div className="grid gap-1">
+              <Label>Email Disclaimer / Privacy Notice</Label>
+              <Textarea
+                placeholder={"This message may contain information which is confidential or private in nature..."}
+                rows={5}
+                value={companyForm.disclaimer_text || ""}
+                onChange={(e) => setCompanyForm({ ...companyForm, disclaimer_text: e.target.value })}
+              />
+              <p className="text-xs text-muted-foreground">This text appears at the bottom of all signatures assigned to this company.</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCompanyDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSaveCompany} disabled={submitting || companyLogoUploading}>
+              {(submitting || companyLogoUploading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {editingCompanyId ? "Save Changes" : "Add Company"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* DEPARTMENT CREATE/EDIT DIALOG */}
+      <Dialog open={isDepartmentDialogOpen} onOpenChange={setIsDepartmentDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{editingDepartmentId ? "Edit Department" : "Add Department"}</DialogTitle>
+            <DialogDescription>Departments appear as a dropdown selection when creating a signature.</DialogDescription>
+          </DialogHeader>
+          <div className="py-2">
+            <div className="grid gap-1">
+              <Label>Department Name <span className="text-destructive">*</span></Label>
+              <Input placeholder="Engineering" value={departmentName} onChange={(e) => setDepartmentName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") handleSaveDepartment(); }} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDepartmentDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSaveDepartment} disabled={submitting}>
+              {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {editingDepartmentId ? "Save Changes" : "Add Department"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Camera, Loader2, Eye, EyeOff, ChevronDown, Settings, LogOut } from "lucide-react";
+import { ArrowLeft, Camera, Loader2, Eye, EyeOff, ChevronDown, Settings, LogOut, Copy } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,8 @@ import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { authAPI, usersAPI, preferencesAPI, settingsAPI } from "@/lib/api";
+import { authAPI, usersAPI, preferencesAPI, settingsAPI, signaturesAPI, type EmailSignature } from "@/lib/api";
+import SignaturePreview, { generateSignatureHTML } from "@/components/SignaturePreview";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -221,6 +222,11 @@ export default function UserProfile() {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
+  // Signature state
+  const [mySignature, setMySignature] = useState<EmailSignature | null>(null);
+  const [signatureLoading, setSignatureLoading] = useState(false);
+  const [canViewSignature, setCanViewSignature] = useState(false);
+
   // Password change state
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -291,6 +297,34 @@ export default function UserProfile() {
           if (adminTheme.data.theme_sidebar_text) adminPalette.sidebarText = adminTheme.data.theme_sidebar_text;
           
           setAdminColors({ ...defaultColors, ...adminPalette });
+
+          // Check if user has signatures read permission.
+          // If role_permissions has never been saved to the DB, default to showing
+          // the section (matches the defaultRolePermissions which grants read to all roles).
+          try {
+            const userRole = user?.role || "user";
+            let hasRead = userRole === "admin"; // admins always see it
+
+            if (!hasRead) {
+              const rolePermsRaw = adminTheme.data?.role_permissions;
+              if (rolePermsRaw) {
+                const rolePerms = typeof rolePermsRaw === "string" ? JSON.parse(rolePermsRaw) : rolePermsRaw;
+                // If the permissions key exists but signatures is not set, default to true (matches defaultRolePermissions)
+                hasRead = rolePerms?.[userRole]?.signatures?.read !== false;
+              } else {
+                // role_permissions never saved — use the default (read: true for all roles)
+                hasRead = true;
+              }
+            }
+
+            setCanViewSignature(hasRead);
+            if (hasRead) {
+              setSignatureLoading(true);
+              const sigResult = await signaturesAPI.getMySignature();
+              if (sigResult.success) setMySignature(sigResult.data || null);
+              setSignatureLoading(false);
+            }
+          } catch { /* silent */ }
         }
       } catch (error) {
         console.error("Error loading preferences:", error);
@@ -1035,6 +1069,70 @@ export default function UserProfile() {
               </Button>
             </CardContent>
           </Card>
+
+          {/* Email Signature Section */}
+          {canViewSignature && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Email Signature</CardTitle>
+                <CardDescription>
+                  Your assigned email signature. Copy the HTML to paste into Gmail, Outlook, or any email client's signature settings.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {signatureLoading ? (
+                  <div className="flex items-center gap-2 text-muted-foreground py-4">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span className="text-sm">Loading signature...</span>
+                  </div>
+                ) : mySignature ? (
+                  <div className="space-y-4">
+                    <div>
+                      <Label className="text-sm font-medium mb-2 block">Preview</Label>
+                      <SignaturePreview
+                        signature={mySignature}
+                        userAvatarUrl={avatar || undefined}
+                        companyLogoUrl={companyLogo}
+                      />
+                    </div>
+                    <Separator />
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium">{mySignature.name}</p>
+                        <p className="text-xs text-muted-foreground capitalize">
+                          Template: {mySignature.template} &bull; Font: {mySignature.font_family}
+                        </p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          const html = generateSignatureHTML(
+                            mySignature,
+                            avatar || undefined,
+                            companyLogo
+                          );
+                          navigator.clipboard.writeText(html).then(() => {
+                            toast({
+                              title: "Copied!",
+                              description: "Signature HTML copied. Paste it into your email client's signature settings.",
+                            });
+                          });
+                        }}
+                      >
+                        <Copy className="mr-2 h-4 w-4" />
+                        Copy HTML
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <p className="text-sm">No email signature assigned to your account yet.</p>
+                    <p className="text-xs mt-1">Contact your administrator to have one set up for you.</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
 

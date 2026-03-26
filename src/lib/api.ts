@@ -802,6 +802,180 @@ export const faqsAPI = {
   delete: (id: string) => apiFetch(`/faqs/${id}`, { method: 'DELETE' }),
 };
 
+// ============ SIGNATURE COMPANIES API ============
+
+export interface SignatureCompany {
+  id: string;
+  name: string;
+  address: string | null;
+  telephone: string | null;
+  logo_url: string | null;
+  website_url: string | null;
+  disclaimer_text: string | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateSignatureCompanyData {
+  name: string;
+  address?: string;
+  telephone?: string;
+  logo_url?: string;
+  website_url?: string;
+  disclaimer_text?: string;
+}
+
+export const signatureCompaniesAPI = {
+  getAll: () => apiFetch<SignatureCompany[]>('/signature-companies'),
+  create: (data: CreateSignatureCompanyData) =>
+    apiFetch<SignatureCompany>('/signature-companies', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: string, data: Partial<CreateSignatureCompanyData>) =>
+    apiFetch<SignatureCompany>(`/signature-companies/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: string) => apiFetch(`/signature-companies/${id}`, { method: 'DELETE' }),
+  uploadLogo: async (file: File): Promise<{ success: boolean; data?: { logo_url: string }; message?: string }> => {
+    const token = getAuthToken();
+    const form = new FormData();
+    form.append('logo', file);
+    const res = await fetch(`${API_BASE_URL}/signature-companies/logo`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: form,
+    });
+    return res.json();
+  },
+};
+
+// ============ SIGNATURE DEPARTMENTS API ============
+
+export interface SignatureDepartment {
+  id: string;
+  name: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export const signatureDepartmentsAPI = {
+  getAll: () => apiFetch<SignatureDepartment[]>('/signature-departments'),
+  create: (name: string) =>
+    apiFetch<SignatureDepartment>('/signature-departments', { method: 'POST', body: JSON.stringify({ name }) }),
+  update: (id: string, name: string) =>
+    apiFetch<SignatureDepartment>(`/signature-departments/${id}`, { method: 'PUT', body: JSON.stringify({ name }) }),
+  delete: (id: string) => apiFetch(`/signature-departments/${id}`, { method: 'DELETE' }),
+};
+
+// ============ SIGNATURES API ============
+
+export interface EmailSignature {
+  id: string;
+  name: string;
+  full_name: string | null;
+  job_title: string | null;
+  department: string | null;
+  company_name: string | null;
+  phone: string | null;
+  mobile: string | null;
+  email: string | null;
+  website_url: string | null;
+  office_address: string | null;
+  show_profile_photo: boolean;
+  show_company_logo: boolean;
+  social_linkedin: string | null;
+  social_twitter: string | null;
+  social_facebook: string | null;
+  social_instagram: string | null;
+  social_github: string | null;
+  social_youtube: string | null;
+  social_custom_url: string | null;
+  social_custom_label: string | null;
+  template: 'horizontal' | 'vertical' | 'compact' | 'modern';
+  primary_color: string;
+  font_family: 'Arial' | 'Georgia' | 'Verdana' | 'Helvetica';
+  assigned_to: string | null;
+  assigned_user_name?: string | null;
+  assigned_user_email?: string | null;
+  custom_photo_url: string | null;
+  disclaimer_text: string | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateSignatureData {
+  name: string;
+  full_name?: string;
+  job_title?: string;
+  department?: string;
+  company_name?: string;
+  phone?: string;
+  mobile?: string;
+  email?: string;
+  website_url?: string;
+  office_address?: string;
+  show_profile_photo?: boolean;
+  show_company_logo?: boolean;
+  social_linkedin?: string;
+  social_twitter?: string;
+  social_facebook?: string;
+  social_instagram?: string;
+  social_github?: string;
+  social_youtube?: string;
+  social_custom_url?: string;
+  social_custom_label?: string;
+  template?: 'horizontal' | 'vertical' | 'compact' | 'modern';
+  primary_color?: string;
+  font_family?: 'Arial' | 'Georgia' | 'Verdana' | 'Helvetica';
+  assigned_to?: string | null;
+  custom_photo_url?: string | null;
+  disclaimer_text?: string | null;
+}
+
+export type UpdateSignatureData = Partial<CreateSignatureData>;
+
+export const signaturesAPI = {
+  getAll: () => apiFetch<EmailSignature[]>('/signatures'),
+
+  getById: (id: string) => apiFetch<EmailSignature>(`/signatures/${id}`),
+
+  getMySignature: () => apiFetch<EmailSignature | null>('/signatures/me'),
+
+  create: (data: CreateSignatureData) =>
+    apiFetch<{ id: string }>('/signatures', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  update: (id: string, data: UpdateSignatureData) =>
+    apiFetch(`/signatures/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  delete: (id: string) => apiFetch(`/signatures/${id}`, { method: 'DELETE' }),
+
+  assign: (id: string, userId: string) =>
+    apiFetch(`/signatures/${id}/assign`, {
+      method: 'POST',
+      body: JSON.stringify({ userId }),
+    }),
+
+  unassign: (id: string) =>
+    apiFetch(`/signatures/${id}/assign`, { method: 'DELETE' }),
+
+  uploadPhoto: async (file: File): Promise<{ success: boolean; data?: { photo_url: string }; message?: string }> => {
+    const token = getAuthToken();
+    const form = new FormData();
+    form.append('photo', file);
+    const res = await fetch(`${API_BASE_URL}/signatures/upload-photo`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: form,
+    });
+    return res.json();
+  },
+};
+
 export default {
   auth: authAPI,
   users: usersAPI,
@@ -813,5 +987,8 @@ export default {
   notifications: notificationsAPI,
   preferences: preferencesAPI,
   faqs: faqsAPI,
+  signatures: signaturesAPI,
+  signatureCompanies: signatureCompaniesAPI,
+  signatureDepartments: signatureDepartmentsAPI,
   healthCheck,
 };

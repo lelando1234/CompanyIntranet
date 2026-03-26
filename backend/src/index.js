@@ -17,6 +17,9 @@ const urlCategoriesRoutes = require('./routes/urlCategories');
 const notificationsRoutes = require('./routes/notifications');
 const preferencesRoutes = require('./routes/preferences');
 const faqsRoutes = require('./routes/faqs');
+const signaturesRoutes = require('./routes/signatures');
+const signatureCompaniesRoutes = require('./routes/signatureCompanies');
+const signatureDepartmentsRoutes = require('./routes/signatureDepartments');
 
 // Import database
 const { testConnection, pool } = require('./database/connection');
@@ -87,6 +90,9 @@ app.use('/api/url-categories', urlCategoriesRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/preferences', preferencesRoutes);
 app.use('/api/faqs', faqsRoutes);
+app.use('/api/signatures', signaturesRoutes);
+app.use('/api/signature-companies', signatureCompaniesRoutes);
+app.use('/api/signature-departments', signatureDepartmentsRoutes);
 
 // Health check endpoint
 app.get('/api/health', async (req, res) => {

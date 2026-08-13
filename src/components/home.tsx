@@ -122,30 +122,41 @@ function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f5f4ef] text-[#1c1c1a] antialiased">
+    <div className="min-h-screen bg-background text-foreground antialiased">
       <div className="flex min-h-screen flex-col lg:flex-row">
-        <section className="relative flex min-h-[260px] flex-none flex-col justify-between overflow-hidden bg-gradient-to-br from-[#1b4332] to-[#14302b] px-8 py-9 text-[#f5f4ef] lg:min-h-screen lg:basis-[46%] lg:px-16 lg:py-14">
+        <section
+          className="relative flex min-h-[260px] flex-none flex-col justify-between overflow-hidden px-8 py-9 lg:min-h-screen lg:basis-[46%] lg:px-16 lg:py-14"
+          style={{
+            background: "linear-gradient(135deg, var(--login-bg-1, #f0f9ff), var(--login-bg-2, #eff6ff))",
+            color: "var(--login-title-color-1, hsl(var(--primary)))",
+          }}
+        >
           <div className="relative z-10 mx-auto flex w-full max-w-[380px] flex-1 flex-col items-center justify-center text-center">
             <img
               src="/login-logo.png"
               alt="Company Logo"
-              className="mb-6 h-[88px] w-auto object-contain lg:mb-9 lg:h-[150px]"
+              className="mb-6 h-[108px] w-auto object-contain lg:mb-9 lg:h-[180px]"
               onError={(e) => {
                 e.currentTarget.src = logoUrl;
               }}
             />
-            <div className="mb-[18px] flex items-center justify-center gap-2.5 font-mono text-[11px] uppercase tracking-[0.18em] text-[#7c9885] before:block before:h-px before:w-6 before:bg-[#7c9885]">
+            <div className="mb-[18px] flex items-center justify-center gap-2.5 font-mono text-[11px] uppercase tracking-[0.18em] opacity-75 before:block before:h-px before:w-6 before:bg-current">
               {portalName}
             </div>
-            <h1 className="mb-4 max-w-[380px] font-serif text-[26px] font-medium leading-[1.18] text-[#f5f4ef] lg:text-[38px]">
+            <h1
+              className="mb-4 max-w-[380px] font-serif text-[26px] font-medium leading-[1.18] lg:text-[38px]"
+              style={{
+                color: "var(--login-title-color-1, hsl(var(--primary)))",
+              }}
+            >
               {loginHeroTitle}
             </h1>
-            <p className="hidden max-w-[320px] text-[14.5px] leading-[1.65] text-[#f5f4ef]/60 lg:block">
+            <p className="hidden max-w-[320px] text-[14.5px] leading-[1.65] opacity-70 lg:block">
               {loginHeroSubtitle}
             </p>
           </div>
 
-          <div className="relative z-10 hidden w-full items-end justify-between self-end font-mono text-[11px] uppercase tracking-[0.08em] text-[#f5f4ef]/40 lg:flex">
+          <div className="relative z-10 hidden w-full items-end justify-between self-end font-mono text-[11px] uppercase tracking-[0.08em] opacity-45 lg:flex">
             <span>Est. 1991 - Darling, Western Cape</span>
             <span>V.2026</span>
           </div>
@@ -156,22 +167,22 @@ function Home() {
             preserveAspectRatio="none"
             aria-hidden="true"
           >
-            <path d="M0,140 C120,120 180,160 300,150 C420,140 480,170 600,150" stroke="rgba(245,244,239,0.09)" strokeWidth="1" fill="none" />
-            <path d="M0,170 C120,155 180,185 300,178 C420,170 480,190 600,178" stroke="rgba(245,244,239,0.09)" strokeWidth="1" fill="none" />
-            <path d="M0,110 C130,85 170,130 300,118 C430,106 470,140 600,120" stroke="rgba(200,214,196,0.28)" strokeWidth="1" fill="none" />
+            <path d="M0,140 C120,120 180,160 300,150 C420,140 480,170 600,150" stroke="currentColor" strokeOpacity="0.08" strokeWidth="1" fill="none" />
+            <path d="M0,170 C120,155 180,185 300,178 C420,170 480,190 600,178" stroke="currentColor" strokeOpacity="0.08" strokeWidth="1" fill="none" />
+            <path d="M0,110 C130,85 170,130 300,118 C430,106 470,140 600,120" stroke="currentColor" strokeOpacity="0.18" strokeWidth="1" fill="none" />
           </svg>
         </section>
 
         <section className="flex flex-1 items-center justify-center bg-white px-6 py-8 lg:basis-[54%] lg:p-10">
           <div className="w-full max-w-[380px]">
             <div className="mb-9">
-              <div className="mb-2.5 font-mono text-[11px] uppercase tracking-[0.16em] text-[#6b6f66]">
+              <div className="mb-2.5 font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
                 Sign in
               </div>
-              <h2 className="mb-2 font-serif text-[28px] font-medium text-[#14302b]">
+              <h2 className="mb-2 font-serif text-[28px] font-medium text-foreground">
                 Welcome back
               </h2>
-              <p className="text-[13.5px] leading-normal text-[#6b6f66]">
+              <p className="text-[13.5px] leading-normal text-muted-foreground">
                 Enter your company credentials to continue.
               </p>
             </div>
@@ -195,7 +206,7 @@ function Home() {
               )}
 
               <div className="mb-5">
-                <Label htmlFor="email" className="mb-2 block text-xs font-semibold tracking-[0.02em] text-[#1c1c1a]">
+                <Label htmlFor="email" className="mb-2 block text-xs font-semibold tracking-[0.02em] text-foreground">
                   Email
                 </Label>
                 <Input
@@ -207,12 +218,13 @@ function Home() {
                   required
                   disabled={isSubmitting}
                   autoComplete="username"
-                  className="h-auto rounded border-[#e3e1d8] bg-[#fdfdfb] px-3.5 py-3 text-sm text-[#1c1c1a] shadow-none placeholder:text-[#a8a79c] hover:border-[#c9c7ba] focus-visible:ring-[#2d5a47]/15"
+                  className="h-auto rounded bg-white px-3.5 py-3 text-sm text-foreground shadow-none placeholder:text-muted-foreground focus-visible:ring-primary/20"
+                  style={{ borderColor: "var(--login-card-border, hsl(var(--border)))" }}
                 />
               </div>
 
               <div className="mb-5">
-                <Label htmlFor="password" className="mb-2 block text-xs font-semibold tracking-[0.02em] text-[#1c1c1a]">
+                <Label htmlFor="password" className="mb-2 block text-xs font-semibold tracking-[0.02em] text-foreground">
                   Password
                 </Label>
                 <Input
@@ -224,7 +236,8 @@ function Home() {
                   required
                   disabled={isSubmitting}
                   autoComplete="current-password"
-                  className="h-auto rounded border-[#e3e1d8] bg-[#fdfdfb] px-3.5 py-3 text-sm text-[#1c1c1a] shadow-none placeholder:text-[#a8a79c] hover:border-[#c9c7ba] focus-visible:ring-[#2d5a47]/15"
+                  className="h-auto rounded bg-white px-3.5 py-3 text-sm text-foreground shadow-none placeholder:text-muted-foreground focus-visible:ring-primary/20"
+                  style={{ borderColor: "var(--login-card-border, hsl(var(--border)))" }}
                 />
               </div>
 
@@ -235,11 +248,11 @@ function Home() {
                     checked={rememberMe}
                     onCheckedChange={(checked) => setRememberMe(!!checked)}
                     disabled={isSubmitting}
-                    className="h-4 w-4 rounded-sm border-[#a8a79c] data-[state=checked]:border-[#2d5a47] data-[state=checked]:bg-[#2d5a47]"
+                    className="h-4 w-4 rounded-sm data-[state=checked]:border-primary data-[state=checked]:bg-primary"
                   />
                   <Label
                     htmlFor="rememberMe"
-                    className="cursor-pointer text-[13px] font-normal text-[#6b6f66]"
+                    className="cursor-pointer text-[13px] font-normal text-muted-foreground"
                   >
                     Remember me
                   </Label>
@@ -247,7 +260,7 @@ function Home() {
                 <Button
                   type="button"
                   variant="link"
-                  className="h-auto px-0 text-[13px] font-medium text-[#2d5a47] hover:text-[#2d5a47]"
+                  className="h-auto px-0 text-[13px] font-medium text-primary hover:text-primary"
                   onClick={() => setIsForgotPasswordOpen(true)}
                 >
                   Forgot password?
@@ -256,7 +269,10 @@ function Home() {
 
               <Button
                 type="submit"
-                className="h-auto w-full rounded bg-[#1b4332] p-[13px] text-sm font-semibold tracking-[0.01em] text-[#f5f4ef] hover:bg-[#2d5a47]"
+                className="h-auto w-full rounded p-[13px] text-sm font-semibold tracking-[0.01em] text-white hover:opacity-95"
+                style={{
+                  background: "linear-gradient(135deg, var(--login-button-bg-1, hsl(var(--primary))), var(--login-button-bg-2, hsl(var(--secondary))))",
+                }}
                 disabled={isSubmitting}
               >
                 {isSubmitting ? (
@@ -272,9 +288,9 @@ function Home() {
               </Button>
             </form>
 
-            <p className="mt-9 text-center text-[12.5px] text-[#6b6f66]">
+            <p className="mt-9 text-center text-[12.5px] text-muted-foreground">
               Trouble signing in?{" "}
-              <a className="font-medium text-[#2d5a47] hover:underline" href={`mailto:${adminEmail}`}>
+              <a className="font-medium text-primary hover:underline" href={`mailto:${adminEmail}`}>
                 Contact IT support
               </a>
             </p>
@@ -347,7 +363,10 @@ function Home() {
                 <Button
                   type="submit"
                   disabled={forgotPasswordSubmitting || !forgotPasswordEmail}
-                  className="w-full bg-[#1b4332] hover:bg-[#2d5a47] sm:w-auto"
+                  className="w-full text-white hover:opacity-95 sm:w-auto"
+                  style={{
+                    background: "linear-gradient(135deg, var(--login-button-bg-1, hsl(var(--primary))), var(--login-button-bg-2, hsl(var(--secondary))))",
+                  }}
                 >
                   {forgotPasswordSubmitting ? (
                     <>

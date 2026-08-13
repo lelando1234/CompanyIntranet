@@ -139,7 +139,7 @@ const SideNavigation = ({
 
   return (
     <div
-      className={`h-full flex flex-col border-r border-[#e3e1d8] transition-all duration-300 ${collapsed ? "w-16" : "w-[248px]"}`}
+      className={`h-full flex flex-col border-r border-[#e3e1d8] transition-all duration-300 ${collapsed ? "w-16" : "w-[340px]"}`}
       style={{ backgroundColor: 'var(--sidebar-bg, hsl(var(--background)))', color: 'var(--sidebar-text, inherit)' }}
     >
       <div className="flex items-center justify-between px-[22px] pb-3 pt-6">
@@ -200,7 +200,7 @@ const SideNavigation = ({
                   <AccordionTrigger className={`rounded px-3 py-2.5 text-left hover:no-underline hover:bg-[#e5eae3] [&>svg]:h-3 [&>svg]:w-3 [&>svg]:text-muted-foreground ${index === 2 ? "bg-[#e5eae3] text-[#1b4332]" : ""}`}>
                     <div className="flex items-center gap-2.5">
                       {CategoryIcon && <CategoryIcon size={16} className="text-[#2d5a47]" />}
-                      <span className="text-[13.5px] font-medium">{category.name}</span>
+                      <span className="min-w-0 text-[13.5px] font-medium">{category.name}</span>
                     </div>
                   </AccordionTrigger>
                   <AccordionContent>
@@ -211,7 +211,7 @@ const SideNavigation = ({
                           <Button
                             key={link.id}
                             variant="ghost"
-                            className="h-auto w-full justify-start rounded py-1.5 text-sm font-normal hover:bg-[#e5eae3]"
+                            className="h-auto w-full justify-start rounded py-1.5 pr-2 text-sm font-normal hover:bg-[#e5eae3]"
                             onClick={() => handleLinkClick(link.url)}
                           >
                             {link.icon_url ? (
@@ -229,7 +229,7 @@ const SideNavigation = ({
                             ) : (
                               <ExternalLink size={14} className="mr-2 flex-shrink-0" />
                             )}
-                            <span className="truncate">{link.title}</span>
+                            <span className="min-w-0 truncate">{link.title}</span>
                           </Button>
                         );
                       })}

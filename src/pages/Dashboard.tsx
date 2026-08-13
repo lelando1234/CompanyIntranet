@@ -25,15 +25,6 @@ import SideNavigation from "@/components/SideNavigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { settingsAPI, articlesAPI, notificationsAPI, type Article } from "@/lib/api";
 
-function isDarkHex(hex?: string) {
-  const match = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex || "");
-  if (!match) return false;
-  const r = parseInt(match[1], 16);
-  const g = parseInt(match[2], 16);
-  const b = parseInt(match[3], 16);
-  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 < 0.5;
-}
-
 export default function Dashboard() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -56,7 +47,6 @@ export default function Dashboard() {
   const userAvatar = user?.avatar || "";
   const [companyLogo, setCompanyLogo] = useState<string>("/logo.png");
   const [logoSize, setLogoSize] = useState<number>(40);
-  const [useLightHeaderLogo, setUseLightHeaderLogo] = useState(false);
 
   // Load settings
   useEffect(() => {
@@ -76,13 +66,6 @@ export default function Dashboard() {
           // Load logo settings
           if (result.data.logo_url) setCompanyLogo(result.data.logo_url);
           if (result.data.logo_size) setLogoSize(parseInt(result.data.logo_size));
-
-          if (result.data.theme_palette) {
-            const palette = typeof result.data.theme_palette === "string"
-              ? JSON.parse(result.data.theme_palette)
-              : result.data.theme_palette;
-            setUseLightHeaderLogo(isDarkHex(palette?.headerBg));
-          }
           
           // Load and apply favicon
           if (result.data.favicon_url) {
@@ -178,10 +161,11 @@ export default function Dashboard() {
         <div className="h-16 px-4 md:px-7 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3.5 shrink-0">
             <img
-              src={useLightHeaderLogo ? "/login-logo.png" : companyLogo}
+              src={companyLogo}
               alt="Company Logo"
               style={{ height: Math.min(Math.max(logoSize, 42), 48) }}
               className="w-auto object-contain"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
             />
             <h1 className="text-[17px] font-medium hidden md:block font-serif">
               {portalName}

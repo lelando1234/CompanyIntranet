@@ -72,6 +72,7 @@ const SideNavigation = ({
 }: SideNavigationProps) => {
   const [apiCategories, setApiCategories] = useState<LinkCategory[]>([]);
   const [loading, setLoading] = useState(true);
+  const [openCategoryIds, setOpenCategoryIds] = useState<string[]>([]);
   const { user } = useAuth();
 
   // Fetch categories from API (filtered by user's groups)
@@ -116,6 +117,12 @@ const SideNavigation = ({
   }, [propCategories, user?.groups]);
 
   const categories = propCategories || apiCategories;
+
+  useEffect(() => {
+    if (!loading) {
+      setOpenCategoryIds(categories.map((category) => category.id));
+    }
+  }, [loading, categories]);
 
   const handleToggleCollapse = () => {
     onToggleCollapse();
@@ -180,7 +187,12 @@ const SideNavigation = ({
             })}
           </div>
         ) : (
-          <Accordion type="multiple" className="space-y-1 px-3 py-0">
+          <Accordion
+            type="multiple"
+            value={openCategoryIds}
+            onValueChange={setOpenCategoryIds}
+            className="space-y-1 px-3 py-0"
+          >
             {categories.map((category, index) => {
               const CategoryIcon = category.icon ? iconMap[category.icon] : null;
               return (

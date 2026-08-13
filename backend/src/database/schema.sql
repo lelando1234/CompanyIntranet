@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS users (
     email VARCHAR(255) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
     name VARCHAR(255) NOT NULL,
-    role ENUM('admin', 'editor', 'user') NOT NULL DEFAULT 'user',
+    role VARCHAR(50) NOT NULL DEFAULT 'user',
     avatar VARCHAR(500),
     department VARCHAR(100),
     phone VARCHAR(50),

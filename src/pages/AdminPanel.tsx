@@ -550,7 +550,7 @@ const AdminPanel = () => {
     email: "",
     password: "",
     confirmPassword: "",
-    role: "user" as "user" | "admin" | "editor",
+    role: "user" as string,
     department: "",
     phone: "",
     groups: [] as string[],
@@ -681,7 +681,7 @@ const AdminPanel = () => {
 
   // Logo settings
   const [logoUrl, setLogoUrl] = useState<string>("/logo.png");
-  const [logoSize, setLogoSize] = useState<number>(40);
+  const [logoSize, setLogoSize] = useState<number>(72);
   const logoFileRef = useRef<HTMLInputElement>(null);
 
   // Favicon settings
@@ -1751,9 +1751,17 @@ const AdminPanel = () => {
       {/* Side Navigation */}
       <div className="hidden md:block w-64 border-r" style={{ backgroundColor: 'var(--sidebar-bg, hsl(var(--card)))', color: 'var(--sidebar-text, inherit)' }}>
         <div className="p-4 space-y-4 h-full flex flex-col">
-          <div className="flex items-center space-x-2 mb-6">
-            <img src={logoUrl} alt="Logo" style={{ height: logoSize }} className="w-auto" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-            <h2 className="text-lg font-bold">{portalName}</h2>
+          <div className="mb-6">
+            <div className="flex items-center gap-3 rounded-md p-1">
+              <img
+                src={logoUrl}
+                alt="Logo"
+                style={{ height: Math.max(logoSize, 64) }}
+                className="max-h-20 w-auto max-w-[92px] flex-shrink-0 object-contain mix-blend-multiply"
+                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+              />
+              <h2 className="min-w-0 text-lg font-bold leading-tight">{portalName}</h2>
+            </div>
           </div>
           <div className="space-y-1 flex-1">
             <Button variant="ghost" className="w-full justify-start" onClick={() => navigate("/")}>
@@ -2719,9 +2727,41 @@ const AdminPanel = () => {
                       <CardDescription>Upload your company logo and adjust its display size.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
-                      <div className="flex items-start gap-6">
-                        <div className="border rounded-lg p-4 bg-muted/30 min-w-[200px] flex items-center justify-center">
-                          <img src={logoUrl} alt="Current Logo" style={{ height: logoSize }} className="w-auto max-w-[200px]" onError={(e) => { (e.target as HTMLImageElement).src = "/vite.svg"; }} />
+                      <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
+                        <div className="space-y-3">
+                          <div
+                            className="flex min-h-[180px] items-center justify-center rounded-md border border-border/70 p-6 shadow-inner"
+                            style={{
+                              backgroundColor: "hsl(var(--muted) / 0.28)",
+                              backgroundImage:
+                                "linear-gradient(45deg, hsl(var(--muted)) 25%, transparent 25%), linear-gradient(-45deg, hsl(var(--muted)) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, hsl(var(--muted)) 75%), linear-gradient(-45deg, transparent 75%, hsl(var(--muted)) 75%)",
+                              backgroundPosition: "0 0, 0 8px, 8px -8px, -8px 0",
+                              backgroundSize: "16px 16px",
+                            }}
+                          >
+                            <img
+                              src={logoUrl}
+                              alt="Current Logo"
+                              style={{ height: Math.max(logoSize * 1.5, 96) }}
+                              className="w-auto max-w-[260px] object-contain drop-shadow-sm mix-blend-multiply"
+                              onError={(e) => { (e.target as HTMLImageElement).src = "/vite.svg"; }}
+                            />
+                          </div>
+                          <div
+                            className="rounded-md border p-3"
+                            style={{ backgroundColor: 'var(--sidebar-bg, hsl(var(--card)))', color: 'var(--sidebar-text, inherit)' }}
+                          >
+                            <div className="flex items-center gap-3">
+                              <img
+                                src={logoUrl}
+                                alt="Sidebar logo preview"
+                                style={{ height: Math.max(logoSize, 64) }}
+                                className="max-h-20 w-auto max-w-[92px] object-contain mix-blend-multiply"
+                                onError={(e) => { (e.target as HTMLImageElement).src = "/vite.svg"; }}
+                              />
+                              <span className="font-semibold">{portalName}</span>
+                            </div>
+                          </div>
                         </div>
                         <div className="flex-1 space-y-4">
                           <div>
@@ -2731,8 +2771,8 @@ const AdminPanel = () => {
                           </div>
                           <div className="space-y-2">
                             <Label>Logo Size: {logoSize}px</Label>
-                            <Slider value={[logoSize]} onValueChange={handleLogoSizeChange} min={20} max={120} step={2} />
-                            <div className="flex justify-between text-xs text-muted-foreground"><span>20px</span><span>120px</span></div>
+                            <Slider value={[logoSize]} onValueChange={handleLogoSizeChange} min={40} max={180} step={2} />
+                            <div className="flex justify-between text-xs text-muted-foreground"><span>40px</span><span>180px</span></div>
                           </div>
                         </div>
                       </div>
@@ -3276,7 +3316,7 @@ const AdminPanel = () => {
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label>Role</Label>
-                <Select value={userForm.role} onValueChange={(val) => setUserForm({ ...userForm, role: val as "user" | "admin" | "editor" })}>
+                <Select value={userForm.role} onValueChange={(val) => setUserForm({ ...userForm, role: val })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {customRoles.map((role) => (

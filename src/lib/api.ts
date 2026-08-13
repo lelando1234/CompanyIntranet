@@ -169,7 +169,7 @@ export interface CreateUserData {
   email: string;
   password: string;
   name: string;
-  role: 'admin' | 'editor' | 'user';
+  role: string;
   department?: string;
   phone?: string;
   groups?: string[];
@@ -178,7 +178,7 @@ export interface CreateUserData {
 export interface UpdateUserData {
   email?: string;
   name?: string;
-  role?: 'admin' | 'editor' | 'user';
+  role?: string;
   department?: string;
   phone?: string;
   status?: 'active' | 'inactive' | 'suspended';

@@ -11,6 +11,38 @@ const fs = require('fs');
 
 const router = express.Router();
 
+const DEFAULT_ROLES = ['admin', 'editor', 'user'];
+const CUSTOM_ROLE_PATTERN = /^[a-z][a-z0-9_]{0,49}$/;
+
+const getValidRoles = async () => {
+  const rows = await query('SELECT setting_value FROM settings WHERE setting_key = ?', ['custom_roles']);
+  if (rows.length === 0 || !rows[0].setting_value) return DEFAULT_ROLES;
+
+  try {
+    const parsed = JSON.parse(rows[0].setting_value);
+    if (Array.isArray(parsed)) {
+      return [...new Set([...DEFAULT_ROLES, ...parsed.filter((role) => typeof role === 'string')])];
+    }
+  } catch (error) {
+    console.warn('Failed to parse custom_roles setting:', error.message);
+  }
+
+  return DEFAULT_ROLES;
+};
+
+const validateRole = async (role) => {
+  if (!role || typeof role !== 'string' || !CUSTOM_ROLE_PATTERN.test(role)) {
+    throw new Error('Invalid role');
+  }
+
+  const validRoles = await getValidRoles();
+  if (!validRoles.includes(role)) {
+    throw new Error('Role is not configured');
+  }
+
+  return true;
+};
+
 // Configure multer for avatar uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -142,7 +174,7 @@ router.post('/', verifyToken, requireRole('admin'), [
   body('email').isEmail().normalizeEmail(),
   body('password').isLength({ min: 6 }),
   body('name').notEmpty().trim(),
-  body('role').isIn(['admin', 'editor', 'user'])
+  body('role').custom(validateRole)
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -187,12 +219,66 @@ router.post('/', verifyToken, requireRole('admin'), [
   }
 });
 
+// Update current user's profile
+router.put('/me', verifyToken, [
+  body('name').optional().notEmpty().trim(),
+  body('email').optional().isEmail().normalizeEmail(),
+  body('department').optional().trim(),
+  body('phone').optional().trim()
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, errors: errors.array() });
+    }
+
+    const { name, email, department, phone } = req.body;
+    const userId = req.user.id;
+
+    // Get existing user
+    const existing = await query('SELECT * FROM users WHERE id = ?', [userId]);
+    if (existing.length === 0) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Check email uniqueness if changing
+    if (email && email !== existing[0].email) {
+      const emailExists = await query('SELECT id FROM users WHERE email = ? AND id != ?', [email, userId]);
+      if (emailExists.length > 0) {
+        return res.status(400).json({ success: false, message: 'Email already exists' });
+      }
+    }
+
+    // Build update query
+    const updates = [];
+    const params = [];
+
+    if (name) { updates.push('name = ?'); params.push(name); }
+    if (email) { updates.push('email = ?'); params.push(email); }
+    if (department !== undefined) { updates.push('department = ?'); params.push(department); }
+    if (phone !== undefined) { updates.push('phone = ?'); params.push(phone); }
+
+    if (updates.length > 0) {
+      params.push(userId);
+      await query(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`, params);
+    }
+
+    // Log audit
+    await logAudit(userId, 'UPDATE_PROFILE', 'user', userId, existing[0], req.body, req);
+
+    res.json({ success: true, message: 'Profile updated successfully' });
+  } catch (error) {
+    console.error('Update profile error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
 // Update user
 router.put('/:id', verifyToken, requireRole('admin'), [
   param('id').isUUID(),
   body('email').optional().isEmail().normalizeEmail(),
   body('name').optional().notEmpty().trim(),
-  body('role').optional().isIn(['admin', 'editor', 'user'])
+  body('role').optional().custom(validateRole)
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -307,60 +393,6 @@ router.post('/me/avatar', verifyToken, upload.single('avatar'), async (req, res)
     });
   } catch (error) {
     console.error('Upload avatar error:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
-  }
-});
-
-// Update current user's profile
-router.put('/me', verifyToken, [
-  body('name').optional().notEmpty().trim(),
-  body('email').optional().isEmail().normalizeEmail(),
-  body('department').optional().trim(),
-  body('phone').optional().trim()
-], async (req, res) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ success: false, errors: errors.array() });
-    }
-
-    const { name, email, department, phone } = req.body;
-    const userId = req.user.id;
-
-    // Get existing user
-    const existing = await query('SELECT * FROM users WHERE id = ?', [userId]);
-    if (existing.length === 0) {
-      return res.status(404).json({ success: false, message: 'User not found' });
-    }
-
-    // Check email uniqueness if changing
-    if (email && email !== existing[0].email) {
-      const emailExists = await query('SELECT id FROM users WHERE email = ? AND id != ?', [email, userId]);
-      if (emailExists.length > 0) {
-        return res.status(400).json({ success: false, message: 'Email already exists' });
-      }
-    }
-
-    // Build update query
-    const updates = [];
-    const params = [];
-
-    if (name) { updates.push('name = ?'); params.push(name); }
-    if (email) { updates.push('email = ?'); params.push(email); }
-    if (department !== undefined) { updates.push('department = ?'); params.push(department); }
-    if (phone !== undefined) { updates.push('phone = ?'); params.push(phone); }
-
-    if (updates.length > 0) {
-      params.push(userId);
-      await query(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`, params);
-    }
-
-    // Log audit
-    await logAudit(userId, 'UPDATE_PROFILE', 'user', userId, existing[0], req.body, req);
-
-    res.json({ success: true, message: 'Profile updated successfully' });
-  } catch (error) {
-    console.error('Update profile error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });

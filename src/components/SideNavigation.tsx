@@ -75,9 +75,23 @@ const SideNavigation = ({
   const [openCategoryIds, setOpenCategoryIds] = useState<string[]>([]);
   const { user } = useAuth();
 
+  const normalizeCategory = (cat: any): LinkCategory => ({
+    id: String(cat.id),
+    name: cat.name,
+    icon: cat.icon,
+    links: (cat.links || []).map((link: any) => ({
+      id: String(link.id),
+      title: link.title,
+      url: link.url,
+      icon: link.icon,
+      icon_url: link.icon_url,
+    })),
+  });
+
   // Fetch categories from API (filtered by user's groups)
   useEffect(() => {
     if (propCategories) {
+      setOpenCategoryIds(propCategories.map((category) => String(category.id)));
       setLoading(false);
       return;
     }
@@ -92,19 +106,9 @@ const SideNavigation = ({
           userGroups: userGroupIds
         });
         if (result.success && result.data) {
-          const mapped: LinkCategory[] = (result.data as any[]).map((cat) => ({
-            id: cat.id,
-            name: cat.name,
-            icon: cat.icon,
-            links: (cat.links || []).map((link: any) => ({
-              id: link.id,
-              title: link.title,
-              url: link.url,
-              icon: link.icon,
-              icon_url: link.icon_url,
-            })),
-          }));
+          const mapped: LinkCategory[] = (result.data as any[]).map(normalizeCategory);
           setApiCategories(mapped);
+          setOpenCategoryIds(mapped.map((category) => category.id));
         }
       } catch {
         // Use empty array if API fails
@@ -116,13 +120,7 @@ const SideNavigation = ({
     fetchCategories();
   }, [propCategories, user?.groups]);
 
-  const categories = propCategories || apiCategories;
-
-  useEffect(() => {
-    if (!loading) {
-      setOpenCategoryIds(categories.map((category) => category.id));
-    }
-  }, [loading, categories]);
+  const categories = propCategories ? propCategories.map(normalizeCategory) : apiCategories;
 
   const handleToggleCollapse = () => {
     onToggleCollapse();

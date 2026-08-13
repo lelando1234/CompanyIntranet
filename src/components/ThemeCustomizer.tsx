@@ -49,6 +49,28 @@ const defaultColors: ColorPalette = {
   loginTitleColor2: "#16a34a",
 };
 
+const darlingPortalColors: ColorPalette = {
+  ...defaultColors,
+  primary: "#1b4332",
+  secondary: "#7c9885",
+  accent: "#b8934d",
+  background: "#f5f4ef",
+  foreground: "#1c1c1a",
+  headerBg: "#1b4332",
+  headerText: "#f5f4ef",
+  sidebarBg: "#ffffff",
+  sidebarText: "#1c1c1a",
+  articleCardBg: "#ffffff",
+  articleCardBorder: "#e3e1d8",
+  loginBg1: "#153d2f",
+  loginBg2: "#f5f4ef",
+  loginCardBorder: "#e3e1d8",
+  loginButtonBg1: "#1b4332",
+  loginButtonBg2: "#1b4332",
+  loginTitleColor1: "#f5f4ef",
+  loginTitleColor2: "#f5f4ef",
+};
+
 // Helper: get contrast color for text readability
 function getContrastColor(hex: string): string {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -172,6 +194,7 @@ const ThemeCustomizer = () => {
   };
 
   const presets = [
+    { name: "Darling Depot Portal", colors: { ...darlingPortalColors } },
     { name: "Blue & Green (Default)", colors: { ...defaultColors } },
     {
       name: "Purple & Pink",

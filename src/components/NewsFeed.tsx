@@ -330,50 +330,55 @@ const NewsFeed = ({ articles = [], useApi = false, externalSearchTerm = "" }: Ne
 
   if (loading && initialLoad) {
     return (
-      <div className="w-full bg-background p-4 md:p-6 flex items-center justify-center min-h-[400px]">
+      <div className="flex min-h-[400px] w-full items-center justify-center bg-transparent">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="w-full bg-background p-4 md:p-6">
+    <div className="w-full bg-transparent">
       <div className="mb-6">
-        <div className="flex items-center gap-2">
-          <h1 className="text-2xl font-bold mb-2">Company News</h1>
+        <div className="mb-2 flex items-center gap-2">
+          <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Company News</span>
           {loading && !initialLoad && (
             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
           )}
         </div>
-        <p className="text-muted-foreground">
+        <h1 className="mb-1.5 font-serif text-2xl font-medium leading-tight text-[#14302b]">Company News</h1>
+        <p className="text-[13.5px] text-muted-foreground">
           Stay updated with the latest company announcements and news
         </p>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-4 mb-6">
+      <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search news..."
-            className="pl-10"
+            className="h-[38px] rounded border-[#e3e1d8] bg-[#fdfdfb] pl-9 text-[13.5px] placeholder:text-[#a8a79c] focus-visible:ring-1 focus-visible:ring-[#7c9885]"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
 
-        <div className="flex gap-2 overflow-x-auto pb-2">
-          <div className="flex items-center gap-1">
-            <Filter className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm">Filter:</span>
+        <div className="flex gap-2 overflow-x-auto pb-1 md:pb-0">
+          <div className="flex shrink-0 items-center gap-1.5 text-[13px] text-muted-foreground">
+            <Filter className="h-3.5 w-3.5" />
+            <span>Filter:</span>
           </div>
 
           {categories.map((category) => (
             <Button
               key={category}
-              variant={selectedCategory === category ? "default" : "outline"}
+              variant="outline"
               size="sm"
               onClick={() => setSelectedCategory(category)}
-              className="whitespace-nowrap"
+              className={`h-8 whitespace-nowrap rounded-full border px-3.5 text-[12.5px] font-semibold shadow-none ${
+                selectedCategory === category
+                  ? "border-[#1b4332] bg-[#1b4332] text-[#f5f4ef] hover:bg-[#1b4332]/95"
+                  : "border-[#e3e1d8] bg-[#fdfdfb] text-[#1c1c1a] hover:border-[#7c9885] hover:bg-[#fdfdfb]"
+              }`}
             >
               {category.charAt(0).toUpperCase() + category.slice(1)}
             </Button>
@@ -382,7 +387,7 @@ const NewsFeed = ({ articles = [], useApi = false, externalSearchTerm = "" }: Ne
       </div>
 
       {filteredArticles.length === 0 ? (
-        <Card className="w-full">
+        <Card className="w-full rounded border-[#e3e1d8] bg-[#fdfdfb] shadow-none">
           <CardContent className="pt-6 text-center">
             <p>No news articles found. Try adjusting your search or filters.</p>
           </CardContent>
@@ -395,17 +400,17 @@ const NewsFeed = ({ articles = [], useApi = false, externalSearchTerm = "" }: Ne
             return (
               <Card
                 key={article.id}
-                className="w-full"
+                className="w-full rounded border shadow-none transition-colors hover:border-[#7c9885]"
                 style={{
                   backgroundColor: 'var(--article-card-bg, hsl(var(--card)))',
                   borderColor: 'var(--article-card-border, hsl(var(--border)))',
                 }}
               >
-                <CardHeader>
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <CardTitle>{article.title}</CardTitle>
-                      <CardDescription className="mt-1">
+                <CardHeader className="px-6 py-5 pb-3">
+                  <div className="flex justify-between gap-5">
+                    <div className="min-w-0">
+                      <CardTitle className="text-base font-semibold leading-tight text-[#1c1c1a]">{article.title}</CardTitle>
+                      <CardDescription className="mt-1 font-mono text-[11px] tracking-[0.04em] text-muted-foreground">
                         {new Date(article.date).toLocaleDateString("en-US", {
                           year: "numeric",
                           month: "long",
@@ -413,18 +418,18 @@ const NewsFeed = ({ articles = [], useApi = false, externalSearchTerm = "" }: Ne
                         })}
                       </CardDescription>
                     </div>
-                    <Badge>{article.category}</Badge>
+                    <Badge className="h-6 shrink-0 rounded-full bg-[#e5eae3] px-3 py-0 text-[11.5px] font-bold text-[#1b4332] shadow-none hover:bg-[#e5eae3]">{article.category}</Badge>
                   </div>
                 </CardHeader>
 
-                <CardContent>
+                <CardContent className="px-6 py-0">
                   {isExpanded ? (
                     <div 
                       className="prose prose-sm max-w-none"
                       dangerouslySetInnerHTML={{ __html: article.content }}
                     />
                   ) : (
-                    <p className="text-sm">{article.previewText}</p>
+                    <p className="text-[13.5px] leading-6 text-[#3a3b35]">{article.previewText}</p>
                   )}
                   
                   {/* Attachments */}
@@ -469,15 +474,15 @@ const NewsFeed = ({ articles = [], useApi = false, externalSearchTerm = "" }: Ne
                   )}
                 </CardContent>
 
-                <CardFooter className="flex justify-between">
-                  <div className="text-sm text-muted-foreground">
+                <CardFooter className="flex justify-between px-6 py-5">
+                  <div className="text-xs text-muted-foreground">
                     Posted by: {article.author}
                   </div>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => toggleArticleExpansion(article.id)}
-                    className="flex items-center gap-1"
+                    className="flex h-auto items-center gap-1 px-0 py-0 text-[12.5px] font-semibold text-[#2d5a47] hover:bg-transparent hover:text-[#14302b]"
                   >
                     {isExpanded ? (
                       <>
@@ -536,9 +541,9 @@ const NewsFeed = ({ articles = [], useApi = false, externalSearchTerm = "" }: Ne
       )}
 
       {filteredArticles.length > 0 && (
-        <div className="mt-6">
-          <Separator className="my-4" />
-          <p className="text-sm text-muted-foreground text-center">
+        <div className="mt-5">
+          <Separator className="hidden" />
+          <p className="text-center font-mono text-[11.5px] uppercase tracking-[0.06em] text-muted-foreground">
             {useApi 
               ? `Showing ${(currentPage - 1) * ARTICLES_PER_PAGE + 1}-${Math.min(currentPage * ARTICLES_PER_PAGE, totalArticles)} of ${totalArticles} news articles`
               : `Showing ${startIndex + 1}-${Math.min(startIndex + ARTICLES_PER_PAGE, filteredArticles.length)} of ${filteredArticles.length} news articles`

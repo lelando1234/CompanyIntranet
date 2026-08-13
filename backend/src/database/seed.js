@@ -124,6 +124,27 @@ async function seed() {
       }
     }
 
+    const darlingPortalPalette = {
+      primary: '#1b4332',
+      secondary: '#7c9885',
+      accent: '#b8934d',
+      background: '#f5f4ef',
+      foreground: '#1c1c1a',
+      headerBg: '#1b4332',
+      headerText: '#f5f4ef',
+      sidebarBg: '#ffffff',
+      sidebarText: '#1c1c1a',
+      articleCardBg: '#ffffff',
+      articleCardBorder: '#e3e1d8',
+      loginBg1: '#153d2f',
+      loginBg2: '#f5f4ef',
+      loginCardBorder: '#e3e1d8',
+      loginButtonBg1: '#1b4332',
+      loginButtonBg2: '#1b4332',
+      loginTitleColor1: '#f5f4ef',
+      loginTitleColor2: '#f5f4ef',
+    };
+
     // Create default settings
     const settings = [
       { key: 'site_name', value: 'Company Portal', type: 'string' },
@@ -134,6 +155,9 @@ async function seed() {
       { key: 'articles_per_page', value: '10', type: 'number' },
       { key: 'welcome_message', value: 'Welcome to the Company Portal', type: 'string' },
       { key: 'welcome_subtext', value: 'Stay updated with the latest company news and access your personalized resources.', type: 'string' },
+      { key: 'login_hero_title', value: 'Everything the depots run on, in one place.', type: 'string' },
+      { key: 'login_hero_subtitle', value: 'Sign in to reach fleet, ERP, and support tools across all Darling Romery sites.', type: 'string' },
+      { key: 'theme_palette', value: JSON.stringify(darlingPortalPalette), type: 'json' },
       { key: 'show_welcome', value: 'true', type: 'boolean' },
       { key: 'copyright_text', value: '© 2024 Company Portal. All rights reserved.', type: 'string' },
     ];

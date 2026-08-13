@@ -693,6 +693,8 @@ const AdminPanel = () => {
   const [adminEmail, setAdminEmail] = useState(authUser?.email || "admin@company.com");
   const [welcomeMessage, setWelcomeMessage] = useState("Welcome to the Company Portal");
   const [welcomeSubtext, setWelcomeSubtext] = useState("Stay updated with the latest company news and access your personalized resources.");
+  const [loginHeroTitle, setLoginHeroTitle] = useState("Everything the depots run on, in one place.");
+  const [loginHeroSubtitle, setLoginHeroSubtitle] = useState("Sign in to reach fleet, ERP, and support tools across all Darling Romery sites.");
   const [showWelcome, setShowWelcome] = useState(true);
   const [copyrightText, setCopyrightText] = useState("");
   const [settingsSaving, setSettingsSaving] = useState(false);
@@ -821,6 +823,8 @@ const AdminPanel = () => {
           if (result.data.admin_email) setAdminEmail(result.data.admin_email);
           if (result.data.welcome_message) setWelcomeMessage(result.data.welcome_message);
           if (result.data.welcome_subtext) setWelcomeSubtext(result.data.welcome_subtext);
+          if (result.data.login_hero_title) setLoginHeroTitle(result.data.login_hero_title);
+          if (result.data.login_hero_subtitle) setLoginHeroSubtitle(result.data.login_hero_subtitle);
           if (result.data.show_welcome !== undefined) setShowWelcome(result.data.show_welcome === true || result.data.show_welcome === 'true');
           if (result.data.copyright_text !== undefined) setCopyrightText(result.data.copyright_text || '');
           // Load role permissions from backend
@@ -893,6 +897,8 @@ const AdminPanel = () => {
         admin_email: adminEmail,
         welcome_message: welcomeMessage,
         welcome_subtext: welcomeSubtext,
+        login_hero_title: loginHeroTitle,
+        login_hero_subtitle: loginHeroSubtitle,
         show_welcome: showWelcome.toString(),
         copyright_text: copyrightText,
       });
@@ -3946,6 +3952,17 @@ const AdminPanel = () => {
             <div className="grid gap-2">
               <Label>Admin Email</Label>
               <Input type="email" value={adminEmail} onChange={(e) => setAdminEmail(e.target.value)} placeholder="admin@company.com" />
+            </div>
+            <div className="border-t pt-4 space-y-4">
+              <h4 className="font-medium text-sm">Login Screen</h4>
+              <div className="grid gap-2">
+                <Label>Login Hero Title</Label>
+                <Input value={loginHeroTitle} onChange={(e) => setLoginHeroTitle(e.target.value)} placeholder="Everything the depots run on, in one place." />
+              </div>
+              <div className="grid gap-2">
+                <Label>Login Hero Subtitle</Label>
+                <Textarea value={loginHeroSubtitle} onChange={(e) => setLoginHeroSubtitle(e.target.value)} rows={2} placeholder="Sign in to reach fleet, ERP, and support tools across all Darling Romery sites." />
+              </div>
             </div>
             <div className="border-t pt-4 space-y-4">
               <h4 className="font-medium text-sm">Welcome Banner</h4>

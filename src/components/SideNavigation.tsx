@@ -132,16 +132,16 @@ const SideNavigation = ({
 
   return (
     <div
-      className={`h-full flex flex-col border-r transition-all duration-300 ${collapsed ? "w-16" : "w-64 md:w-72"}`}
+      className={`h-full flex flex-col border-r border-[#e3e1d8] transition-all duration-300 ${collapsed ? "w-16" : "w-[248px]"}`}
       style={{ backgroundColor: 'var(--sidebar-bg, hsl(var(--background)))', color: 'var(--sidebar-text, inherit)' }}
     >
-      <div className="flex items-center justify-between p-4 border-b">
-        {!collapsed && <h2 className="text-lg font-semibold">Resources</h2>}
+      <div className="flex items-center justify-between px-[22px] pb-3 pt-6">
+        {!collapsed && <h2 className="font-mono text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Resources</h2>}
         <Button
           variant="ghost"
           size="icon"
           onClick={handleToggleCollapse}
-          className={`hover:bg-primary hover:text-primary-foreground transition-colors ${collapsed ? "mx-auto" : ""}`}
+          className={`h-7 w-7 rounded text-muted-foreground hover:bg-[#e5eae3] hover:text-[#1b4332] ${collapsed ? "mx-auto" : ""}`}
         >
           {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
         </Button>
@@ -166,7 +166,7 @@ const SideNavigation = ({
                   className="flex flex-col items-center py-2"
                 >
                   <div
-                    className="w-8 h-8 rounded-full bg-muted flex items-center justify-center mb-1 cursor-pointer"
+                    className="mb-1 flex h-8 w-8 cursor-pointer items-center justify-center rounded bg-[#e5eae3] text-[#2d5a47]"
                     title={category.name}
                   >
                     {CategoryIcon ? (
@@ -180,26 +180,26 @@ const SideNavigation = ({
             })}
           </div>
         ) : (
-          <Accordion type="multiple" className="px-2 py-2">
-            {categories.map((category) => {
+          <Accordion type="multiple" className="space-y-1 px-3 py-0">
+            {categories.map((category, index) => {
               const CategoryIcon = category.icon ? iconMap[category.icon] : null;
               return (
-                <AccordionItem key={category.id} value={category.id}>
-                  <AccordionTrigger className="py-2 hover:no-underline">
-                    <div className="flex items-center gap-2">
-                      {CategoryIcon && <CategoryIcon size={16} />}
-                      <span className="text-sm font-medium">{category.name}</span>
+                <AccordionItem key={category.id} value={category.id} className="border-0">
+                  <AccordionTrigger className={`rounded px-3 py-2.5 text-left hover:no-underline hover:bg-[#e5eae3] [&>svg]:h-3 [&>svg]:w-3 [&>svg]:text-muted-foreground ${index === 2 ? "bg-[#e5eae3] text-[#1b4332]" : ""}`}>
+                    <div className="flex items-center gap-2.5">
+                      {CategoryIcon && <CategoryIcon size={16} className="text-[#2d5a47]" />}
+                      <span className="text-[13.5px] font-medium">{category.name}</span>
                     </div>
                   </AccordionTrigger>
                   <AccordionContent>
-                    <div className="pl-2 py-1 space-y-1">
+                    <div className="space-y-1 py-1 pl-2">
                       {category.links.map((link) => {
                         const LinkIcon = link.icon ? iconMap[link.icon] : null;
                         return (
                           <Button
                             key={link.id}
                             variant="ghost"
-                            className="w-full justify-start text-sm font-normal py-1.5 h-auto"
+                            className="h-auto w-full justify-start rounded py-1.5 text-sm font-normal hover:bg-[#e5eae3]"
                             onClick={() => handleLinkClick(link.url)}
                           >
                             {link.icon_url ? (

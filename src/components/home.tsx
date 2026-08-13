@@ -6,13 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -34,56 +27,41 @@ function Home() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [portalName, setPortalName] = useState("Company Portal");
   const [logoUrl, setLogoUrl] = useState<string>("/logo.png");
-  
-  // Forgot password state
+  const [adminEmail, setAdminEmail] = useState("admin@company.com");
+  const [loginHeroTitle, setLoginHeroTitle] = useState("Everything the depots run on, in one place.");
+  const [loginHeroSubtitle, setLoginHeroSubtitle] = useState("Sign in to reach fleet, ERP, and support tools across all Darling Romery sites.");
+
   const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState("");
   const [forgotPasswordSubmitting, setForgotPasswordSubmitting] = useState(false);
   const [forgotPasswordSent, setForgotPasswordSent] = useState(false);
   const [forgotPasswordError, setForgotPasswordError] = useState("");
 
-  // Load portal name from document title (already set by SettingsLoader in App.tsx)
-  // This avoids a duplicate API call that contributes to rate limiting
   useEffect(() => {
     const currentTitle = document.title;
-    if (currentTitle && currentTitle !== 'Vite + React + TS' && currentTitle !== 'Vite App') {
+    if (currentTitle && currentTitle !== "Vite + React + TS" && currentTitle !== "Vite App") {
       setPortalName(currentTitle);
     }
   }, []);
 
-  // Load logo from settings
   useEffect(() => {
-    const loadLogo = async () => {
+    const loadSettings = async () => {
       try {
         const result = await settingsAPI.getAll();
         if (result.success && result.data) {
           if (result.data.logo_url) setLogoUrl(result.data.logo_url);
           if (result.data.site_name) setPortalName(result.data.site_name);
+          if (result.data.admin_email) setAdminEmail(result.data.admin_email);
+          if (result.data.login_hero_title) setLoginHeroTitle(result.data.login_hero_title);
+          if (result.data.login_hero_subtitle) setLoginHeroSubtitle(result.data.login_hero_subtitle);
         }
-      } catch { /* use defaults */ }
+      } catch {
+        // Use defaults if settings are unavailable.
+      }
     };
-    loadLogo();
+    loadSettings();
   }, []);
 
-  // Load theme colors from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem("theme-palette");
-    if (saved) {
-      try {
-        const palette = JSON.parse(saved);
-        const root = document.documentElement;
-        if (palette.loginBg1) root.style.setProperty("--login-bg-1", palette.loginBg1);
-        if (palette.loginBg2) root.style.setProperty("--login-bg-2", palette.loginBg2);
-        if (palette.loginCardBorder) root.style.setProperty("--login-card-border", palette.loginCardBorder);
-        if (palette.loginButtonBg1) root.style.setProperty("--login-button-bg-1", palette.loginButtonBg1);
-        if (palette.loginButtonBg2) root.style.setProperty("--login-button-bg-2", palette.loginButtonBg2);
-        if (palette.loginTitleColor1) root.style.setProperty("--login-title-color-1", palette.loginTitleColor1);
-        if (palette.loginTitleColor2) root.style.setProperty("--login-title-color-2", palette.loginTitleColor2);
-      } catch { /* ignore */ }
-    }
-  }, []);
-
-  // Redirect if already authenticated
   React.useEffect(() => {
     if (isAuthenticated && !isLoading) {
       navigate("/dashboard");
@@ -102,7 +80,7 @@ function Home() {
       } else {
         setError("Invalid email or password. Please try again.");
       }
-    } catch (err) {
+    } catch {
       setError("An error occurred. Please try again.");
     } finally {
       setIsSubmitting(false);
@@ -121,7 +99,7 @@ function Home() {
       } else {
         setForgotPasswordError(result.message || "Failed to send reset email. Please try again.");
       }
-    } catch (err) {
+    } catch {
       setForgotPasswordError("An error occurred. Please try again.");
     } finally {
       setForgotPasswordSubmitting(false);
@@ -137,121 +115,131 @@ function Home() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div
-      className="min-h-screen flex items-center justify-center p-4"
-      style={{
-        background: `linear-gradient(to bottom right, var(--login-bg-1, #eff6ff), var(--login-bg-2, #dcfce7), var(--login-bg-1, #eff6ff))`,
-      }}
-    >
-      <div className="w-full max-w-md">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="flex justify-center mb-6">
-            <div className="relative">
-              <div
-                className="absolute inset-0 rounded-full blur-xl opacity-30"
-                style={{
-                  background: `linear-gradient(to right, var(--login-button-bg-1, #60a5fa), var(--login-button-bg-2, #4ade80))`,
-                }}
-              />
-              <img
-                src={logoUrl}
-                alt="Company Logo"
-                className="h-20 w-auto relative"
-                onError={(e) => {
-                  e.currentTarget.style.display = "none";
-                }}
-              />
+    <div className="min-h-screen bg-[#f5f4ef] text-[#1c1c1a] antialiased">
+      <div className="flex min-h-screen flex-col lg:flex-row">
+        <section className="relative flex min-h-[260px] flex-none flex-col justify-between overflow-hidden bg-gradient-to-br from-[#1b4332] to-[#14302b] px-8 py-9 text-[#f5f4ef] lg:min-h-screen lg:basis-[46%] lg:px-16 lg:py-14">
+          <div className="relative z-10 mx-auto flex w-full max-w-[380px] flex-1 flex-col items-center justify-center text-center">
+            <img
+              src="/login-logo.png"
+              alt="Company Logo"
+              className="mb-6 h-[88px] w-auto object-contain lg:mb-9 lg:h-[150px]"
+              onError={(e) => {
+                e.currentTarget.src = logoUrl;
+              }}
+            />
+            <div className="mb-[18px] flex items-center justify-center gap-2.5 font-mono text-[11px] uppercase tracking-[0.18em] text-[#7c9885] before:block before:h-px before:w-6 before:bg-[#7c9885]">
+              {portalName}
             </div>
+            <h1 className="mb-4 max-w-[380px] font-serif text-[26px] font-medium leading-[1.18] text-[#f5f4ef] lg:text-[38px]">
+              {loginHeroTitle}
+            </h1>
+            <p className="hidden max-w-[320px] text-[14.5px] leading-[1.65] text-[#f5f4ef]/60 lg:block">
+              {loginHeroSubtitle}
+            </p>
           </div>
-          <h1
-            className="text-4xl font-bold bg-clip-text text-transparent mb-2"
-            style={{
-              backgroundImage: `linear-gradient(to right, var(--login-title-color-1, #2563eb), var(--login-title-color-2, #16a34a))`,
-            }}
+
+          <div className="relative z-10 hidden w-full items-end justify-between self-end font-mono text-[11px] uppercase tracking-[0.08em] text-[#f5f4ef]/40 lg:flex">
+            <span>Est. 1991 - Darling, Western Cape</span>
+            <span>V.2026</span>
+          </div>
+
+          <svg
+            className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-[120px] w-full opacity-90 lg:h-[220px]"
+            viewBox="0 0 600 220"
+            preserveAspectRatio="none"
+            aria-hidden="true"
           >
-            {portalName}
-          </h1>
-          <p className="text-gray-600">
-            Sign in to access your portal
-          </p>
-        </div>
+            <path d="M0,140 C120,120 180,160 300,150 C420,140 480,170 600,150" stroke="rgba(245,244,239,0.09)" strokeWidth="1" fill="none" />
+            <path d="M0,170 C120,155 180,185 300,178 C420,170 480,190 600,178" stroke="rgba(245,244,239,0.09)" strokeWidth="1" fill="none" />
+            <path d="M0,110 C130,85 170,130 300,118 C430,106 470,140 600,120" stroke="rgba(200,214,196,0.28)" strokeWidth="1" fill="none" />
+          </svg>
+        </section>
 
-        {/* Backend Status Warning */}
-        {!backendAvailable && (
-          <Alert variant="destructive" className="mb-4">
-            <WifiOff className="h-4 w-4" />
-            <AlertDescription>
-              <strong>Backend server is not reachable.</strong> Login requires a running backend.
-              Check that the server is running at {import.meta.env.VITE_API_URL || "http://localhost:3001/api"}.
-            </AlertDescription>
-          </Alert>
-        )}
+        <section className="flex flex-1 items-center justify-center bg-white px-6 py-8 lg:basis-[54%] lg:p-10">
+          <div className="w-full max-w-[380px]">
+            <div className="mb-9">
+              <div className="mb-2.5 font-mono text-[11px] uppercase tracking-[0.16em] text-[#6b6f66]">
+                Sign in
+              </div>
+              <h2 className="mb-2 font-serif text-[28px] font-medium text-[#14302b]">
+                Welcome back
+              </h2>
+              <p className="text-[13.5px] leading-normal text-[#6b6f66]">
+                Enter your company credentials to continue.
+              </p>
+            </div>
 
-        {/* Login Card */}
-        <Card
-          className="shadow-xl"
-          style={{ borderColor: 'var(--login-card-border, #bfdbfe)' }}
-        >
-          <CardHeader className="text-center">
-            <CardTitle>Sign In</CardTitle>
-            <CardDescription>
-              Enter your credentials to continue
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            {!backendAvailable && (
+              <Alert variant="destructive" className="mb-5">
+                <WifiOff className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>Backend server is not reachable.</strong> Login requires a running backend.
+                  Check that the server is running at {import.meta.env.VITE_API_URL || "http://localhost:3001/api"}.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            <form onSubmit={handleSubmit}>
               {error && (
-                <Alert variant="destructive">
+                <Alert variant="destructive" className="mb-5">
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
 
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+              <div className="mb-5">
+                <Label htmlFor="email" className="mb-2 block text-xs font-semibold tracking-[0.02em] text-[#1c1c1a]">
+                  Email
+                </Label>
                 <Input
                   id="email"
                   type="email"
-                  placeholder="you@company.com"
+                  placeholder="you@darlingromery.co.za"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   disabled={isSubmitting}
+                  autoComplete="username"
+                  className="h-auto rounded border-[#e3e1d8] bg-[#fdfdfb] px-3.5 py-3 text-sm text-[#1c1c1a] shadow-none placeholder:text-[#a8a79c] hover:border-[#c9c7ba] focus-visible:ring-[#2d5a47]/15"
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+              <div className="mb-5">
+                <Label htmlFor="password" className="mb-2 block text-xs font-semibold tracking-[0.02em] text-[#1c1c1a]">
+                  Password
+                </Label>
                 <Input
                   id="password"
                   type="password"
-                  placeholder="••••••••"
+                  placeholder="********"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   disabled={isSubmitting}
+                  autoComplete="current-password"
+                  className="h-auto rounded border-[#e3e1d8] bg-[#fdfdfb] px-3.5 py-3 text-sm text-[#1c1c1a] shadow-none placeholder:text-[#a8a79c] hover:border-[#c9c7ba] focus-visible:ring-[#2d5a47]/15"
                 />
               </div>
 
-              <div className="flex items-center justify-between">
+              <div className="mb-[26px] flex items-center justify-between text-[13px]">
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     id="rememberMe"
                     checked={rememberMe}
                     onCheckedChange={(checked) => setRememberMe(!!checked)}
                     disabled={isSubmitting}
+                    className="h-4 w-4 rounded-sm border-[#a8a79c] data-[state=checked]:border-[#2d5a47] data-[state=checked]:bg-[#2d5a47]"
                   />
                   <Label
                     htmlFor="rememberMe"
-                    className="text-sm font-normal cursor-pointer"
+                    className="cursor-pointer text-[13px] font-normal text-[#6b6f66]"
                   >
                     Remember me
                   </Label>
@@ -259,7 +247,7 @@ function Home() {
                 <Button
                   type="button"
                   variant="link"
-                  className="text-sm px-0 h-auto font-normal"
+                  className="h-auto px-0 text-[13px] font-medium text-[#2d5a47] hover:text-[#2d5a47]"
                   onClick={() => setIsForgotPasswordOpen(true)}
                 >
                   Forgot password?
@@ -268,10 +256,7 @@ function Home() {
 
               <Button
                 type="submit"
-                className="w-full text-white font-semibold"
-                style={{
-                  background: `linear-gradient(to right, var(--login-button-bg-1, #2563eb), var(--login-button-bg-2, #16a34a))`,
-                }}
+                className="h-auto w-full rounded bg-[#1b4332] p-[13px] text-sm font-semibold tracking-[0.01em] text-[#f5f4ef] hover:bg-[#2d5a47]"
                 disabled={isSubmitting}
               >
                 {isSubmitting ? (
@@ -281,16 +266,22 @@ function Home() {
                   </>
                 ) : (
                   <>
-                    Enter Portal <ArrowRight className="ml-2 h-4 w-4" />
+                    Enter portal <ArrowRight className="ml-2 h-3.5 w-3.5" />
                   </>
                 )}
               </Button>
             </form>
-          </CardContent>
-        </Card>
+
+            <p className="mt-9 text-center text-[12.5px] text-[#6b6f66]">
+              Trouble signing in?{" "}
+              <a className="font-medium text-[#2d5a47] hover:underline" href={`mailto:${adminEmail}`}>
+                Contact IT support
+              </a>
+            </p>
+          </div>
+        </section>
       </div>
 
-      {/* Forgot Password Dialog */}
       <Dialog open={isForgotPasswordOpen} onOpenChange={closeForgotPasswordDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -299,7 +290,7 @@ function Home() {
               Reset Password
             </DialogTitle>
             <DialogDescription>
-              {forgotPasswordSent 
+              {forgotPasswordSent
                 ? "Check your email for password reset instructions."
                 : "Enter your email address and we'll send you a link to reset your password."
               }
@@ -308,10 +299,10 @@ function Home() {
 
           {forgotPasswordSent ? (
             <div className="py-6 text-center">
-              <div className="mx-auto w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mb-4">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
                 <CheckCircle className="h-6 w-6 text-green-600" />
               </div>
-              <p className="text-sm text-muted-foreground mb-4">
+              <p className="mb-4 text-sm text-muted-foreground">
                 If an account exists with <strong>{forgotPasswordEmail}</strong>, you will receive a password reset email shortly.
               </p>
               <Button onClick={closeForgotPasswordDialog} className="w-full">
@@ -333,7 +324,7 @@ function Home() {
                   <Input
                     id="forgotEmail"
                     type="email"
-                    placeholder="you@company.com"
+                    placeholder="you@darlingromery.co.za"
                     value={forgotPasswordEmail}
                     onChange={(e) => setForgotPasswordEmail(e.target.value)}
                     required
@@ -342,7 +333,7 @@ function Home() {
                 </div>
               </div>
 
-              <DialogFooter className="flex-col sm:flex-row gap-2">
+              <DialogFooter className="flex-col gap-2 sm:flex-row">
                 <Button
                   type="button"
                   variant="outline"
@@ -353,13 +344,10 @@ function Home() {
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Back
                 </Button>
-                <Button 
-                  type="submit" 
+                <Button
+                  type="submit"
                   disabled={forgotPasswordSubmitting || !forgotPasswordEmail}
-                  className="w-full sm:w-auto"
-                  style={{
-                    background: `linear-gradient(to right, var(--login-button-bg-1, #2563eb), var(--login-button-bg-2, #16a34a))`,
-                  }}
+                  className="w-full bg-[#1b4332] hover:bg-[#2d5a47] sm:w-auto"
                 >
                   {forgotPasswordSubmitting ? (
                     <>

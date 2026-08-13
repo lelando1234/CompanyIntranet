@@ -25,6 +25,15 @@ import SideNavigation from "@/components/SideNavigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { settingsAPI, articlesAPI, notificationsAPI, type Article } from "@/lib/api";
 
+function isDarkHex(hex?: string) {
+  const match = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex || "");
+  if (!match) return false;
+  const r = parseInt(match[1], 16);
+  const g = parseInt(match[2], 16);
+  const b = parseInt(match[3], 16);
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 < 0.5;
+}
+
 export default function Dashboard() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -47,6 +56,7 @@ export default function Dashboard() {
   const userAvatar = user?.avatar || "";
   const [companyLogo, setCompanyLogo] = useState<string>("/logo.png");
   const [logoSize, setLogoSize] = useState<number>(40);
+  const [useLightHeaderLogo, setUseLightHeaderLogo] = useState(false);
 
   // Load settings
   useEffect(() => {
@@ -66,6 +76,13 @@ export default function Dashboard() {
           // Load logo settings
           if (result.data.logo_url) setCompanyLogo(result.data.logo_url);
           if (result.data.logo_size) setLogoSize(parseInt(result.data.logo_size));
+
+          if (result.data.theme_palette) {
+            const palette = typeof result.data.theme_palette === "string"
+              ? JSON.parse(result.data.theme_palette)
+              : result.data.theme_palette;
+            setUseLightHeaderLogo(isDarkHex(palette?.headerBg));
+          }
           
           // Load and apply favicon
           if (result.data.favicon_url) {
@@ -157,36 +174,41 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-10 border-b shadow-sm" style={{ backgroundColor: 'var(--header-bg, hsl(var(--background)))', color: 'var(--header-text, inherit)' }}>
-        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <img src={companyLogo} alt="Company Logo" style={{ height: logoSize }} className="w-auto" />
-            <h1 className="text-xl font-bold hidden md:block">
+      <header className="sticky top-0 z-10 border-b border-white/10" style={{ backgroundColor: 'var(--header-bg, hsl(var(--background)))', color: 'var(--header-text, inherit)' }}>
+        <div className="h-16 px-4 md:px-7 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5 shrink-0">
+            <img
+              src={useLightHeaderLogo ? "/login-logo.png" : companyLogo}
+              alt="Company Logo"
+              style={{ height: Math.min(Math.max(logoSize, 42), 48) }}
+              className="w-auto object-contain"
+            />
+            <h1 className="text-[17px] font-medium hidden md:block font-serif">
               {portalName}
             </h1>
           </div>
 
-          <div className="hidden md:flex items-center flex-1 max-w-md mx-4">
+          <div className="hidden md:flex items-center flex-1 max-w-[480px] mr-auto">
             <div className="relative w-full">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 opacity-50" />
+              <Search className="absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 opacity-50" />
               <Input
                 type="search"
                 placeholder="Search news or resources..."
-                className="pl-8"
+                className="h-9 rounded border-white/20 bg-white/10 pl-9 text-[13.5px] text-current placeholder:text-current/45 focus-visible:ring-1 focus-visible:ring-white/25"
                 value={searchQuery}
                 onChange={handleSearch}
               />
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 md:gap-5">
             {/* Notifications */}
             <Popover open={notifOpen} onOpenChange={setNotifOpen}>
               <PopoverTrigger asChild>
-                <Button variant="ghost" size="icon" className="relative">
-                  <Bell className="h-5 w-5" />
+                <Button variant="ghost" size="icon" className="relative h-9 w-9 rounded-full text-current/75 hover:bg-white/10 hover:text-current">
+                  <Bell className="h-[18px] w-[18px]" />
                   {unreadCount > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-red-500 text-white text-[10px] flex items-center justify-center font-bold">
+                    <span className="absolute right-1 top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#b8934d] text-[9px] font-bold text-[#14302b]">
                       {unreadCount > 9 ? '9+' : unreadCount}
                     </span>
                   )}
@@ -231,18 +253,18 @@ export default function Dashboard() {
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="flex items-center gap-2">
-                  <Avatar className="h-8 w-8">
+                <Button variant="ghost" className="flex items-center gap-2 rounded-full px-1.5 py-1 text-current hover:bg-white/10 hover:text-current">
+                  <Avatar className="h-7 w-7">
                     <AvatarImage src={userAvatar} alt={userName} />
-                    <AvatarFallback>
+                    <AvatarFallback className="bg-[#7c9885] text-[11.5px] font-bold text-[#14302b]">
                       {userName
                         .split(" ")
                         .map((n) => n[0])
                         .join("")}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="hidden md:inline-block">{userName}</span>
-                  <ChevronDown className="h-4 w-4" />
+                  <span className="hidden text-[13.5px] md:inline-block">{userName}</span>
+                  <ChevronDown className="h-3.5 w-3.5 opacity-60" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -274,7 +296,7 @@ export default function Dashboard() {
             <Button
               variant="ghost"
               size="icon"
-              className="md:hidden"
+              className="md:hidden hover:bg-white/10 hover:text-current"
               onClick={toggleMobileMenu}
             >
               <svg
@@ -308,11 +330,11 @@ export default function Dashboard() {
         {/* Mobile Search */}
         <div className="md:hidden px-4 pb-3">
           <div className="relative w-full">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 opacity-50" />
             <Input
               type="search"
               placeholder="Search..."
-              className="pl-8"
+              className="h-9 rounded border-white/20 bg-white/10 pl-9 text-current placeholder:text-current/45"
               value={searchQuery}
               onChange={handleSearch}
             />
@@ -345,28 +367,27 @@ export default function Dashboard() {
         )}
 
         {/* Main Content Area */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-6">
-          <div className="container mx-auto">
+        <main className="flex-1 overflow-y-auto px-5 py-6 md:px-10 md:py-8">
+          <div className="mx-auto max-w-[1100px]">
             {showWelcome && (
-              <Card className="mb-6 p-4 md:p-6 bg-muted/30">
-                <h2 className="text-2xl font-bold mb-2">
+              <Card className="mb-8 rounded border-0 p-6 md:px-8 md:py-6 shadow-none" style={{ backgroundColor: "var(--header-bg, hsl(var(--primary)))", color: "var(--header-text, #ffffff)" }}>
+                <h2 className="mb-1.5 font-serif text-[23px] font-medium leading-tight">
                   {welcomeMessage}{user?.name ? `, ${user.name.split(" ")[0]}!` : '!'}
                 </h2>
-                <p className="text-muted-foreground">
+                <p className="text-[13.5px] opacity-70">
                   {welcomeSubtext}
                 </p>
               </Card>
             )}
 
-            <div className="space-y-6">
-              <h2 className="text-xl font-semibold">Company News</h2>
+            <div>
               <NewsFeed useApi={true} externalSearchTerm={searchQuery} />
             </div>
           </div>
 
           {/* Copyright Footer */}
           {copyrightText && (
-            <footer className="mt-8 py-4 border-t">
+            <footer className="sr-only">
               <div className="container mx-auto text-center text-sm text-muted-foreground">
                 {copyrightText}
               </div>

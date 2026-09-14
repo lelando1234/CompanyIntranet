@@ -62,8 +62,18 @@ export const darlingPortalColors: ColorPalette = {
   loginTitleColor2: "#f5f4ef",
 };
 
+export const originalDarlingColors: ColorPalette = {
+  ...darlingPortalColors,
+  primary: "#1b4332",
+  headerBg: "#1b4332",
+  loginBg1: "#153d2f",
+  loginButtonBg1: "#1b4332",
+  loginButtonBg2: "#1b4332",
+};
+
 export const adminColorPresets = [
     { name: "Darling Depot Portal", colors: { ...darlingPortalColors } },
+    { name: "Original Darling", colors: { ...originalDarlingColors } },
     { name: "Blue & Green (Default)", colors: { ...defaultColors } },
     {
       name: "Purple & Pink",
@@ -192,9 +202,10 @@ export const profileDefaultColors = {
 };
 
 export const userColorPresets = [
-  { 
-    name: "Blue & Green (Default)", 
-    colors: { ...profileDefaultColors } 
+  { name: "Original Darling", colors: { ...originalDarlingColors } },
+  {
+    name: "Blue & Green (Default)",
+    colors: { ...profileDefaultColors }
   },
   {
     name: "Purple & Pink",
@@ -350,4 +361,4 @@ export const userColorPresets = [
       sidebarText: "#3b0764",
     },
   },
-];
+];

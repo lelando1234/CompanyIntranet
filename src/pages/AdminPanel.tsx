@@ -1,3 +1,5 @@
+import ToolbarUserMenu from "@/components/ToolbarUserMenu";
+import { getThemePrimaryHex, emailColors } from "@/lib/theme-colors";
 import React, { useState, useEffect, useRef } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -9,6 +11,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import ToolbarSearch from "@/components/ToolbarSearch";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -24,7 +27,6 @@ import {
   HelpCircle,
   Palette,
   ChevronRight,
-  ChevronDown,
   Home,
   Loader2,
   AlertTriangle,
@@ -83,12 +85,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
@@ -447,7 +445,7 @@ const SortableUrlLink = ({
           href={link.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-blue-600 hover:underline truncate block max-w-md"
+          className="text-primary hover:underline truncate block max-w-md"
         >
           {link.url}
         </a>
@@ -472,6 +470,9 @@ const SortableUrlLink = ({
     </TableRow>
   );
 };
+
+const getSidebarItemClassName = (selected = false) =>
+  `w-full justify-start hover:bg-secondary hover:text-secondary-foreground${selected ? " bg-primary text-primary-foreground" : ""}`;
 
 const AdminPanel = () => {
   const navigate = useNavigate();
@@ -562,7 +563,7 @@ const AdminPanel = () => {
   const [groupForm, setGroupForm] = useState({
     name: "",
     description: "",
-    color: "#3B82F6",
+    color: getThemePrimaryHex(),
     members: [] as string[],
     permissions: [] as string[],
   });
@@ -590,7 +591,7 @@ const AdminPanel = () => {
     social_linkedin: "", social_twitter: "", social_facebook: "",
     social_instagram: "", social_github: "", social_youtube: "",
     social_custom_url: "", social_custom_label: "",
-    template: "horizontal", primary_color: "#0080ff", font_family: "Arial",
+    template: "horizontal", primary_color: getThemePrimaryHex(), font_family: "Arial",
     assigned_to: null,
   };
   const [signatures, setSignatures] = useState<EmailSignature[]>([]);
@@ -626,7 +627,7 @@ const AdminPanel = () => {
     name: "",
     slug: "",
     description: "",
-    color: "#3B82F6",
+    color: getThemePrimaryHex(),
   });
   const [newsCategoriesData, setNewsCategoriesData] = useState<Category[]>([]);
   const [newsCategoriesLoading, setNewsCategoriesLoading] = useState(false);
@@ -651,11 +652,11 @@ const AdminPanel = () => {
   // Email template state
   const [emailTemplates, setEmailTemplates] = useState({
     email_template_password_reset_subject: "Password Reset Request",
-    email_template_password_reset_body: `<h2>Password Reset Request</h2>\n<p>Hello {{user_name}},</p>\n<p>You requested a password reset. Click the link below to reset your password:</p>\n<p><a href="{{reset_url}}" style="display:inline-block;padding:10px 20px;background:{{primary_color}};color:#fff;text-decoration:none;border-radius:5px;">Reset Password</a></p>\n<p>Or copy this URL: {{reset_url}}</p>\n<p>This link will expire in 1 hour.</p>\n<p>If you didn't request this, please ignore this email.</p>`,
+    email_template_password_reset_body: `<h2>Password Reset Request</h2>\n<p>Hello {{user_name}},</p>\n<p>You requested a password reset. Click the link below to reset your password:</p>\n<p><a href="{{reset_url}}" style="display:inline-block;padding:10px 20px;background:{{primary_color}};color:${emailColors.onPrimary};text-decoration:none;border-radius:5px;">Reset Password</a></p>\n<p>Or copy this URL: {{reset_url}}</p>\n<p>This link will expire in 1 hour.</p>\n<p>If you didn't request this, please ignore this email.</p>`,
     email_template_welcome_subject: "Welcome to {{site_name}}",
-    email_template_welcome_body: `<h2>Welcome to {{site_name}}!</h2>\n<p>Hello {{user_name}},</p>\n<p>Your account has been created successfully.</p>\n<p><a href="{{login_url}}" style="display:inline-block;padding:10px 20px;background:{{primary_color}};color:#fff;text-decoration:none;border-radius:5px;">Log In Now</a></p>`,
+    email_template_welcome_body: `<h2>Welcome to {{site_name}}!</h2>\n<p>Hello {{user_name}},</p>\n<p>Your account has been created successfully.</p>\n<p><a href="{{login_url}}" style="display:inline-block;padding:10px 20px;background:{{primary_color}};color:${emailColors.onPrimary};text-decoration:none;border-radius:5px;">Log In Now</a></p>`,
     email_template_notification_subject: "New Article: {{article_title}}",
-    email_template_notification_body: `<h2>{{article_title}}</h2>\n<p>Hello {{user_name}},</p>\n<p>A new article has been published on {{site_name}}.</p>\n<p><a href="{{article_url}}" style="display:inline-block;padding:10px 20px;background:{{primary_color}};color:#fff;text-decoration:none;border-radius:5px;">Read More</a></p>`,
+    email_template_notification_body: `<h2>{{article_title}}</h2>\n<p>Hello {{user_name}},</p>\n<p>A new article has been published on {{site_name}}.</p>\n<p><a href="{{article_url}}" style="display:inline-block;padding:10px 20px;background:{{primary_color}};color:${emailColors.onPrimary};text-decoration:none;border-radius:5px;">Read More</a></p>`,
   });
   const [templateLoading, setTemplateLoading] = useState(false);
   const [templateSaving, setTemplateSaving] = useState(false);
@@ -1168,10 +1169,10 @@ const AdminPanel = () => {
   };
 
   // --- GROUPS CRUD ---
-  const openNewGroup = () => { setEditingGroupId(null); setGroupForm({ name: "", description: "", color: "#3B82F6", members: [], permissions: [] }); setGroupMemberSearch(""); setIsGroupDialogOpen(true); };
+  const openNewGroup = () => { setEditingGroupId(null); setGroupForm({ name: "", description: "", color: getThemePrimaryHex(), members: [], permissions: [] }); setGroupMemberSearch(""); setIsGroupDialogOpen(true); };
   const openEditGroup = async (group: Group) => {
     setEditingGroupId(group.id);
-    setGroupForm({ name: group.name, description: group.description || "", color: group.color || "#3B82F6", members: [], permissions: group.permissions || [] });
+    setGroupForm({ name: group.name, description: group.description || "", color: group.color || getThemePrimaryHex(), members: [], permissions: group.permissions || [] });
     setGroupMemberSearch("");
     setGroupMembersLoading(true);
     setIsGroupDialogOpen(true);
@@ -1495,7 +1496,7 @@ const AdminPanel = () => {
 
   const openNewCategory = () => {
     setEditingCategoryId(null);
-    setCategoryForm({ name: "", slug: "", description: "", color: "#3B82F6" });
+    setCategoryForm({ name: "", slug: "", description: "", color: getThemePrimaryHex() });
     setIsCategoryDialogOpen(true);
   };
 
@@ -1505,7 +1506,7 @@ const AdminPanel = () => {
       name: cat.name,
       slug: cat.slug,
       description: cat.description || "",
-      color: cat.color || "#3B82F6",
+      color: cat.color || getThemePrimaryHex(),
     });
     setIsCategoryDialogOpen(true);
   };
@@ -1755,25 +1756,23 @@ const AdminPanel = () => {
     <div className="flex h-screen bg-background">
       <Toaster />
       {/* Side Navigation */}
-      <div className="hidden md:block w-64 border-r" style={{ backgroundColor: 'var(--sidebar-bg, hsl(var(--card)))', color: 'var(--sidebar-text, inherit)' }}>
-        <div className="p-4 space-y-4 h-full flex flex-col">
-          <div className="mb-6">
-            <div className="flex items-center gap-3 rounded-md p-1">
+      <div className="hidden md:block w-[340px] shrink-0 border-r" style={{ backgroundColor: 'var(--sidebar-bg, hsl(var(--card)))', color: 'var(--sidebar-text, inherit)' }}>
+        <div className="pb-4 space-y-4 h-full flex flex-col">
+          <div className="mb-1 p-[11px]">
+            <div className="flex items-center justify-center rounded-md">
               <img
                 src={logoUrl}
                 alt="Logo"
-                style={{ height: Math.max(logoSize, 64) }}
-                className="max-h-20 w-auto max-w-[92px] flex-shrink-0 object-contain mix-blend-multiply"
+                className="header-logo"
                 onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
               />
-              <h2 className="min-w-0 text-lg font-bold leading-tight">{portalName}</h2>
             </div>
           </div>
-          <div className="space-y-1 flex-1">
-            <Button variant="ghost" className="w-full justify-start" onClick={() => navigate("/")}>
+          <div className="px-4 space-y-1 flex-1">
+            <Button variant="ghost" className={getSidebarItemClassName()} onClick={() => navigate("/")}>
               <Home className="mr-2 h-4 w-4" /> Home
             </Button>
-            <Button variant="ghost" className="w-full justify-start" onClick={() => navigate("/dashboard")}>
+            <Button variant="ghost" className={getSidebarItemClassName()} onClick={() => navigate("/dashboard")}>
               <ChevronRight className="mr-2 h-4 w-4" /> Dashboard
             </Button>
             <div className="py-2"><p className="text-xs font-semibold text-muted-foreground px-2 mb-2">ADMIN SECTIONS</p></div>
@@ -1794,7 +1793,7 @@ const AdminPanel = () => {
                 : sidebarTab === key;
               
               return (
-                <Button key={key} variant={isActive ? "secondary" : "ghost"} className="w-full justify-start"
+                <Button key={key} variant="ghost" className={getSidebarItemClassName(isActive)}
                   onClick={() => { 
                     setSidebarTab(key); 
                     setActiveTab(key); 
@@ -1804,11 +1803,11 @@ const AdminPanel = () => {
               );
             })}
           </div>
-          <div className="border-t pt-4 space-y-1">
-            <Button variant="ghost" className="w-full justify-start" onClick={() => setIsSettingsDialogOpen(true)}>
+          <div className="mx-4 border-t pt-4 space-y-1">
+            <Button variant="ghost" className={getSidebarItemClassName()} onClick={() => setIsSettingsDialogOpen(true)}>
               <Settings className="mr-2 h-4 w-4" /> Settings
             </Button>
-            <Button variant="ghost" className="w-full justify-start" onClick={() => setIsHelpDialogOpen(true)}>
+            <Button variant="ghost" className={getSidebarItemClassName()} onClick={() => setIsHelpDialogOpen(true)}>
               <HelpCircle className="mr-2 h-4 w-4" /> Help & Support
             </Button>
           </div>
@@ -1817,55 +1816,29 @@ const AdminPanel = () => {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="border-b p-4" style={{ backgroundColor: 'var(--header-bg, hsl(var(--card)))', color: 'var(--header-text, inherit)' }}>
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold">Admin Panel</h1>
-            <div className="flex items-center space-x-4">
-              <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input type="search" placeholder="Search..." className="w-[200px] pl-8 md:w-[300px] bg-background" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+        <header className="border-b" style={{ backgroundColor: 'var(--header-bg, hsl(var(--card)))', color: 'var(--header-text, inherit)' }}>
+          <div className="relative h-[71px] px-4 md:px-7 flex items-center justify-between gap-4">
+            <div className="flex flex-1 items-center justify-end gap-4">
+              <div className="absolute left-1/2 w-full max-w-[340px] -translate-x-1/2">
+                <ToolbarSearch value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
               </div>
-              
+
               {/* User Profile Dropdown */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="flex items-center gap-2">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={authUser?.avatar || ""} alt={authUser?.name || "User"} />
-                      <AvatarFallback>
-                        {(authUser?.name || "U")
-                          .split(" ")
-                          .map((n) => n[0])
-                          .join("")}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="hidden md:inline-block">{authUser?.name || "User"}</span>
-                    <ChevronDown className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>
-                    <div>
-                      <p>{authUser?.name || "User"}</p>
-                      <p className="text-xs text-muted-foreground capitalize">{authUser?.role}</p>
-                    </div>
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => navigate("/dashboard")}>
-                    <Home className="mr-2 h-4 w-4" />
-                    <span>Dashboard</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate("/profile")}>
-                    <UserIcon className="mr-2 h-4 w-4" />
-                    <span>Profile</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => { logout(); navigate("/"); }}>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Log out</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <ToolbarUserMenu name={authUser?.name || "User"} avatar={authUser?.avatar} role={authUser?.role}>
+                <DropdownMenuItem onClick={() => navigate("/dashboard")}>
+                  <Home className="mr-2 h-4 w-4" />
+                  <span>Dashboard</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/profile")}>
+                  <UserIcon className="mr-2 h-4 w-4" />
+                  <span>Profile</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => { logout(); navigate("/"); }}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Log out</span>
+                </DropdownMenuItem>
+              </ToolbarUserMenu>
             </div>
           </div>
         </header>
@@ -1880,11 +1853,11 @@ const AdminPanel = () => {
                   <div className="mb-6">
                     <div className="flex justify-between items-center mb-4">
                       <div className="flex gap-2">
-                        <Button variant={activeTab === "news" ? "default" : "outline"} onClick={() => { setActiveTab("news"); setSidebarTab("news"); }}>
+                        <Button selected={activeTab === "news"} variant={activeTab === "news" ? "default" : "outline"} onClick={() => { setActiveTab("news"); setSidebarTab("news"); }}>
                           News Articles
                         </Button>
                         {canViewTab("categories") && (
-                          <Button variant={activeTab === "categories" ? "default" : "outline"} onClick={() => { setActiveTab("categories"); setSidebarTab("categories"); }}>
+                          <Button selected={activeTab === "categories"} variant={activeTab === "categories" ? "default" : "outline"} onClick={() => { setActiveTab("categories"); setSidebarTab("categories"); }}>
                             News Categories
                           </Button>
                         )}
@@ -1900,16 +1873,16 @@ const AdminPanel = () => {
                   <div className="mb-6">
                     <div className="flex justify-between items-center mb-4">
                       <div className="flex gap-2">
-                        <Button variant={activeTab === "users" ? "default" : "outline"} onClick={() => { setActiveTab("users"); setSidebarTab("users"); }}>
+                        <Button selected={activeTab === "users"} variant={activeTab === "users" ? "default" : "outline"} onClick={() => { setActiveTab("users"); setSidebarTab("users"); }}>
                           Users
                         </Button>
                         {canViewTab("groups") && (
-                          <Button variant={activeTab === "groups" ? "default" : "outline"} onClick={() => { setActiveTab("groups"); setSidebarTab("groups"); }}>
+                          <Button selected={activeTab === "groups"} variant={activeTab === "groups" ? "default" : "outline"} onClick={() => { setActiveTab("groups"); setSidebarTab("groups"); }}>
                             Groups
                           </Button>
                         )}
                         {canViewTab("roles") && (
-                          <Button variant={activeTab === "roles" ? "default" : "outline"} onClick={() => { setActiveTab("roles"); setSidebarTab("roles"); }}>
+                          <Button selected={activeTab === "roles"} variant={activeTab === "roles" ? "default" : "outline"} onClick={() => { setActiveTab("roles"); setSidebarTab("roles"); }}>
                             Roles
                           </Button>
                         )}
@@ -2250,7 +2223,7 @@ const AdminPanel = () => {
                                             }
                                           });
                                         }}
-                                        className="rounded border-gray-300"
+                                        className="rounded border-input"
                                         disabled={role === "admin"}
                                       />
                                       <span className="text-sm text-muted-foreground">Read</span>
@@ -2268,7 +2241,7 @@ const AdminPanel = () => {
                                             }
                                           });
                                         }}
-                                        className="rounded border-gray-300"
+                                        className="rounded border-input"
                                         disabled={role === "admin"}
                                       />
                                       <span className="text-sm text-muted-foreground">Write</span>
@@ -2286,7 +2259,7 @@ const AdminPanel = () => {
                                             }
                                           });
                                         }}
-                                        className="rounded border-gray-300"
+                                        className="rounded border-input"
                                         disabled={role === "admin"}
                                       />
                                       <span className="text-sm text-muted-foreground">Delete</span>
@@ -2562,7 +2535,7 @@ const AdminPanel = () => {
                             ].map(({ key, label }) => (
                               <Button
                                 key={key}
-                                variant={activeTemplateTab === key ? "default" : "outline"}
+                                selected={activeTemplateTab === key} variant={activeTemplateTab === key ? "default" : "outline"}
                                 size="sm"
                                 onClick={() => setActiveTemplateTab(key)}
                               >
@@ -2749,7 +2722,7 @@ const AdminPanel = () => {
                               src={logoUrl}
                               alt="Current Logo"
                               style={{ height: Math.max(logoSize * 1.5, 96) }}
-                              className="w-auto max-w-[260px] object-contain drop-shadow-sm mix-blend-multiply"
+                              className="w-auto max-w-[260px] object-contain drop-shadow-sm"
                               onError={(e) => { (e.target as HTMLImageElement).src = "/vite.svg"; }}
                             />
                           </div>
@@ -2762,7 +2735,7 @@ const AdminPanel = () => {
                                 src={logoUrl}
                                 alt="Sidebar logo preview"
                                 style={{ height: Math.max(logoSize, 64) }}
-                                className="max-h-20 w-auto max-w-[92px] object-contain mix-blend-multiply"
+                                className="max-h-20 w-auto max-w-[92px] object-contain"
                                 onError={(e) => { (e.target as HTMLImageElement).src = "/vite.svg"; }}
                               />
                               <span className="font-semibold">{portalName}</span>
@@ -2880,7 +2853,7 @@ const AdminPanel = () => {
                   <div className="flex gap-1 border-b pb-2">
                     {(["signatures", "companies", "departments"] as const).map((tab) => (
                       <button key={tab} type="button"
-                        className={`px-4 py-1.5 text-sm rounded-md capitalize transition-colors ${sigSubTab === tab ? "bg-primary text-primary-foreground font-medium" : "text-muted-foreground hover:text-foreground hover:bg-muted"}`}
+                        className={`px-4 py-1.5 text-sm rounded-md capitalize transition-colors ${sigSubTab === tab ? "bg-primary text-primary-foreground font-medium" : "text-muted-foreground hover:bg-muted"}`}
                         onClick={() => setSigSubTab(tab)}>
                         {tab}
                       </button>
@@ -3311,12 +3284,12 @@ const AdminPanel = () => {
               <div className="grid gap-2">
                 <Label>Confirm Password {editingUserId ? "" : "*"}</Label>
                 <div className="relative">
-                  <Input type={showConfirmUserPassword ? "text" : "password"} value={userForm.confirmPassword} onChange={(e) => { setUserForm({ ...userForm, confirmPassword: e.target.value }); if (userPasswordError) setUserPasswordError(""); }} placeholder="Confirm password" className={userPasswordError ? "border-red-500 focus-visible:ring-red-500" : ""} />
+                  <Input type={showConfirmUserPassword ? "text" : "password"} value={userForm.confirmPassword} onChange={(e) => { setUserForm({ ...userForm, confirmPassword: e.target.value }); if (userPasswordError) setUserPasswordError(""); }} placeholder="Confirm password" className={userPasswordError ? "border-destructive focus-visible:ring-destructive" : ""} />
                   <Button type="button" variant="ghost" size="sm" className="absolute right-0 top-0 h-full px-3 hover:bg-transparent" onClick={() => setShowConfirmUserPassword(!showConfirmUserPassword)}>
                     {showConfirmUserPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </Button>
                 </div>
-                {userPasswordError && <p className="text-sm text-red-500 font-medium">{userPasswordError}</p>}
+                {userPasswordError && <p className="text-sm text-destructive font-medium">{userPasswordError}</p>}
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -3484,7 +3457,7 @@ const AdminPanel = () => {
                   value={categoryForm.color}
                   onChange={(e) => setCategoryForm({ ...categoryForm, color: e.target.value })}
                   className="flex-1"
-                  placeholder="#3B82F6"
+                  placeholder="Hex colour"
                 />
               </div>
             </div>
@@ -3713,8 +3686,8 @@ const AdminPanel = () => {
                 <div className="grid gap-1">
                   <Label>Primary Color</Label>
                   <div className="flex gap-2 items-center">
-                    <input type="color" value={signatureForm.primary_color || "#0080ff"} onChange={(e) => setSignatureForm({ ...signatureForm, primary_color: e.target.value })} className="w-10 h-9 rounded border cursor-pointer p-0.5" />
-                    <Input value={signatureForm.primary_color || "#0080ff"} onChange={(e) => setSignatureForm({ ...signatureForm, primary_color: e.target.value })} placeholder="#0080ff" className="flex-1" />
+                    <input type="color" value={signatureForm.primary_color || getThemePrimaryHex()} onChange={(e) => setSignatureForm({ ...signatureForm, primary_color: e.target.value })} className="w-10 h-9 rounded border cursor-pointer p-0.5" />
+                    <Input value={signatureForm.primary_color || getThemePrimaryHex()} onChange={(e) => setSignatureForm({ ...signatureForm, primary_color: e.target.value })} placeholder="Hex colour" className="flex-1" />
                   </div>
                 </div>
                 <div className="grid gap-1">
@@ -3857,7 +3830,7 @@ const AdminPanel = () => {
               <div className="flex items-center gap-3">
                 {companyForm.logo_url && (
                   <img src={companyForm.logo_url.startsWith('/uploads') ? `http://localhost:3001${companyForm.logo_url}` : companyForm.logo_url}
-                    alt="Logo" className="h-10 w-24 object-contain border rounded p-1 bg-white" />
+                    alt="Logo" className="h-10 w-24 object-contain border rounded p-1 bg-card" />
                 )}
                 <label className="cursor-pointer flex-1">
                   <div className="flex items-center gap-2 px-3 py-2 border rounded-md text-sm hover:bg-muted transition-colors w-fit">

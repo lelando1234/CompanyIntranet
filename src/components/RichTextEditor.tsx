@@ -104,7 +104,7 @@ const ImageCarousel = Node.create({
         [
           "button",
           {
-            class: "carousel-prev absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 shadow-lg",
+            class: "carousel-prev absolute left-2 top-1/2 -translate-y-1/2 bg-card/80 hover:bg-card rounded-full p-2 shadow-lg",
             onclick: "const container = this.parentElement; const images = container.querySelectorAll('.carousel-image'); let current = Array.from(images).findIndex(img => !img.classList.contains('hidden')); images[current].classList.add('hidden'); current = (current - 1 + images.length) % images.length; images[current].classList.remove('hidden');",
           },
           "←",
@@ -112,7 +112,7 @@ const ImageCarousel = Node.create({
         [
           "button",
           {
-            class: "carousel-next absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 shadow-lg",
+            class: "carousel-next absolute right-2 top-1/2 -translate-y-1/2 bg-card/80 hover:bg-card rounded-full p-2 shadow-lg",
             onclick: "const container = this.parentElement; const images = container.querySelectorAll('.carousel-image'); let current = Array.from(images).findIndex(img => !img.classList.contains('hidden')); images[current].classList.add('hidden'); current = (current + 1) % images.length; images[current].classList.remove('hidden');",
           },
           "→",
@@ -188,7 +188,7 @@ const RichTextEditor = ({
       Link.configure({
         openOnClick: false,
         HTMLAttributes: {
-          class: "text-blue-600 underline cursor-pointer",
+          class: "text-primary underline cursor-pointer",
         },
       }),
       Youtube.configure({
@@ -500,7 +500,7 @@ const RichTextEditor = ({
 
         {/* Text Formatting */}
         <Button
-          variant={editor.isActive("bold") ? "secondary" : "ghost"}
+          selected={editor.isActive("bold")} variant={editor.isActive("bold") ? "secondary" : "ghost"}
           size="sm"
           onClick={() => editor.chain().focus().toggleBold().run()}
           className="h-8 w-8 p-0"
@@ -508,7 +508,7 @@ const RichTextEditor = ({
           <Bold className="h-4 w-4" />
         </Button>
         <Button
-          variant={editor.isActive("italic") ? "secondary" : "ghost"}
+          selected={editor.isActive("italic")} variant={editor.isActive("italic") ? "secondary" : "ghost"}
           size="sm"
           onClick={() => editor.chain().focus().toggleItalic().run()}
           className="h-8 w-8 p-0"
@@ -516,7 +516,7 @@ const RichTextEditor = ({
           <Italic className="h-4 w-4" />
         </Button>
         <Button
-          variant={editor.isActive("underline") ? "secondary" : "ghost"}
+          selected={editor.isActive("underline")} variant={editor.isActive("underline") ? "secondary" : "ghost"}
           size="sm"
           onClick={() => editor.chain().focus().toggleUnderline().run()}
           className="h-8 w-8 p-0"
@@ -524,7 +524,7 @@ const RichTextEditor = ({
           <UnderlineIcon className="h-4 w-4" />
         </Button>
         <Button
-          variant={editor.isActive("strike") ? "secondary" : "ghost"}
+          selected={editor.isActive("strike")} variant={editor.isActive("strike") ? "secondary" : "ghost"}
           size="sm"
           onClick={() => editor.chain().focus().toggleStrike().run()}
           className="h-8 w-8 p-0"
@@ -536,7 +536,7 @@ const RichTextEditor = ({
 
         {/* Lists */}
         <Button
-          variant={editor.isActive("bulletList") ? "secondary" : "ghost"}
+          selected={editor.isActive("bulletList")} variant={editor.isActive("bulletList") ? "secondary" : "ghost"}
           size="sm"
           onClick={() => editor.chain().focus().toggleBulletList().run()}
           className="h-8 w-8 p-0"
@@ -544,7 +544,7 @@ const RichTextEditor = ({
           <List className="h-4 w-4" />
         </Button>
         <Button
-          variant={editor.isActive("orderedList") ? "secondary" : "ghost"}
+          selected={editor.isActive("orderedList")} variant={editor.isActive("orderedList") ? "secondary" : "ghost"}
           size="sm"
           onClick={() => editor.chain().focus().toggleOrderedList().run()}
           className="h-8 w-8 p-0"

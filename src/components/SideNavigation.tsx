@@ -60,12 +60,14 @@ interface LinkCategory {
 }
 
 interface SideNavigationProps {
+  logoUrl?: string;
   categories?: LinkCategory[];
   collapsed?: boolean;
   onToggleCollapse?: () => void;
 }
 
 const SideNavigation = ({
+  logoUrl,
   categories: propCategories,
   collapsed = false,
   onToggleCollapse = () => {},
@@ -137,16 +139,28 @@ const SideNavigation = ({
 
   return (
     <div
-      className={`h-full flex flex-col border-r border-[#e3e1d8] transition-all duration-300 ${collapsed ? "w-16" : "w-[340px]"}`}
+      className={`h-full flex flex-col border-r border-border transition-all duration-300 ${collapsed ? "w-16" : "w-[340px]"}`}
       style={{ backgroundColor: 'var(--sidebar-bg, hsl(var(--background)))', color: 'var(--sidebar-text, inherit)' }}
     >
+      {logoUrl && !collapsed && (
+        <div className="p-[11px]">
+          <div className="flex items-center justify-center rounded-md">
+            <img
+              src={logoUrl}
+              alt="Company Logo"
+              className="header-logo"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+            />
+          </div>
+        </div>
+      )}
       <div className="flex items-center justify-between px-[22px] pb-3 pt-6">
         {!collapsed && <h2 className="font-mono text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Resources</h2>}
         <Button
           variant="ghost"
           size="icon"
           onClick={handleToggleCollapse}
-          className={`h-7 w-7 rounded text-muted-foreground hover:bg-[#e5eae3] hover:text-[#1b4332] ${collapsed ? "mx-auto" : ""}`}
+          className={`h-7 w-7 rounded text-muted-foreground hover:bg-secondary/15 hover:text-primary ${collapsed ? "mx-auto" : ""}`}
         >
           {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
         </Button>
@@ -171,7 +185,7 @@ const SideNavigation = ({
                   className="flex flex-col items-center py-2"
                 >
                   <div
-                    className="mb-1 flex h-8 w-8 cursor-pointer items-center justify-center rounded bg-[#e5eae3] text-[#2d5a47]"
+                    className="mb-1 flex h-8 w-8 cursor-pointer items-center justify-center rounded bg-secondary/15 text-primary"
                     title={category.name}
                   >
                     {CategoryIcon ? (
@@ -195,9 +209,9 @@ const SideNavigation = ({
               const CategoryIcon = category.icon ? iconMap[category.icon] : null;
               return (
                 <AccordionItem key={category.id} value={category.id} className="border-0">
-                  <AccordionTrigger className={`rounded px-3 py-2.5 text-left hover:no-underline hover:bg-[#e5eae3] [&>svg]:h-3 [&>svg]:w-3 [&>svg]:text-muted-foreground ${index === 2 ? "bg-[#e5eae3] text-[#1b4332]" : ""}`}>
+                  <AccordionTrigger className={`rounded px-3 py-2.5 text-left hover:no-underline hover:bg-secondary/15 [&>svg]:h-3 [&>svg]:w-3 [&>svg]:text-muted-foreground ${index === 2 ? "bg-secondary/15 text-primary" : ""}`}>
                     <div className="flex items-center gap-2.5">
-                      {CategoryIcon && <CategoryIcon size={16} className="text-[#2d5a47]" />}
+                      {CategoryIcon && <CategoryIcon size={16} className="text-primary" />}
                       <span className="min-w-0 text-[13.5px] font-medium">{category.name}</span>
                     </div>
                   </AccordionTrigger>
@@ -209,7 +223,7 @@ const SideNavigation = ({
                           <Button
                             key={link.id}
                             variant="ghost"
-                            className="h-auto w-full justify-start rounded py-1.5 pr-2 text-sm font-normal hover:bg-[#e5eae3]"
+                            className="h-auto w-full justify-start rounded py-1.5 pr-2 text-sm font-normal hover:bg-secondary/15"
                             onClick={() => handleLinkClick(link.url)}
                           >
                             {link.icon_url ? (

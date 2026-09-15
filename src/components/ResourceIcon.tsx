@@ -1,16 +1,17 @@
 import { useState } from "react";
-import { Link2 } from "lucide-react";
+import { Link2, type LucideIcon } from "lucide-react";
 import { resourceIconMap, resourceIconUrl } from "@/lib/resources";
 
 interface ResourceIconProps {
   icon?: string;
   iconUrl?: string;
+  iconComponent?: LucideIcon;
 }
 
-export default function ResourceIcon({ icon, iconUrl }: ResourceIconProps) {
+export default function ResourceIcon({ icon, iconUrl, iconComponent }: ResourceIconProps) {
   const src = iconUrl ? resourceIconUrl(iconUrl) : undefined;
   const [failedSrc, setFailedSrc] = useState<string>();
-  const Icon = resourceIconMap[icon || ""] || Link2;
+  const Icon = iconComponent || resourceIconMap[icon || ""] || Link2;
 
   return (
     <span aria-hidden="true" className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded bg-muted/60">

@@ -135,16 +135,16 @@ function Home() {
             <img
               src="/login-logo.png"
               alt="Company Logo"
-              className="mb-6 h-[130px] w-auto object-contain lg:mb-9"
+              className="mb-6 h-[130px] w-auto object-contain lg:mb-7"
               onError={(e) => {
                 e.currentTarget.src = logoUrl;
               }}
             />
-            <div className="mb-[18px] flex items-center justify-center gap-2.5 font-mono text-[11px] uppercase tracking-[0.18em] opacity-75 before:block before:h-px before:w-6 before:bg-current">
+            <div className="mb-[7px] flex items-center justify-center gap-2.5 font-mono text-[11px] uppercase tracking-[0.18em] opacity-75 before:block before:h-px before:w-6 before:bg-current">
               {portalName}
             </div>
             <h1
-              className="mb-4 max-w-[380px] text-[26px] font-medium leading-[1.18] lg:text-[38px]"
+              className="mb-0 max-w-[380px] text-[26px] font-medium leading-[1.18] lg:mb-4 lg:text-[38px]"
               style={{
                 color: "var(--login-title-color-1, hsl(var(--primary)))",
               }}

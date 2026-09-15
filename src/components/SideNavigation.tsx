@@ -1,13 +1,13 @@
-import React, { useState, useEffect, useLayoutEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import SidebarPanel from "@/components/SidebarPanel";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Loader2, X } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { type URLCategory } from "@/lib/api";
 import { resourceIconMap as iconMap, resourceHref } from "@/lib/resources";
 
@@ -34,65 +34,13 @@ const SideNavigation = ({
   onClose,
   footer,
 }: SideNavigationProps) => {
-  const sidebarRef = useRef<HTMLDivElement>(null);
-  const headerRef = useRef<HTMLDivElement>(null);
-  const footerRef = useRef<HTMLDivElement>(null);
-  const hasFooter = React.Children.toArray(footer).some(child => child !== '');
-  useLayoutEffect(() => {
-    const updateInsets = () => {
-      sidebarRef.current?.style.setProperty('--sidebar-header-height', `${headerRef.current?.offsetHeight || 0}px`);
-      sidebarRef.current?.style.setProperty('--sidebar-footer-height', `${footerRef.current?.offsetHeight || 0}px`);
-    };
-    const observer = new ResizeObserver(updateInsets);
-    if (headerRef.current) observer.observe(headerRef.current);
-    if (footerRef.current) observer.observe(footerRef.current);
-    updateInsets();
-    return () => observer.disconnect();
-  }, [hasFooter]);
   const [openCategoryIds, setOpenCategoryIds] = useState<string[]>([]);
   useEffect(() => {
     setOpenCategoryIds(categories.map(category => category.id));
   }, [categories]);
 
-  const handleToggleCollapse = () => {
-    onToggleCollapse();
-  };
-
   return (
-    <div
-      ref={sidebarRef}
-      className={`resource-sidebar relative h-full min-h-0 flex select-none flex-col overflow-hidden border-border transition-all duration-300 ${onClose ? "w-full" : collapsed ? "w-16 border-r" : "w-[340px] border-r"}`}
-      style={{ backgroundColor: 'var(--sidebar-bg, hsl(var(--background)))', color: 'var(--sidebar-text, inherit)' }}
-    >
-      <div ref={headerRef} className="resource-sidebar-glass relative z-10 shrink-0" style={onClose ? { paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'env(safe-area-inset-left)', paddingRight: 'env(safe-area-inset-right)' } : undefined}>
-      {logoUrl && !collapsed && (
-        <div className="p-[11px]">
-          <div className="flex items-center justify-center rounded-md">
-            <img
-              src={logoUrl}
-              alt="Company Logo"
-              className="header-logo"
-              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-            />
-          </div>
-        </div>
-      )}
-      <div className="flex items-center justify-between px-[22px] py-3">
-        {!collapsed && <h2 className="font-mono text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Resources</h2>}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onClose || handleToggleCollapse}
-          aria-label={onClose ? 'Close resources menu' : collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          className={`h-7 w-7 rounded text-muted-foreground hover:bg-secondary hover:text-secondary-foreground ${collapsed ? "mx-auto" : ""}`}
-        >
-          {onClose ? <X size={18} /> : collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
-        </Button>
-      </div>
-      </div>
-
-      <ScrollArea className="inset-0 [&>[data-orientation=vertical]]:hidden" style={{ position: 'absolute' }}>
-        <div style={{ paddingTop: 'var(--sidebar-header-height)', paddingBottom: onClose ? 'calc(var(--sidebar-footer-height) + env(safe-area-inset-bottom))' : 'var(--sidebar-footer-height)', paddingLeft: onClose ? 'env(safe-area-inset-left)' : undefined, paddingRight: onClose ? 'env(safe-area-inset-right)' : undefined }}>
+    <SidebarPanel title="Resources" logoUrl={logoUrl} collapsed={collapsed} onToggleCollapse={onToggleCollapse} onClose={onClose} footer={footer}>
         {loading ? (
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -167,14 +115,7 @@ const SideNavigation = ({
             })}
           </Accordion>
         )}
-        </div>
-      </ScrollArea>
-      {hasFooter && (
-        <div ref={footerRef} className="resource-sidebar-glass relative z-10 mt-auto min-h-8 shrink-0">
-          {footer}
-        </div>
-      )}
-    </div>
+    </SidebarPanel>
   );
 };
 

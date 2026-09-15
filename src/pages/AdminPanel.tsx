@@ -1,3 +1,4 @@
+import AdminSideNavigation from "@/components/AdminSideNavigation";
 import ToolbarUserMenu from "@/components/ToolbarUserMenu";
 import { getThemePrimaryHex, emailColors } from "@/lib/theme-colors";
 import React, { useState, useEffect, useRef } from "react";
@@ -16,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Search,
+  Menu,
   Plus,
   Settings,
   Trash2,
@@ -471,15 +473,14 @@ const SortableUrlLink = ({
   );
 };
 
-const getSidebarItemClassName = (selected = false) =>
-  `w-full justify-start hover:bg-secondary hover:text-secondary-foreground${selected ? " bg-primary text-primary-foreground" : ""}`;
-
 const AdminPanel = () => {
   const navigate = useNavigate();
   const { user: authUser, logout } = useAuth();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("news");
   const [sidebarTab, setSidebarTab] = useState("news");
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Backend status
   const { isAvailable: backendAvailable, checking: backendChecking } = useBackendStatus();
@@ -1752,74 +1753,50 @@ const AdminPanel = () => {
     );
   }
 
+  const sidebarItems = [
+    { key: "news", icon: Newspaper, label: "News" },
+    { key: "urls", icon: Link2, label: "URLs" },
+    { key: "users", icon: Users, label: "Users" },
+    { key: "faqs", icon: MessageCircleQuestion, label: "FAQs" },
+    { key: "email", icon: Mail, label: "Email Settings" },
+    { key: "theme", icon: Palette, label: "Theme & Logo" },
+    { key: "signatures", icon: PenLine, label: "Signatures" },
+  ].filter(({ key }) => canViewTab(key) || (key === "news" && (canViewTab("news") || canViewTab("categories"))) || (key === "users" && (canViewTab("users") || canViewTab("roles") || canViewTab("groups")))).map(section => ({
+    ...section,
+    active: section.key === 'news'
+      ? activeTab === 'news' || activeTab === 'categories'
+      : section.key === 'users'
+        ? activeTab === 'users' || activeTab === 'roles' || activeTab === 'groups'
+        : sidebarTab === section.key,
+  }));
+  const sidebarProps = {
+    logoUrl,
+    items: sidebarItems,
+    onNavigate: (path: string) => navigate(path),
+    onSelect: (key: string) => { setSidebarTab(key); setActiveTab(key); },
+    onSettings: () => setIsSettingsDialogOpen(true),
+    onHelp: () => setIsHelpDialogOpen(true),
+  };
+
   return (
     <div className="flex h-screen bg-background">
       <Toaster />
       {/* Side Navigation */}
-      <div className="hidden md:block w-[340px] shrink-0 select-none border-r" style={{ backgroundColor: 'var(--sidebar-bg, hsl(var(--card)))', color: 'var(--sidebar-text, inherit)' }}>
-        <div className="pb-4 space-y-4 h-full flex flex-col">
-          <div className="mb-1 p-[11px]">
-            <div className="flex items-center justify-center rounded-md">
-              <img
-                src={logoUrl}
-                alt="Logo"
-                className="header-logo"
-                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-              />
-            </div>
-          </div>
-          <div className="px-4 space-y-1 flex-1">
-            <Button variant="ghost" className={getSidebarItemClassName()} onClick={() => navigate("/")}>
-              <Home className="mr-2 h-4 w-4" /> Home
-            </Button>
-            <Button variant="ghost" className={getSidebarItemClassName()} onClick={() => navigate("/dashboard")}>
-              <ChevronRight className="mr-2 h-4 w-4" /> Dashboard
-            </Button>
-            <div className="py-2"><p className="text-xs font-semibold text-muted-foreground px-2 mb-2">ADMIN SECTIONS</p></div>
-            {[
-              { key: "news", icon: Newspaper, label: "News" },
-              { key: "urls", icon: Link2, label: "URLs" },
-              { key: "users", icon: Users, label: "Users" },
-              { key: "faqs", icon: MessageCircleQuestion, label: "FAQs" },
-              { key: "email", icon: Mail, label: "Email Settings" },
-              { key: "theme", icon: Palette, label: "Theme & Logo" },
-              { key: "signatures", icon: PenLine, label: "Signatures" },
-            ].filter(({ key }) => canViewTab(key) || (key === "news" && (canViewTab("news") || canViewTab("categories"))) || (key === "users" && (canViewTab("users") || canViewTab("roles") || canViewTab("groups")))).map(({ key, icon: Icon, label }) => {
-              // Determine if this sidebar item should be highlighted
-              const isActive = key === "news" 
-                ? (activeTab === "news" || activeTab === "categories")
-                : key === "users"
-                ? (activeTab === "users" || activeTab === "roles" || activeTab === "groups")
-                : sidebarTab === key;
-              
-              return (
-                <Button key={key} variant="ghost" className={getSidebarItemClassName(isActive)}
-                  onClick={() => { 
-                    setSidebarTab(key); 
-                    setActiveTab(key); 
-                  }}>
-                  <Icon className="mr-2 h-4 w-4" /> {label}
-                </Button>
-              );
-            })}
-          </div>
-          <div className="mx-4 border-t pt-4 space-y-1">
-            <Button variant="ghost" className={getSidebarItemClassName()} onClick={() => setIsSettingsDialogOpen(true)}>
-              <Settings className="mr-2 h-4 w-4" /> Settings
-            </Button>
-            <Button variant="ghost" className={getSidebarItemClassName()} onClick={() => setIsHelpDialogOpen(true)}>
-              <HelpCircle className="mr-2 h-4 w-4" /> Help & Support
-            </Button>
-          </div>
-        </div>
+      <div className="hidden md:block shrink-0 overflow-hidden">
+        <AdminSideNavigation {...sidebarProps} collapsed={isSidebarCollapsed} onToggleCollapse={() => setIsSidebarCollapsed(value => !value)} />
       </div>
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-20 bg-background md:hidden">
+          <AdminSideNavigation {...sidebarProps} onClose={() => setIsMobileMenuOpen(false)} />
+        </div>
+      )}
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="min-w-0 flex-1 flex flex-col overflow-hidden">
         <header className="border-b" style={{ backgroundColor: 'var(--header-bg, hsl(var(--card)))', color: 'var(--header-text, inherit)' }}>
           <div className="relative h-[71px] px-4 md:px-7 flex items-center justify-between gap-4">
             <div className="flex flex-1 items-center justify-end gap-4">
-              <div className="absolute left-1/2 w-full max-w-[340px] -translate-x-1/2">
+              <div className="min-w-0 flex-1 md:absolute md:left-1/2 md:w-full md:max-w-[340px] md:-translate-x-1/2">
                 <ToolbarSearch value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
               </div>
 
@@ -1839,6 +1816,9 @@ const AdminPanel = () => {
                   <span>Log out</span>
                 </DropdownMenuItem>
               </ToolbarUserMenu>
+              <Button variant="ghost" size="icon" className="shrink-0 md:hidden" aria-label="Open admin menu" aria-expanded={isMobileMenuOpen} onClick={() => setIsMobileMenuOpen(true)}>
+                <Menu className="h-5 w-5" />
+              </Button>
             </div>
           </div>
         </header>

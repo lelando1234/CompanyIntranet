@@ -2,9 +2,8 @@ import ToolbarUserMenu from "@/components/ToolbarUserMenu";
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bell, User, Settings, LogOut, X, Menu, ChevronLeft, ChevronRight } from "lucide-react";
-import ToolbarSearch from "@/components/ToolbarSearch";
+import ResourceSearch from "@/components/ResourceSearch";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenuItem,
@@ -19,12 +18,31 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import NewsFeed from "@/components/NewsFeed";
 import SideNavigation from "@/components/SideNavigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { settingsAPI, articlesAPI, notificationsAPI, type Article } from "@/lib/api";
+import { settingsAPI, articlesAPI, notificationsAPI, type Article, urlCategoriesAPI, type URLCategory } from "@/lib/api";
 
 export default function Dashboard() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [searchQuery, setSearchQuery] = useState("");
+  const resourceOwner = JSON.stringify([user?.id, user?.role, user?.groups]);
+  const [resources, setResources] = useState<{ owner: string; categories: URLCategory[]; loading: boolean; error?: string }>({ owner: '', categories: [], loading: true });
+  const resourceCategories = resources.owner === resourceOwner ? resources.categories : [];
+  const resourcesLoading = resources.owner !== resourceOwner || resources.loading;
+  const resourcesError = resources.owner === resourceOwner ? resources.error : undefined;
+
+  useEffect(() => {
+    let cancelled = false;
+    setResources({ owner: resourceOwner, categories: [], loading: true });
+    if (user?.id) {
+      urlCategoriesAPI.getAll({ filterByUser: true }).then(result => {
+        if (cancelled) return;
+        setResources({ owner: resourceOwner, categories: result.success ? result.data || [] : [], loading: false,
+          error: result.success ? undefined : 'Unable to load resources. Refresh to retry.' });
+      }).catch(() => {
+        if (!cancelled) setResources({ owner: resourceOwner, categories: [], loading: false, error: 'Unable to load resources. Refresh to retry.' });
+      });
+    }
+    return () => { cancelled = true; };
+  }, [resourceOwner]);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
@@ -130,10 +148,6 @@ export default function Dashboard() {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
   };
 
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(e.target.value);
-  };
-
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
@@ -149,8 +163,9 @@ export default function Dashboard() {
   return (
     <div className="h-screen flex bg-background">
       {/* Side Navigation - Desktop */}
-      <div className="hidden md:block shrink-0 overflow-y-auto">
+      <div className="hidden md:block shrink-0 overflow-hidden">
         <SideNavigation
+          categories={resourceCategories} loading={resourcesLoading} error={resourcesError}
           logoUrl={companyLogo}
           onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
           collapsed={isSidebarCollapsed}
@@ -160,26 +175,32 @@ export default function Dashboard() {
       {/* Mobile Navigation Overlay */}
       {isMobileMenuOpen && (
         <div className="fixed inset-0 z-20 bg-background md:hidden">
-          <div className="p-4 h-full overflow-y-auto">
-            <div className="flex justify-end items-center mb-4">
-              <Button variant="ghost" size="icon" onClick={toggleMobileMenu}>
-                <X className="h-5 w-5" />
-              </Button>
-            </div>
-            <SideNavigation logoUrl={companyLogo} />
-          </div>
+          <SideNavigation logoUrl={companyLogo} categories={resourceCategories} loading={resourcesLoading} error={resourcesError} onClose={toggleMobileMenu} />
         </div>
       )}
 
       <div className="min-w-0 flex-1 flex flex-col overflow-hidden">
         {/* Header */}
         <header className="shrink-0 z-10 border-b border-header-foreground/10" style={{ backgroundColor: 'var(--header-bg, hsl(var(--background)))', color: 'var(--header-text, inherit)' }}>
-          <div className="relative h-[71px] px-4 md:px-7 flex items-center justify-between gap-4">
-            <div className="absolute left-1/2 hidden w-full max-w-[340px] -translate-x-1/2 md:block">
-              <ToolbarSearch placeholder="Search news or resources..." value={searchQuery} onChange={handleSearch} />
+          <div className="relative min-h-[71px] px-4 py-3 md:px-7 flex items-center justify-between gap-4">
+            {showWelcome && (
+              <div className="min-w-0 flex-1">
+                <h2 className="text-base font-medium leading-[1.25] md:text-xl md:leading-[1.25]">
+                  <span className="md:hidden">Company Portal</span>
+                  <span className="hidden md:inline">
+                    {welcomeMessage}{user?.name ? `, ${user.name.split(" ")[0]}!` : '!'}
+                  </span>
+                </h2>
+                <p className="mb-1 hidden text-[13.5px] leading-[1.25] opacity-70 md:block">
+                  {welcomeSubtext}
+                </p>
+              </div>
+            )}
+            <div className="hidden w-1/3 max-w-[340px] shrink-0 md:block">
+              <ResourceSearch canAccessAdmin={canAccessAdmin} key={resourceOwner} categories={resourceCategories} loading={resourcesLoading} error={resourcesError} />
             </div>
 
-            <div className="ml-auto flex items-center gap-3 md:gap-5">
+            <div className="ml-auto flex shrink-0 items-center gap-3 md:gap-5">
               {/* Notifications */}
               <Popover open={notifOpen} onOpenChange={setNotifOpen}>
                 <PopoverTrigger asChild>
@@ -283,8 +304,8 @@ export default function Dashboard() {
 
           {/* Mobile Search */}
           <div className="md:hidden px-4 pb-3">
-            <div className="mx-auto w-full max-w-[340px]">
-              <ToolbarSearch value={searchQuery} onChange={handleSearch} />
+            <div className="w-full">
+              <ResourceSearch canAccessAdmin={canAccessAdmin} key={resourceOwner} categories={resourceCategories} loading={resourcesLoading} error={resourcesError} />
             </div>
           </div>
         </header>
@@ -292,19 +313,8 @@ export default function Dashboard() {
         {/* Main Content Area */}
         <main className="flex-1 overflow-y-auto px-5 py-6 md:px-10 md:py-8">
           <div className="mx-auto max-w-[1100px]">
-            {showWelcome && (
-              <Card className="mb-8 rounded border-0 p-6 md:px-8 md:py-6 shadow-none" style={{ backgroundColor: "var(--header-bg, hsl(var(--primary)))", color: "var(--header-text, hsl(var(--primary-foreground)))" }}>
-                <h2 className="mb-1.5 font-serif text-[23px] font-medium leading-tight">
-                  {welcomeMessage}{user?.name ? `, ${user.name.split(" ")[0]}!` : '!'}
-                </h2>
-                <p className="text-[13.5px] opacity-70">
-                  {welcomeSubtext}
-                </p>
-              </Card>
-            )}
-
             <div>
-              <NewsFeed useApi={true} externalSearchTerm={searchQuery} />
+              <NewsFeed useApi={true} />
             </div>
           </div>
 

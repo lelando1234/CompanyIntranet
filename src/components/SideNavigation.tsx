@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useLayoutEffect, useRef } from "react";
 import {
   Accordion,
   AccordionContent,
@@ -7,141 +7,64 @@ import {
 } from "@/components/ui/accordion";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, ExternalLink, Loader2, Link2, Globe, BookOpen, FileText, Briefcase, Heart, Star, Folder, HelpCircle, Settings, Users, Mail, Phone, MapPin, Calendar, Clock, Shield, Zap, Database, Code, Image, Video, Music, Download, Upload, Search, Home, type LucideIcon } from "lucide-react";
-import { urlCategoriesAPI } from "@/lib/api";
-import { useAuth } from "@/contexts/AuthContext";
+import { ChevronLeft, ChevronRight, Loader2, X } from "lucide-react";
+import { type URLCategory } from "@/lib/api";
+import { resourceIconMap as iconMap, resourceHref } from "@/lib/resources";
 
-// Map icon names from the backend to actual Lucide icon components
-const iconMap: Record<string, LucideIcon> = {
-  Link: Link2,
-  Link2: Link2,
-  Globe: Globe,
-  BookOpen: BookOpen,
-  FileText: FileText,
-  Briefcase: Briefcase,
-  Heart: Heart,
-  Star: Star,
-  Folder: Folder,
-  HelpCircle: HelpCircle,
-  Settings: Settings,
-  Users: Users,
-  Mail: Mail,
-  Phone: Phone,
-  MapPin: MapPin,
-  Calendar: Calendar,
-  Clock: Clock,
-  Shield: Shield,
-  Zap: Zap,
-  Database: Database,
-  Code: Code,
-  Image: Image,
-  Video: Video,
-  Music: Music,
-  Download: Download,
-  Upload: Upload,
-  Search: Search,
-  Home: Home,
-  ExternalLink: ExternalLink,
-};
-
-interface LinkItem {
-  id: string;
-  title: string;
-  url: string;
-  icon?: string;
-  icon_url?: string;
-}
-
-interface LinkCategory {
-  id: string;
-  name: string;
-  icon?: string;
-  links: LinkItem[];
-}
+import ResourceIcon from "@/components/ResourceIcon";
 
 interface SideNavigationProps {
   logoUrl?: string;
-  categories?: LinkCategory[];
+  categories: URLCategory[];
+  loading?: boolean;
+  error?: string;
   collapsed?: boolean;
   onToggleCollapse?: () => void;
+  onClose?: () => void;
+  footer?: React.ReactNode;
 }
 
 const SideNavigation = ({
   logoUrl,
-  categories: propCategories,
+  categories,
+  loading = false,
+  error,
   collapsed = false,
   onToggleCollapse = () => {},
+  onClose,
+  footer,
 }: SideNavigationProps) => {
-  const [apiCategories, setApiCategories] = useState<LinkCategory[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [openCategoryIds, setOpenCategoryIds] = useState<string[]>([]);
-  const { user } = useAuth();
-
-  const normalizeCategory = (cat: any): LinkCategory => ({
-    id: String(cat.id),
-    name: cat.name,
-    icon: cat.icon,
-    links: (cat.links || []).map((link: any) => ({
-      id: String(link.id),
-      title: link.title,
-      url: link.url,
-      icon: link.icon,
-      icon_url: link.icon_url,
-    })),
-  });
-
-  // Fetch categories from API (filtered by user's groups)
-  useEffect(() => {
-    if (propCategories) {
-      setOpenCategoryIds(propCategories.map((category) => String(category.id)));
-      setLoading(false);
-      return;
-    }
-
-    const fetchCategories = async () => {
-      try {
-        // Get user's group IDs for filtering
-        const userGroupIds = user?.groups?.map(g => g.id) || [];
-        
-        const result = await urlCategoriesAPI.getAll({
-          filterByUser: true,
-          userGroups: userGroupIds
-        });
-        if (result.success && result.data) {
-          const mapped: LinkCategory[] = (result.data as any[]).map(normalizeCategory);
-          setApiCategories(mapped);
-          setOpenCategoryIds(mapped.map((category) => category.id));
-        }
-      } catch {
-        // Use empty array if API fails
-      } finally {
-        setLoading(false);
-      }
+  const sidebarRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLDivElement>(null);
+  const footerRef = useRef<HTMLDivElement>(null);
+  const hasFooter = React.Children.toArray(footer).some(child => child !== '');
+  useLayoutEffect(() => {
+    const updateInsets = () => {
+      sidebarRef.current?.style.setProperty('--sidebar-header-height', `${headerRef.current?.offsetHeight || 0}px`);
+      sidebarRef.current?.style.setProperty('--sidebar-footer-height', `${footerRef.current?.offsetHeight || 0}px`);
     };
-
-    fetchCategories();
-  }, [propCategories, user?.groups]);
-
-  const categories = propCategories ? propCategories.map(normalizeCategory) : apiCategories;
+    const observer = new ResizeObserver(updateInsets);
+    if (headerRef.current) observer.observe(headerRef.current);
+    if (footerRef.current) observer.observe(footerRef.current);
+    updateInsets();
+    return () => observer.disconnect();
+  }, [hasFooter]);
+  const [openCategoryIds, setOpenCategoryIds] = useState<string[]>([]);
+  useEffect(() => {
+    setOpenCategoryIds(categories.map(category => category.id));
+  }, [categories]);
 
   const handleToggleCollapse = () => {
     onToggleCollapse();
   };
 
-  const handleLinkClick = (url: string) => {
-    // Add protocol if missing
-    let finalUrl = url;
-    if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      finalUrl = 'https://' + url;
-    }
-    window.open(finalUrl, "_blank");
-  };
-
   return (
     <div
-      className={`h-full flex flex-col border-r border-border transition-all duration-300 ${collapsed ? "w-16" : "w-[340px]"}`}
+      ref={sidebarRef}
+      className={`resource-sidebar relative h-full min-h-0 flex select-none flex-col overflow-hidden border-border transition-all duration-300 ${onClose ? "w-full" : collapsed ? "w-16 border-r" : "w-[340px] border-r"}`}
       style={{ backgroundColor: 'var(--sidebar-bg, hsl(var(--background)))', color: 'var(--sidebar-text, inherit)' }}
     >
+      <div ref={headerRef} className="resource-sidebar-glass relative z-10 shrink-0" style={onClose ? { paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'env(safe-area-inset-left)', paddingRight: 'env(safe-area-inset-right)' } : undefined}>
       {logoUrl && !collapsed && (
         <div className="p-[11px]">
           <div className="flex items-center justify-center rounded-md">
@@ -154,23 +77,28 @@ const SideNavigation = ({
           </div>
         </div>
       )}
-      <div className="flex items-center justify-between px-[22px] pb-3 pt-6">
+      <div className="flex items-center justify-between px-[22px] py-3">
         {!collapsed && <h2 className="font-mono text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Resources</h2>}
         <Button
           variant="ghost"
           size="icon"
-          onClick={handleToggleCollapse}
-          className={`h-7 w-7 rounded text-muted-foreground hover:bg-secondary/15 hover:text-primary ${collapsed ? "mx-auto" : ""}`}
+          onClick={onClose || handleToggleCollapse}
+          aria-label={onClose ? 'Close resources menu' : collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          className={`h-7 w-7 rounded text-muted-foreground hover:bg-secondary hover:text-secondary-foreground ${collapsed ? "mx-auto" : ""}`}
         >
-          {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+          {onClose ? <X size={18} /> : collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
         </Button>
       </div>
+      </div>
 
-      <ScrollArea className="flex-1">
+      <ScrollArea className="inset-0 [&>[data-orientation=vertical]]:hidden" style={{ position: 'absolute' }}>
+        <div style={{ paddingTop: 'var(--sidebar-header-height)', paddingBottom: onClose ? 'calc(var(--sidebar-footer-height) + env(safe-area-inset-bottom))' : 'var(--sidebar-footer-height)', paddingLeft: onClose ? 'env(safe-area-inset-left)' : undefined, paddingRight: onClose ? 'env(safe-area-inset-right)' : undefined }}>
         {loading ? (
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           </div>
+        ) : error ? (
+          <p role="alert" className="px-4 py-8 text-sm text-muted-foreground">{error}</p>
         ) : categories.length === 0 ? (
           <div className="px-4 py-8 text-center text-sm text-muted-foreground">
             No resource categories available.
@@ -185,7 +113,7 @@ const SideNavigation = ({
                   className="flex flex-col items-center py-2"
                 >
                   <div
-                    className="mb-1 flex h-8 w-8 cursor-pointer items-center justify-center rounded bg-secondary/15 text-primary"
+                    className="mb-1 flex h-8 w-8 cursor-pointer items-center justify-center rounded bg-primary text-primary-foreground"
                     title={category.name}
                   >
                     {CategoryIcon ? (
@@ -205,43 +133,30 @@ const SideNavigation = ({
             onValueChange={setOpenCategoryIds}
             className="space-y-1 px-3 py-0"
           >
-            {categories.map((category, index) => {
+            {categories.map((category) => {
               const CategoryIcon = category.icon ? iconMap[category.icon] : null;
               return (
                 <AccordionItem key={category.id} value={category.id} className="border-0">
-                  <AccordionTrigger className={`rounded px-3 py-2.5 text-left hover:no-underline hover:bg-secondary/15 [&>svg]:h-3 [&>svg]:w-3 [&>svg]:text-muted-foreground ${index === 2 ? "bg-secondary/15 text-primary" : ""}`}>
+                  <AccordionTrigger className={`rounded px-3 py-2.5 text-left hover:no-underline hover:bg-secondary hover:text-secondary-foreground [&>svg]:h-3 [&>svg]:w-3 [&>svg]:text-current ${openCategoryIds.includes(category.id) ? "bg-primary text-primary-foreground" : ""}`}>
                     <div className="flex items-center gap-2.5">
-                      {CategoryIcon && <CategoryIcon size={16} className="text-primary" />}
+                      {CategoryIcon && <CategoryIcon size={16} />}
                       <span className="min-w-0 text-[13.5px] font-medium">{category.name}</span>
                     </div>
                   </AccordionTrigger>
                   <AccordionContent>
                     <div className="space-y-1 py-1 pl-2">
-                      {category.links.map((link) => {
-                        const LinkIcon = link.icon ? iconMap[link.icon] : null;
+                      {(category.links || []).map((link) => {
                         return (
                           <Button
                             key={link.id}
+                            asChild
                             variant="ghost"
-                            className="h-auto w-full justify-start rounded py-1.5 pr-2 text-sm font-normal hover:bg-secondary/15"
-                            onClick={() => handleLinkClick(link.url)}
+                            className="h-auto w-full justify-start gap-2 rounded py-1.5 pr-2 text-sm font-normal hover:bg-secondary hover:text-secondary-foreground"
                           >
-                            {link.icon_url ? (
-                              <img 
-                                src={link.icon_url.startsWith('/uploads') ? `${(import.meta.env.VITE_API_URL || '').replace('/api', '')}${link.icon_url}` : link.icon_url} 
-                                alt="" 
-                                className="w-4 h-4 mr-2 flex-shrink-0 object-contain"
-                                onError={(e) => {
-                                  // Fallback to icon if image fails to load
-                                  e.currentTarget.style.display = 'none';
-                                }}
-                              />
-                            ) : LinkIcon ? (
-                              <LinkIcon size={14} className="mr-2 flex-shrink-0" />
-                            ) : (
-                              <ExternalLink size={14} className="mr-2 flex-shrink-0" />
-                            )}
+                            <a href={resourceHref(link.url)} target="_blank" rel="noopener noreferrer">
+                            <ResourceIcon icon={link.icon} iconUrl={link.icon_url} />
                             <span className="min-w-0 truncate">{link.title}</span>
+                            </a>
                           </Button>
                         );
                       })}
@@ -252,7 +167,13 @@ const SideNavigation = ({
             })}
           </Accordion>
         )}
+        </div>
       </ScrollArea>
+      {hasFooter && (
+        <div ref={footerRef} className="resource-sidebar-glass relative z-10 mt-auto min-h-8 shrink-0">
+          {footer}
+        </div>
+      )}
     </div>
   );
 };

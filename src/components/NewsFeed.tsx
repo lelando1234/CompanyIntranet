@@ -46,12 +46,11 @@ interface NewsArticle {
 interface NewsFeedProps {
   articles?: NewsArticle[];
   useApi?: boolean;
-  externalSearchTerm?: string;
 }
 
 const ARTICLES_PER_PAGE = 4;
 
-const NewsFeed = ({ articles = [], useApi = false, externalSearchTerm = "" }: NewsFeedProps) => {
+const NewsFeed = ({ articles = [], useApi = false }: NewsFeedProps) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [expandedArticles, setExpandedArticles] = useState<string[]>([]);
@@ -84,18 +83,6 @@ const NewsFeed = ({ articles = [], useApi = false, externalSearchTerm = "" }: Ne
       }
     };
   }, [searchTerm]);
-
-  // Sync external search term from parent (e.g., Dashboard header search)
-  // Use a ref to avoid dependency loop with searchTerm
-  const prevExternalSearchRef = useRef(externalSearchTerm);
-  useEffect(() => {
-    if (externalSearchTerm !== prevExternalSearchRef.current) {
-      prevExternalSearchRef.current = externalSearchTerm;
-      if (externalSearchTerm !== searchTerm) {
-        setSearchTerm(externalSearchTerm);
-      }
-    }
-  }, [externalSearchTerm]);
 
   // Map category name to ID for API calls
   const getCategoryIdByName = useCallback((name: string): string | undefined => {
@@ -340,15 +327,14 @@ const NewsFeed = ({ articles = [], useApi = false, externalSearchTerm = "" }: Ne
     <div className="w-full bg-transparent">
       <div className="mb-6">
         <div className="mb-2 flex items-center gap-2">
-          <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Company News</span>
+          <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+            {new Date().toLocaleDateString("en-ZA", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+          </span>
           {loading && !initialLoad && (
             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
           )}
         </div>
-        <h1 className="mb-1.5 font-serif text-2xl font-medium leading-tight text-primary">Company News</h1>
-        <p className="text-[13.5px] text-muted-foreground">
-          Stay updated with the latest company announcements and news
-        </p>
+        <h1 className="mb-1.5 text-2xl font-medium leading-tight text-primary">Company News</h1>
       </div>
 
       <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center">
@@ -400,7 +386,15 @@ const NewsFeed = ({ articles = [], useApi = false, externalSearchTerm = "" }: Ne
             return (
               <Card
                 key={article.id}
-                className="w-full rounded border shadow-none transition-colors hover:border-secondary"
+                className="w-full cursor-pointer rounded border shadow-none transition-colors hover:border-secondary"
+                onClick={(event) => {
+                  if (event.defaultPrevented) return;
+                  const target = event.target as Element;
+                  if (target.closest('a, button, input, textarea, select, label, summary, video, audio, iframe, [role="button"], [contenteditable="true"]')) return;
+                  const selection = window.getSelection();
+                  if (selection && !selection.isCollapsed && selection.anchorNode && event.currentTarget.contains(selection.anchorNode)) return;
+                  toggleArticleExpansion(article.id);
+                }}
                 style={{
                   backgroundColor: 'var(--article-card-bg, hsl(var(--card)))',
                   borderColor: 'var(--article-card-border, hsl(var(--border)))',
@@ -481,6 +475,7 @@ const NewsFeed = ({ articles = [], useApi = false, externalSearchTerm = "" }: Ne
                   <Button
                     variant="ghost"
                     size="sm"
+                    aria-expanded={isExpanded}
                     onClick={() => toggleArticleExpansion(article.id)}
                     className="flex h-auto items-center gap-1 px-0 py-0 text-[12.5px] font-semibold text-primary hover:bg-transparent hover:text-primary"
                   >

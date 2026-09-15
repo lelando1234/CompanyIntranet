@@ -1756,7 +1756,7 @@ const AdminPanel = () => {
     <div className="flex h-screen bg-background">
       <Toaster />
       {/* Side Navigation */}
-      <div className="hidden md:block w-[340px] shrink-0 border-r" style={{ backgroundColor: 'var(--sidebar-bg, hsl(var(--card)))', color: 'var(--sidebar-text, inherit)' }}>
+      <div className="hidden md:block w-[340px] shrink-0 select-none border-r" style={{ backgroundColor: 'var(--sidebar-bg, hsl(var(--card)))', color: 'var(--sidebar-text, inherit)' }}>
         <div className="pb-4 space-y-4 h-full flex flex-col">
           <div className="mb-1 p-[11px]">
             <div className="flex items-center justify-center rounded-md">

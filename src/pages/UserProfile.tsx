@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { resolveUploadUrl } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
@@ -44,9 +45,13 @@ export default function UserProfile() {
   const companyLogo = "/logo.png";
 
   // Profile picture state
-  const [avatar, setAvatar] = useState(user?.avatar || "");
+  const [avatar, setAvatar] = useState(resolveUploadUrl(user?.avatar));
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
+  useEffect(() => {
+    if (!avatarFile) setAvatar(resolveUploadUrl(user?.avatar));
+  }, [user?.avatar, avatarFile]);
 
   // Signature state
   const [mySignature, setMySignature] = useState<EmailSignature | null>(null);

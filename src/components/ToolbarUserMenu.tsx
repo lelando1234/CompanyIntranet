@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { resolveUploadUrl } from "@/lib/utils";
 import { ChevronDown } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -27,7 +28,7 @@ export default function ToolbarUserMenu({ name, avatar, role, children }: Toolba
           className="flex items-center gap-2 rounded-full px-1.5 py-1 text-current hover:bg-header-foreground/10 hover:text-current"
         >
           <Avatar className="h-7 w-7">
-            <AvatarImage src={avatar || ""} alt={name} />
+            <AvatarImage src={resolveUploadUrl(avatar)} alt={name} />
             <AvatarFallback className="bg-secondary text-[11.5px] font-bold text-primary">
               {name.split(" ").map((part) => part[0]).join("")}
             </AvatarFallback>

@@ -144,7 +144,7 @@ function Home() {
               {portalName}
             </div>
             <h1
-              className="mb-4 max-w-[380px] font-serif text-[26px] font-medium leading-[1.18] lg:text-[38px]"
+              className="mb-4 max-w-[380px] text-[26px] font-medium leading-[1.18] lg:text-[38px]"
               style={{
                 color: "var(--login-title-color-1, hsl(var(--primary)))",
               }}
@@ -179,7 +179,7 @@ function Home() {
               <div className="mb-2.5 font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
                 Sign in
               </div>
-              <h2 className="mb-2 font-serif text-[28px] font-medium text-foreground">
+              <h2 className="mb-2 text-[28px] font-medium text-foreground">
                 Welcome back
               </h2>
               <p className="text-[13.5px] leading-normal text-muted-foreground">

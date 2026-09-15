@@ -2,7 +2,7 @@ name: company-intranet-dev
 
 services:
   db:
-    image: mariadb:10.11
+    image: mariadb:11.8.6
     environment:
       MARIADB_DATABASE: ${DB_NAME:-company_portal}
       MARIADB_ROOT_PASSWORD: ${DB_PASSWORD:-root}

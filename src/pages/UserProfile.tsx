@@ -1,11 +1,14 @@
+import ToolbarUserMenu from "@/components/ToolbarUserMenu";
+import { profileDefaultColors as defaultColors, userColorPresets as colorPresets } from "@/lib/theme-presets";
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Camera, Loader2, Eye, EyeOff, ChevronDown, Settings, LogOut, Copy } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { ArrowLeft, Camera, Loader2, Eye, EyeOff, Settings, LogOut, Copy } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { resolveUploadUrl } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
@@ -13,12 +16,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { authAPI, usersAPI, preferencesAPI, settingsAPI, signaturesAPI, type EmailSignature } from "@/lib/api";
 import SignaturePreview, { generateSignatureHTML } from "@/components/SignaturePreview";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
 interface ColorPalette {
@@ -33,179 +32,7 @@ interface ColorPalette {
   sidebarText: string;
 }
 
-const defaultColors: ColorPalette = {
-  primary: "#0080ff",
-  secondary: "#10b981",
-  accent: "#10b981",
-  background: "#ffffff",
-  foreground: "#001a33",
-  headerBg: "#ffffff",
-  headerText: "#001a33",
-  sidebarBg: "#ffffff",
-  sidebarText: "#001a33",
-};
 
-// Color theme presets
-const colorPresets = [
-  { 
-    name: "Blue & Green (Default)", 
-    colors: { ...defaultColors } 
-  },
-  {
-    name: "Purple & Pink",
-    colors: {
-      primary: "#9333ea",
-      secondary: "#ec4899",
-      accent: "#ec4899",
-      background: "#ffffff",
-      foreground: "#1e1b4b",
-      headerBg: "#581c87",
-      headerText: "#ffffff",
-      sidebarBg: "#f5f3ff",
-      sidebarText: "#1e1b4b",
-    },
-  },
-  {
-    name: "Orange & Yellow",
-    colors: {
-      primary: "#f97316",
-      secondary: "#eab308",
-      accent: "#eab308",
-      background: "#ffffff",
-      foreground: "#431407",
-      headerBg: "#9a3412",
-      headerText: "#ffffff",
-      sidebarBg: "#fff7ed",
-      sidebarText: "#431407",
-    },
-  },
-  {
-    name: "Teal & Cyan",
-    colors: {
-      primary: "#14b8a6",
-      secondary: "#06b6d4",
-      accent: "#06b6d4",
-      background: "#ffffff",
-      foreground: "#042f2e",
-      headerBg: "#115e59",
-      headerText: "#ffffff",
-      sidebarBg: "#f0fdfa",
-      sidebarText: "#042f2e",
-    },
-  },
-  {
-    name: "Dark Professional",
-    colors: {
-      primary: "#3b82f6",
-      secondary: "#6366f1",
-      accent: "#8b5cf6",
-      foreground: "#e2e8f0",
-      background: "#0f172a",
-      headerBg: "#1e293b",
-      headerText: "#e2e8f0",
-      sidebarBg: "#1e293b",
-      sidebarText: "#e2e8f0",
-    },
-  },
-  {
-    name: "Rose & Coral",
-    colors: {
-      primary: "#f43f5e",
-      secondary: "#fb7185",
-      accent: "#ff6b9d",
-      background: "#ffffff",
-      foreground: "#4c0519",
-      headerBg: "#9f1239",
-      headerText: "#ffffff",
-      sidebarBg: "#fff1f2",
-      sidebarText: "#4c0519",
-    },
-  },
-  {
-    name: "Emerald & Lime",
-    colors: {
-      primary: "#10b981",
-      secondary: "#84cc16",
-      accent: "#84cc16",
-      background: "#ffffff",
-      foreground: "#064e3b",
-      headerBg: "#047857",
-      headerText: "#ffffff",
-      sidebarBg: "#ecfdf5",
-      sidebarText: "#064e3b",
-    },
-  },
-  {
-    name: "Indigo & Purple",
-    colors: {
-      primary: "#6366f1",
-      secondary: "#8b5cf6",
-      accent: "#a855f7",
-      background: "#ffffff",
-      foreground: "#312e81",
-      headerBg: "#4338ca",
-      headerText: "#ffffff",
-      sidebarBg: "#eef2ff",
-      sidebarText: "#312e81",
-    },
-  },
-  {
-    name: "Amber & Red",
-    colors: {
-      primary: "#f59e0b",
-      secondary: "#ef4444",
-      accent: "#fb923c",
-      background: "#ffffff",
-      foreground: "#451a03",
-      headerBg: "#b45309",
-      headerText: "#ffffff",
-      sidebarBg: "#fffbeb",
-      sidebarText: "#451a03",
-    },
-  },
-  {
-    name: "Sky & Blue",
-    colors: {
-      primary: "#0ea5e9",
-      secondary: "#3b82f6",
-      accent: "#60a5fa",
-      background: "#ffffff",
-      foreground: "#0c4a6e",
-      headerBg: "#0369a1",
-      headerText: "#ffffff",
-      sidebarBg: "#f0f9ff",
-      sidebarText: "#0c4a6e",
-    },
-  },
-  {
-    name: "Slate & Gray",
-    colors: {
-      primary: "#475569",
-      secondary: "#64748b",
-      accent: "#94a3b8",
-      foreground: "#e2e8f0",
-      background: "#1e293b",
-      headerBg: "#334155",
-      headerText: "#f1f5f9",
-      sidebarBg: "#334155",
-      sidebarText: "#f1f5f9",
-    },
-  },
-  {
-    name: "Violet & Fuchsia",
-    colors: {
-      primary: "#7c3aed",
-      secondary: "#d946ef",
-      accent: "#e879f9",
-      background: "#ffffff",
-      foreground: "#3b0764",
-      headerBg: "#6b21a8",
-      headerText: "#ffffff",
-      sidebarBg: "#faf5ff",
-      sidebarText: "#3b0764",
-    },
-  },
-];
 
 export default function UserProfile() {
   const { user, refreshUser, logout } = useAuth();
@@ -218,9 +45,13 @@ export default function UserProfile() {
   const companyLogo = "/logo.png";
 
   // Profile picture state
-  const [avatar, setAvatar] = useState(user?.avatar || "");
+  const [avatar, setAvatar] = useState(resolveUploadUrl(user?.avatar));
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
+  useEffect(() => {
+    if (!avatarFile) setAvatar(resolveUploadUrl(user?.avatar));
+  }, [user?.avatar, avatarFile]);
 
   // Signature state
   const [mySignature, setMySignature] = useState<EmailSignature | null>(null);
@@ -353,9 +184,9 @@ export default function UserProfile() {
         case b: h = ((r - g) / d + 4) / 6; break;
       }
     }
-    h = Math.round(h * 360);
-    s = Math.round(s * 100);
-    l = Math.round(l * 100);
+    h = Number((h * 360).toFixed(6));
+    s = Number((s * 100).toFixed(6));
+    l = Number((l * 100).toFixed(6));
     return `${h} ${s}% ${l}%`;
   };
 
@@ -485,6 +316,7 @@ export default function UserProfile() {
         root.style.setProperty("--foreground", hexToHSL(activeColors.foreground));
         root.style.setProperty("--header-bg", activeColors.headerBg);
         root.style.setProperty("--header-text", activeColors.headerText);
+    root.style.setProperty("--header-foreground", hexToHSL(activeColors.headerText));
         root.style.setProperty("--sidebar-bg", activeColors.sidebarBg);
         root.style.setProperty("--sidebar-text", activeColors.sidebarText);
 
@@ -558,57 +390,35 @@ export default function UserProfile() {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-10 border-b shadow-sm" style={{ backgroundColor: 'var(--header-bg, hsl(var(--background)))', color: 'var(--header-text, inherit)' }}>
-        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <img src={companyLogo} alt="Company Logo" className="h-8 w-auto" />
-            <h1 className="text-xl font-bold hidden md:block">
-              {portalName}
-            </h1>
-          </div>
+      <header className="sticky top-0 z-10 border-b bg-primary text-primary-foreground shadow-sm">
+        <div className="h-[71px] w-full px-4 flex items-center justify-between">
+          <Link to="/dashboard" aria-label="Back to Dashboard" className="flex items-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground">
+            <img
+              src="/logo-accent.png"
+              alt="Company Logo"
+              className="header-logo"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+            />
+          </Link>
 
           <div className="flex items-center gap-4">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="flex items-center gap-2">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={userAvatar} alt={userName} />
-                    <AvatarFallback>
-                      {userName
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="hidden md:inline-block">{userName}</span>
-                  <ChevronDown className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>
-                  <div>
-                    <p>{userName}</p>
-                    <p className="text-xs text-muted-foreground capitalize">{user?.role}</p>
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate("/dashboard")}>
-                  <ArrowLeft className="mr-2 h-4 w-4" />
-                  <span>Dashboard</span>
+            <ToolbarUserMenu name={userName} avatar={userAvatar} role={user?.role}>
+              <DropdownMenuItem onClick={() => navigate("/dashboard")}>
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                <span>Dashboard</span>
+              </DropdownMenuItem>
+              {canAccessAdmin && (
+                <DropdownMenuItem onClick={() => navigate("/admin")}>
+                  <Settings className="mr-2 h-4 w-4" />
+                  <span>Admin Panel</span>
                 </DropdownMenuItem>
-                {canAccessAdmin && (
-                  <DropdownMenuItem onClick={() => navigate("/admin")}>
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Admin Panel</span>
-                  </DropdownMenuItem>
-                )}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout}>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Log out</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+              )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleLogout}>
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Log out</span>
+              </DropdownMenuItem>
+            </ToolbarUserMenu>
           </div>
         </div>
       </header>
@@ -752,7 +562,7 @@ export default function UserProfile() {
                         // Clear error when user types
                         if (passwordError) setPasswordError("");
                       }}
-                      className={passwordError && confirmPassword ? "border-red-500 focus-visible:ring-red-500" : ""}
+                      className={passwordError && confirmPassword ? "border-destructive focus-visible:ring-destructive" : ""}
                       required
                       minLength={6}
                     />
@@ -771,7 +581,7 @@ export default function UserProfile() {
                     </Button>
                   </div>
                   {passwordError && (
-                    <p className="text-sm text-red-500 font-medium">{passwordError}</p>
+                    <p className="text-sm text-destructive font-medium">{passwordError}</p>
                   )}
                 </div>
 
@@ -829,13 +639,13 @@ export default function UserProfile() {
             <CardContent className="space-y-6">
               <div className="flex items-center gap-4">
                 <Button
-                  variant={useAdminColors ? "default" : "outline"}
+                  selected={useAdminColors} variant={useAdminColors ? "default" : "outline"}
                   onClick={() => setUseAdminColors(true)}
                 >
                   Use Admin Theme
                 </Button>
                 <Button
-                  variant={!useAdminColors ? "default" : "outline"}
+                  selected={!useAdminColors} variant={!useAdminColors ? "default" : "outline"}
                   onClick={() => setUseAdminColors(false)}
                 >
                   Custom Theme

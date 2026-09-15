@@ -465,6 +465,7 @@ export interface URLLink {
   url: string;
   description?: string;
   icon?: string;
+  icon_url?: string;
   sort_order: number;
   is_external: boolean;
   created_at: string;
@@ -500,13 +501,10 @@ export interface CreateURLLinkData {
 }
 
 export const urlCategoriesAPI = {
-  getAll: (params?: { filterByUser?: boolean; userGroups?: string[] }) => {
+  getAll: (params?: { filterByUser?: boolean }) => {
     const queryParams = new URLSearchParams();
     if (params?.filterByUser) {
       queryParams.set('filterByUser', 'true');
-      if (params?.userGroups) {
-        queryParams.set('userGroups', JSON.stringify(params.userGroups));
-      }
     }
     const queryString = queryParams.toString() ? `?${queryParams.toString()}` : '';
     return apiFetch<URLCategory[]>(`/url-categories${queryString}`);

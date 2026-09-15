@@ -49,7 +49,7 @@ export default function ResetPassword() {
       <div
         className="min-h-screen flex items-center justify-center p-4"
         style={{
-          background: `linear-gradient(to bottom right, var(--login-bg-1, #eff6ff), var(--login-bg-2, #dcfce7), var(--login-bg-1, #eff6ff))`,
+          background: `linear-gradient(to bottom right, var(--login-bg-1, hsl(var(--primary))), var(--login-bg-2, hsl(var(--background))), var(--login-bg-1, hsl(var(--primary))))`,
         }}
       >
         <Card className="w-full max-w-md">
@@ -108,7 +108,7 @@ export default function ResetPassword() {
       <div
         className="min-h-screen flex items-center justify-center p-4"
         style={{
-          background: `linear-gradient(to bottom right, var(--login-bg-1, #eff6ff), var(--login-bg-2, #dcfce7), var(--login-bg-1, #eff6ff))`,
+          background: `linear-gradient(to bottom right, var(--login-bg-1, hsl(var(--primary))), var(--login-bg-2, hsl(var(--background))), var(--login-bg-1, hsl(var(--primary))))`,
         }}
       >
         <Card className="w-full max-w-md">
@@ -119,7 +119,7 @@ export default function ResetPassword() {
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col items-center gap-4">
-            <CheckCircle className="h-12 w-12 text-green-500" />
+            <CheckCircle className="h-12 w-12 text-success" />
             <p className="text-sm text-muted-foreground text-center">
               You can now log in with your new password.
             </p>
@@ -136,7 +136,7 @@ export default function ResetPassword() {
     <div
       className="min-h-screen flex items-center justify-center p-4"
       style={{
-        background: `linear-gradient(to bottom right, var(--login-bg-1, #eff6ff), var(--login-bg-2, #dcfce7), var(--login-bg-1, #eff6ff))`,
+        background: `linear-gradient(to bottom right, var(--login-bg-1, hsl(var(--primary))), var(--login-bg-2, hsl(var(--background))), var(--login-bg-1, hsl(var(--primary))))`,
       }}
     >
       <Card className="w-full max-w-md">
@@ -203,7 +203,7 @@ export default function ResetPassword() {
                   placeholder="Confirm new password"
                   required
                   minLength={6}
-                  className={passwordError ? "border-red-500 focus-visible:ring-red-500" : ""}
+                  className={passwordError ? "border-destructive focus-visible:ring-destructive" : ""}
                 />
                 <Button
                   type="button"
@@ -220,7 +220,7 @@ export default function ResetPassword() {
                 </Button>
               </div>
               {passwordError && (
-                <p className="text-sm text-red-500 font-medium">{passwordError}</p>
+                <p className="text-sm text-destructive font-medium">{passwordError}</p>
               )}
             </div>
 
@@ -229,7 +229,7 @@ export default function ResetPassword() {
               className="w-full"
               disabled={isSubmitting}
               style={{
-                background: `linear-gradient(to right, var(--login-button-bg-1, #3b82f6), var(--login-button-bg-2, #22c55e))`,
+                background: `linear-gradient(to right, var(--login-button-bg-1, hsl(var(--primary))), var(--login-button-bg-2, hsl(var(--secondary))))`,
               }}
             >
               {isSubmitting ? (

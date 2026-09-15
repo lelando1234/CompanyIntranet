@@ -127,7 +127,7 @@ function Home() {
         <section
           className="relative flex min-h-[260px] flex-none flex-col justify-between overflow-hidden px-8 py-9 lg:min-h-screen lg:basis-[46%] lg:px-16 lg:py-14"
           style={{
-            background: "linear-gradient(135deg, var(--login-bg-1, #f0f9ff), var(--login-bg-2, #eff6ff))",
+            background: "linear-gradient(45deg, var(--login-bg-1, hsl(var(--primary))), var(--login-bg-2, hsl(var(--background))))",
             color: "var(--login-title-color-1, hsl(var(--primary)))",
           }}
         >
@@ -135,16 +135,16 @@ function Home() {
             <img
               src="/login-logo.png"
               alt="Company Logo"
-              className="mb-6 h-[108px] w-auto object-contain lg:mb-9 lg:h-[180px]"
+              className="mb-6 h-[130px] w-auto object-contain lg:mb-7"
               onError={(e) => {
                 e.currentTarget.src = logoUrl;
               }}
             />
-            <div className="mb-[18px] flex items-center justify-center gap-2.5 font-mono text-[11px] uppercase tracking-[0.18em] opacity-75 before:block before:h-px before:w-6 before:bg-current">
+            <div className="mb-[7px] flex items-center justify-center gap-2.5 font-mono text-[11px] uppercase tracking-[0.18em] opacity-75 before:block before:h-px before:w-6 before:bg-current">
               {portalName}
             </div>
             <h1
-              className="mb-4 max-w-[380px] font-serif text-[26px] font-medium leading-[1.18] lg:text-[38px]"
+              className="mb-0 max-w-[380px] text-[26px] font-medium leading-[1.18] lg:mb-4 lg:text-[38px]"
               style={{
                 color: "var(--login-title-color-1, hsl(var(--primary)))",
               }}
@@ -173,13 +173,13 @@ function Home() {
           </svg>
         </section>
 
-        <section className="flex flex-1 items-center justify-center bg-white px-6 py-8 lg:basis-[54%] lg:p-10">
+        <section className="flex flex-1 items-center justify-center bg-card px-6 py-8 lg:basis-[54%] lg:p-10">
           <div className="w-full max-w-[380px]">
             <div className="mb-9">
               <div className="mb-2.5 font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
                 Sign in
               </div>
-              <h2 className="mb-2 font-serif text-[28px] font-medium text-foreground">
+              <h2 className="mb-2 text-[28px] font-medium text-foreground">
                 Welcome back
               </h2>
               <p className="text-[13.5px] leading-normal text-muted-foreground">
@@ -218,7 +218,7 @@ function Home() {
                   required
                   disabled={isSubmitting}
                   autoComplete="username"
-                  className="h-auto rounded bg-white px-3.5 py-3 text-sm text-foreground shadow-none placeholder:text-muted-foreground focus-visible:ring-primary/20"
+                  className="h-auto rounded bg-card px-3.5 py-3 text-sm text-foreground shadow-none placeholder:text-muted-foreground focus-visible:ring-primary/20"
                   style={{ borderColor: "var(--login-card-border, hsl(var(--border)))" }}
                 />
               </div>
@@ -236,7 +236,7 @@ function Home() {
                   required
                   disabled={isSubmitting}
                   autoComplete="current-password"
-                  className="h-auto rounded bg-white px-3.5 py-3 text-sm text-foreground shadow-none placeholder:text-muted-foreground focus-visible:ring-primary/20"
+                  className="h-auto rounded bg-card px-3.5 py-3 text-sm text-foreground shadow-none placeholder:text-muted-foreground focus-visible:ring-primary/20"
                   style={{ borderColor: "var(--login-card-border, hsl(var(--border)))" }}
                 />
               </div>
@@ -269,7 +269,7 @@ function Home() {
 
               <Button
                 type="submit"
-                className="h-auto w-full rounded p-[13px] text-sm font-semibold tracking-[0.01em] text-white hover:opacity-95"
+                className="h-auto w-full rounded p-[13px] text-sm font-semibold tracking-[0.01em] text-primary-foreground hover:opacity-95"
                 style={{
                   background: "linear-gradient(135deg, var(--login-button-bg-1, hsl(var(--primary))), var(--login-button-bg-2, hsl(var(--secondary))))",
                 }}
@@ -315,8 +315,8 @@ function Home() {
 
           {forgotPasswordSent ? (
             <div className="py-6 text-center">
-              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
-                <CheckCircle className="h-6 w-6 text-green-600" />
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-success/15">
+                <CheckCircle className="h-6 w-6 text-success" />
               </div>
               <p className="mb-4 text-sm text-muted-foreground">
                 If an account exists with <strong>{forgotPasswordEmail}</strong>, you will receive a password reset email shortly.
@@ -363,7 +363,7 @@ function Home() {
                 <Button
                   type="submit"
                   disabled={forgotPasswordSubmitting || !forgotPasswordEmail}
-                  className="w-full text-white hover:opacity-95 sm:w-auto"
+                  className="w-full text-primary-foreground hover:opacity-95 sm:w-auto"
                   style={{
                     background: "linear-gradient(135deg, var(--login-button-bg-1, hsl(var(--primary))), var(--login-button-bg-2, hsl(var(--secondary))))",
                   }}

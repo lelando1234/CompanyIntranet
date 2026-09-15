@@ -3,7 +3,50 @@
   @tailwind utilities;
 
   @layer base {
+    :where(h1, h2, h3, h4, h5, h6, p, button, [role="button"]) {
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    :where([data-slot="card"], [data-slot="card"] h1, [data-slot="card"] h2,
+      [data-slot="card"] h3, [data-slot="card"] h4, [data-slot="card"] h5,
+      [data-slot="card"] h6, [data-slot="card"] p, input, textarea,
+      [contenteditable="true"], [contenteditable="true"] *) {
+      -webkit-user-select: text;
+      user-select: text;
+    }
+  }
+
+  .header-logo {
+    height: 43px;
+    width: auto;
+    max-width: 55.2px;
+    flex-shrink: 0;
+    object-fit: contain;
+  }
+
+  .resource-sidebar-glass {
+    background-color: var(--sidebar-bg, hsl(var(--background)));
+  }
+
+  @supports ((backdrop-filter: blur(11px)) or (-webkit-backdrop-filter: blur(11px))) {
+    .resource-sidebar-glass {
+      background-color: color-mix(in srgb, var(--sidebar-bg, hsl(var(--background))) 75%, transparent);
+      -webkit-backdrop-filter: blur(11px);
+      backdrop-filter: blur(11px);
+    }
+  }
+
+  .resource-sidebar [data-radix-scroll-area-viewport] {
+    scroll-padding-top: var(--sidebar-header-height);
+    scroll-padding-bottom: var(--sidebar-footer-height);
+  }
+
+  @layer base {
     :root {
+      --success: 142 71% 45%;
+      --overlay: 0 0% 0%;
+      --header-foreground: var(--primary-foreground);
       --background: 0 0% 100%;
       --foreground: 210 100% 12%;
 
@@ -102,11 +145,12 @@
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
-    background-color: rgba(255, 255, 255, 0.8);
+    background-color: hsl(var(--card) / 0.8);
+    color: hsl(var(--card-foreground));
     border: none;
     border-radius: 50%;
     padding: 0.5rem;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 10px 15px -3px hsl(var(--overlay) / 0.1);
     cursor: pointer;
     transition: background-color 0.2s;
     font-size: 1.25rem;
@@ -120,7 +164,7 @@
   
   .carousel-prev:hover,
   .carousel-next:hover {
-    background-color: rgba(255, 255, 255, 1);
+    background-color: hsl(var(--card));
   }
   
   .carousel-prev {
@@ -133,11 +177,11 @@
   
   .dark .carousel-prev,
   .dark .carousel-next {
-    background-color: rgba(0, 0, 0, 0.6);
-    color: white;
+    background-color: hsl(var(--card) / 0.6);
+    color: hsl(var(--card-foreground));
   }
   
   .dark .carousel-prev:hover,
   .dark .carousel-next:hover {
-    background-color: rgba(0, 0, 0, 0.8);
+    background-color: hsl(var(--card) / 0.8);
   }

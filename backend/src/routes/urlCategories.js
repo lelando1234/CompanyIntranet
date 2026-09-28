@@ -38,40 +38,27 @@ const iconUpload = multer({
   }
 });
 
-// Get all URL categories with their links (optionally filtered by user's groups)
-router.get('/', async (req, res) => {
+// Dashboard reads always use server-side memberships; management reads retain
+// the existing admin/editor access.
+const visibilityClause = `(
+  NOT EXISTS (SELECT 1 FROM url_category_groups vc WHERE vc.url_category_id = uc.id)
+  OR EXISTS (
+    SELECT 1 FROM url_category_groups vc
+    JOIN user_groups ug ON ug.group_id = vc.group_id
+    WHERE vc.url_category_id = uc.id AND ug.user_id = ?
+  )
+)`;
+const isManagementRead = (req) => req.query.filterByUser !== 'true'
+  && ['admin', 'editor'].includes(req.user.role);
+
+router.get('/', verifyToken, async (req, res) => {
   try {
-    const userId = req.headers.authorization ? null : null; // Will be set by verifyToken if used
-    let categories;
-    
-    // Check if user is authenticated and filter by their groups
-    if (req.query.filterByUser === 'true' && req.query.userGroups) {
-      const userGroupIds = JSON.parse(req.query.userGroups);
-      if (userGroupIds && userGroupIds.length > 0) {
-        // Get categories that are either visible to everyone (no groups assigned) or visible to user's groups
-        const placeholders = userGroupIds.map(() => '?').join(',');
-        categories = await query(`
-          SELECT DISTINCT uc.* FROM url_categories uc
-          LEFT JOIN url_category_groups ucg ON uc.id = ucg.url_category_id
-          WHERE ucg.url_category_id IS NULL 
-             OR ucg.group_id IN (${placeholders})
-          ORDER BY uc.sort_order ASC, uc.name ASC
-        `, userGroupIds);
-      } else {
-        // User has no groups, only show categories visible to everyone
-        categories = await query(`
-          SELECT uc.* FROM url_categories uc
-          LEFT JOIN url_category_groups ucg ON uc.id = ucg.url_category_id
-          WHERE ucg.url_category_id IS NULL
-          ORDER BY uc.sort_order ASC, uc.name ASC
-        `);
-      }
-    } else {
-      // No filtering, return all categories (for admin view)
-      categories = await query(`
-        SELECT * FROM url_categories ORDER BY sort_order ASC, name ASC
-      `);
-    }
+    const management = isManagementRead(req);
+    const categories = await query(`
+      SELECT uc.* FROM url_categories uc
+      ${management ? '' : `WHERE ${visibilityClause}`}
+      ORDER BY uc.sort_order ASC, uc.name ASC
+    `, management ? [] : [req.user.id]);
 
     // Get links and target groups for each category
     for (const category of categories) {
@@ -98,9 +85,13 @@ router.get('/', async (req, res) => {
 });
 
 // Get single URL category with links
-router.get('/:id', async (req, res) => {
+router.get('/:id', verifyToken, async (req, res) => {
   try {
-    const categories = await query('SELECT * FROM url_categories WHERE id = ?', [req.params.id]);
+    const management = isManagementRead(req);
+    const categories = await query(`
+      SELECT uc.* FROM url_categories uc WHERE uc.id = ?
+      ${management ? '' : `AND ${visibilityClause}`}
+    `, management ? [req.params.id] : [req.params.id, req.user.id]);
 
     if (categories.length === 0) {
       return res.status(404).json({ success: false, message: 'URL category not found' });

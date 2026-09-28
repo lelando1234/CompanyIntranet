@@ -125,22 +125,22 @@ async function seed() {
     }
 
     const darlingPortalPalette = {
-      primary: '#1b4332',
+      primary: '#4a5242',
       secondary: '#7c9885',
       accent: '#b8934d',
       background: '#f5f4ef',
       foreground: '#1c1c1a',
-      headerBg: '#1b4332',
+      headerBg: '#4a5242',
       headerText: '#f5f4ef',
       sidebarBg: '#ffffff',
       sidebarText: '#1c1c1a',
       articleCardBg: '#ffffff',
       articleCardBorder: '#e3e1d8',
-      loginBg1: '#153d2f',
+      loginBg1: '#4a5242',
       loginBg2: '#f5f4ef',
       loginCardBorder: '#e3e1d8',
-      loginButtonBg1: '#1b4332',
-      loginButtonBg2: '#1b4332',
+      loginButtonBg1: '#4a5242',
+      loginButtonBg2: '#4a5242',
       loginTitleColor1: '#f5f4ef',
       loginTitleColor2: '#f5f4ef',
     };

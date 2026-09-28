@@ -1,0 +1,315 @@
+src\components\home.tsx:130:            background: "linear-gradient(135deg, var(--login-bg-1, #f0f9ff), var(--login-bg-2, #eff6ff))",
+src\components\home.tsx:176:        <section className="flex flex-1 items-center justify-center bg-white px-6 py-8 lg:basis-[54%] lg:p-10">
+src\components\home.tsx:221:                  className="h-auto rounded bg-white px-3.5 py-3 text-sm text-foreground shadow-none placeholder:text-muted-foreground focus-visible:ring-primary/20"
+src\components\home.tsx:239:                  className="h-auto rounded bg-white px-3.5 py-3 text-sm text-foreground shadow-none placeholder:text-muted-foreground focus-visible:ring-primary/20"
+src\components\home.tsx:272:                className="h-auto w-full rounded p-[13px] text-sm font-semibold tracking-[0.01em] text-white hover:opacity-95"
+src\components\home.tsx:318:              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
+src\components\home.tsx:319:                <CheckCircle className="h-6 w-6 text-green-600" />
+src\components\home.tsx:366:                  className="w-full text-white hover:opacity-95 sm:w-auto"
+src\components\NewsFeed.tsx:359:            className="h-[38px] rounded border-[#e3e1d8] bg-[#fdfdfb] pl-9 text-[13.5px] placeholder:text-[#a8a79c] focus-visible:ring-1 focus-visible:ring-[#7c9885]"
+src\components\NewsFeed.tsx:379:                  ? "border-primary bg-primary text-[#f5f4ef] hover:bg-primary hover:text-[#f5f4ef]"
+src\components\NewsFeed.tsx:380:                  : "border-[#e3e1d8] bg-[#fdfdfb] text-[#1c1c1a] hover:border-[#7c9885] hover:bg-[#fdfdfb] hover:text-[#1c1c1a]"
+src\components\NewsFeed.tsx:390:        <Card className="w-full rounded border-[#e3e1d8] bg-[#fdfdfb] shadow-none">
+src\components\NewsFeed.tsx:403:                className="w-full rounded border shadow-none transition-colors hover:border-[#7c9885]"
+src\components\NewsFeed.tsx:412:                      <CardTitle className="text-base font-semibold leading-tight text-[#1c1c1a]">{article.title}</CardTitle>
+src\components\NewsFeed.tsx:421:                    <Badge className="h-6 shrink-0 rounded-full bg-[#e5eae3] px-3 py-0 text-[11.5px] font-bold text-primary shadow-none hover:bg-[#e5eae3]">{article.category}</Badge>
+src\components\NewsFeed.tsx:432:                    <p className="text-[13.5px] leading-6 text-[#3a3b35]">{article.previewText}</p>
+src\components\NewsFeed.tsx:453:                                <FileText className="h-3 w-3 text-red-600" />
+src\stories\aspect-ratio.stories.tsx:15:    <AspectRatio ratio={16 / 9} className="bg-slate-50 dark:bg-slate-800">
+src\components\RichTextEditor.tsx:107:            class: "carousel-prev absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 shadow-lg",
+src\components\RichTextEditor.tsx:115:            class: "carousel-next absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 shadow-lg",
+src\components\RichTextEditor.tsx:191:          class: "text-blue-600 underline cursor-pointer",
+src\pages\UserProfile.tsx:37:  primary: "#0080ff",
+src\pages\UserProfile.tsx:38:  secondary: "#10b981",
+src\pages\UserProfile.tsx:39:  accent: "#10b981",
+src\pages\UserProfile.tsx:40:  background: "#ffffff",
+src\pages\UserProfile.tsx:41:  foreground: "#001a33",
+src\pages\UserProfile.tsx:42:  headerBg: "#ffffff",
+src\pages\UserProfile.tsx:43:  headerText: "#001a33",
+src\pages\UserProfile.tsx:44:  sidebarBg: "#ffffff",
+src\pages\UserProfile.tsx:45:  sidebarText: "#001a33",
+src\pages\UserProfile.tsx:57:      primary: "#9333ea",
+src\pages\UserProfile.tsx:58:      secondary: "#ec4899",
+src\pages\UserProfile.tsx:59:      accent: "#ec4899",
+src\pages\UserProfile.tsx:60:      background: "#ffffff",
+src\pages\UserProfile.tsx:61:      foreground: "#1e1b4b",
+src\pages\UserProfile.tsx:62:      headerBg: "#581c87",
+src\pages\UserProfile.tsx:63:      headerText: "#ffffff",
+src\pages\UserProfile.tsx:64:      sidebarBg: "#f5f3ff",
+src\pages\UserProfile.tsx:65:      sidebarText: "#1e1b4b",
+src\pages\UserProfile.tsx:71:      primary: "#f97316",
+src\pages\UserProfile.tsx:72:      secondary: "#eab308",
+src\pages\UserProfile.tsx:73:      accent: "#eab308",
+src\pages\UserProfile.tsx:74:      background: "#ffffff",
+src\pages\UserProfile.tsx:75:      foreground: "#431407",
+src\pages\UserProfile.tsx:76:      headerBg: "#9a3412",
+src\pages\UserProfile.tsx:77:      headerText: "#ffffff",
+src\pages\UserProfile.tsx:78:      sidebarBg: "#fff7ed",
+src\pages\UserProfile.tsx:79:      sidebarText: "#431407",
+src\pages\UserProfile.tsx:85:      primary: "#14b8a6",
+src\pages\UserProfile.tsx:86:      secondary: "#06b6d4",
+src\pages\UserProfile.tsx:87:      accent: "#06b6d4",
+src\pages\UserProfile.tsx:88:      background: "#ffffff",
+src\pages\UserProfile.tsx:89:      foreground: "#042f2e",
+src\pages\UserProfile.tsx:90:      headerBg: "#115e59",
+src\pages\UserProfile.tsx:91:      headerText: "#ffffff",
+src\pages\UserProfile.tsx:92:      sidebarBg: "#f0fdfa",
+src\pages\UserProfile.tsx:93:      sidebarText: "#042f2e",
+src\pages\UserProfile.tsx:99:      primary: "#3b82f6",
+src\pages\UserProfile.tsx:100:      secondary: "#6366f1",
+src\pages\UserProfile.tsx:101:      accent: "#8b5cf6",
+src\pages\UserProfile.tsx:102:      foreground: "#e2e8f0",
+src\pages\UserProfile.tsx:103:      background: "#0f172a",
+src\pages\UserProfile.tsx:104:      headerBg: "#1e293b",
+src\pages\UserProfile.tsx:105:      headerText: "#e2e8f0",
+src\pages\UserProfile.tsx:106:      sidebarBg: "#1e293b",
+src\pages\UserProfile.tsx:107:      sidebarText: "#e2e8f0",
+src\pages\UserProfile.tsx:113:      primary: "#f43f5e",
+src\pages\UserProfile.tsx:114:      secondary: "#fb7185",
+src\pages\UserProfile.tsx:115:      accent: "#ff6b9d",
+src\pages\UserProfile.tsx:116:      background: "#ffffff",
+src\pages\UserProfile.tsx:117:      foreground: "#4c0519",
+src\pages\UserProfile.tsx:118:      headerBg: "#9f1239",
+src\pages\UserProfile.tsx:119:      headerText: "#ffffff",
+src\pages\UserProfile.tsx:120:      sidebarBg: "#fff1f2",
+src\pages\UserProfile.tsx:121:      sidebarText: "#4c0519",
+src\pages\UserProfile.tsx:127:      primary: "#10b981",
+src\pages\UserProfile.tsx:128:      secondary: "#84cc16",
+src\pages\UserProfile.tsx:129:      accent: "#84cc16",
+src\pages\UserProfile.tsx:130:      background: "#ffffff",
+src\pages\UserProfile.tsx:131:      foreground: "#064e3b",
+src\pages\UserProfile.tsx:132:      headerBg: "#047857",
+src\pages\UserProfile.tsx:133:      headerText: "#ffffff",
+src\pages\UserProfile.tsx:134:      sidebarBg: "#ecfdf5",
+src\pages\UserProfile.tsx:135:      sidebarText: "#064e3b",
+src\pages\UserProfile.tsx:141:      primary: "#6366f1",
+src\pages\UserProfile.tsx:142:      secondary: "#8b5cf6",
+src\pages\UserProfile.tsx:143:      accent: "#a855f7",
+src\pages\UserProfile.tsx:144:      background: "#ffffff",
+src\pages\UserProfile.tsx:145:      foreground: "#312e81",
+src\pages\UserProfile.tsx:146:      headerBg: "#4338ca",
+src\pages\UserProfile.tsx:147:      headerText: "#ffffff",
+src\pages\UserProfile.tsx:148:      sidebarBg: "#eef2ff",
+src\pages\UserProfile.tsx:149:      sidebarText: "#312e81",
+src\pages\UserProfile.tsx:155:      primary: "#f59e0b",
+src\pages\UserProfile.tsx:156:      secondary: "#ef4444",
+src\pages\UserProfile.tsx:157:      accent: "#fb923c",
+src\pages\UserProfile.tsx:158:      background: "#ffffff",
+src\pages\UserProfile.tsx:159:      foreground: "#451a03",
+src\pages\UserProfile.tsx:160:      headerBg: "#b45309",
+src\pages\UserProfile.tsx:161:      headerText: "#ffffff",
+src\pages\UserProfile.tsx:162:      sidebarBg: "#fffbeb",
+src\pages\UserProfile.tsx:163:      sidebarText: "#451a03",
+src\pages\UserProfile.tsx:169:      primary: "#0ea5e9",
+src\pages\UserProfile.tsx:170:      secondary: "#3b82f6",
+src\pages\UserProfile.tsx:171:      accent: "#60a5fa",
+src\pages\UserProfile.tsx:172:      background: "#ffffff",
+src\pages\UserProfile.tsx:173:      foreground: "#0c4a6e",
+src\pages\UserProfile.tsx:174:      headerBg: "#0369a1",
+src\pages\UserProfile.tsx:175:      headerText: "#ffffff",
+src\pages\UserProfile.tsx:176:      sidebarBg: "#f0f9ff",
+src\pages\UserProfile.tsx:177:      sidebarText: "#0c4a6e",
+src\pages\UserProfile.tsx:183:      primary: "#475569",
+src\pages\UserProfile.tsx:184:      secondary: "#64748b",
+src\pages\UserProfile.tsx:185:      accent: "#94a3b8",
+src\pages\UserProfile.tsx:186:      foreground: "#e2e8f0",
+src\pages\UserProfile.tsx:187:      background: "#1e293b",
+src\pages\UserProfile.tsx:188:      headerBg: "#334155",
+src\pages\UserProfile.tsx:189:      headerText: "#f1f5f9",
+src\pages\UserProfile.tsx:190:      sidebarBg: "#334155",
+src\pages\UserProfile.tsx:191:      sidebarText: "#f1f5f9",
+src\pages\UserProfile.tsx:197:      primary: "#7c3aed",
+src\pages\UserProfile.tsx:198:      secondary: "#d946ef",
+src\pages\UserProfile.tsx:199:      accent: "#e879f9",
+src\pages\UserProfile.tsx:200:      background: "#ffffff",
+src\pages\UserProfile.tsx:201:      foreground: "#3b0764",
+src\pages\UserProfile.tsx:202:      headerBg: "#6b21a8",
+src\pages\UserProfile.tsx:203:      headerText: "#ffffff",
+src\pages\UserProfile.tsx:204:      sidebarBg: "#faf5ff",
+src\pages\UserProfile.tsx:205:      sidebarText: "#3b0764",
+src\pages\UserProfile.tsx:758:                      className={passwordError && confirmPassword ? "border-red-500 focus-visible:ring-red-500" : ""}
+src\pages\UserProfile.tsx:777:                    <p className="text-sm text-red-500 font-medium">{passwordError}</p>
+src\pages\Dashboard.tsx:183:        <header className="shrink-0 z-10 border-b border-white/10" style={{ backgroundColor: 'var(--header-bg, hsl(var(--background)))', color: 'var(--header-text, inherit)' }}>
+src\pages\Dashboard.tsx:193:                  <Button variant="ghost" size="icon" className="relative h-9 w-9 rounded-full text-current/75 hover:bg-white/10 hover:text-current">
+src\pages\Dashboard.tsx:219:                            className={`p-3 cursor-pointer hover:bg-muted/50 transition-colors ${!notif.read ? 'bg-blue-50/50' : ''}`}
+src\pages\Dashboard.tsx:223:                              {!notif.read && <div className="h-2 w-2 rounded-full bg-blue-500 mt-1.5 flex-shrink-0" />}
+src\pages\Dashboard.tsx:241:                  <Button variant="ghost" className="flex items-center gap-2 rounded-full px-1.5 py-1 text-current hover:bg-white/10 hover:text-current">
+src\pages\Dashboard.tsx:244:                      <AvatarFallback className="bg-[#7c9885] text-[11.5px] font-bold text-primary">
+src\pages\Dashboard.tsx:284:                className="md:hidden hover:bg-white/10 hover:text-current"
+src\pages\Dashboard.tsx:327:              <Card className="mb-8 rounded border-0 p-6 md:px-8 md:py-6 shadow-none" style={{ backgroundColor: "var(--header-bg, hsl(var(--primary)))", color: "var(--header-text, #ffffff)" }}>
+src\pages\AdminPanel.tsx:451:          className="text-blue-600 hover:underline truncate block max-w-md"
+src\pages\AdminPanel.tsx:569:    color: "#3B82F6",
+src\pages\AdminPanel.tsx:597:    template: "horizontal", primary_color: "#0080ff", font_family: "Arial",
+src\pages\AdminPanel.tsx:633:    color: "#3B82F6",
+src\pages\AdminPanel.tsx:658:    email_template_password_reset_body: `<h2>Password Reset Request</h2>\n<p>Hello {{user_name}},</p>\n<p>You requested a password reset. Click the link below to reset your password:</p>\n<p><a href="{{reset_url}}" style="display:inline-block;padding:10px 20px;background:{{primary_color}};color:#fff;text-decoration:none;border-radius:5px;">Reset Password</a></p>\n<p>Or copy this URL: {{reset_url}}</p>\n<p>This link will expire in 1 hour.</p>\n<p>If you didn't request this, please ignore this email.</p>`,
+src\pages\AdminPanel.tsx:660:    email_template_welcome_body: `<h2>Welcome to {{site_name}}!</h2>\n<p>Hello {{user_name}},</p>\n<p>Your account has been created successfully.</p>\n<p><a href="{{login_url}}" style="display:inline-block;padding:10px 20px;background:{{primary_color}};color:#fff;text-decoration:none;border-radius:5px;">Log In Now</a></p>`,
+src\pages\AdminPanel.tsx:662:    email_template_notification_body: `<h2>{{article_title}}</h2>\n<p>Hello {{user_name}},</p>\n<p>A new article has been published on {{site_name}}.</p>\n<p><a href="{{article_url}}" style="display:inline-block;padding:10px 20px;background:{{primary_color}};color:#fff;text-decoration:none;border-radius:5px;">Read More</a></p>`,
+src\pages\AdminPanel.tsx:1175:  const openNewGroup = () => { setEditingGroupId(null); setGroupForm({ name: "", description: "", color: "#3B82F6", members: [], permissions: [] }); setGroupMemberSearch(""); setIsGroupDialogOpen(true); };
+src\pages\AdminPanel.tsx:1178:    setGroupForm({ name: group.name, description: group.description || "", color: group.color || "#3B82F6", members: [], permissions: group.permissions || [] });
+src\pages\AdminPanel.tsx:1502:    setCategoryForm({ name: "", slug: "", description: "", color: "#3B82F6" });
+src\pages\AdminPanel.tsx:1512:      color: cat.color || "#3B82F6",
+src\pages\AdminPanel.tsx:2255:                                        className="rounded border-gray-300"
+src\pages\AdminPanel.tsx:2273:                                        className="rounded border-gray-300"
+src\pages\AdminPanel.tsx:2291:                                        className="rounded border-gray-300"
+src\pages\AdminPanel.tsx:3316:                  <Input type={showConfirmUserPassword ? "text" : "password"} value={userForm.confirmPassword} onChange={(e) => { setUserForm({ ...userForm, confirmPassword: e.target.value }); if (userPasswordError) setUserPasswordError(""); }} placeholder="Confirm password" className={userPasswordError ? "border-red-500 focus-visible:ring-red-500" : ""} />
+src\pages\AdminPanel.tsx:3321:                {userPasswordError && <p className="text-sm text-red-500 font-medium">{userPasswordError}</p>}
+src\pages\AdminPanel.tsx:3489:                  placeholder="#3B82F6"
+src\pages\AdminPanel.tsx:3718:                    <input type="color" value={signatureForm.primary_color || "#0080ff"} onChange={(e) => setSignatureForm({ ...signatureForm, primary_color: e.target.value })} className="w-10 h-9 rounded border cursor-pointer p-0.5" />
+src\pages\AdminPanel.tsx:3719:                    <Input value={signatureForm.primary_color || "#0080ff"} onChange={(e) => setSignatureForm({ ...signatureForm, primary_color: e.target.value })} placeholder="#0080ff" className="flex-1" />
+src\pages\AdminPanel.tsx:3862:                    alt="Logo" className="h-10 w-24 object-contain border rounded p-1 bg-white" />
+src\components\SignaturePreview.tsx:61:    rows.push(`<tr><td style="font-family:${font},sans-serif;font-size:12px;color:#666666;padding-bottom:2px;">${titleParts.map(esc).join(' &bull; ')}</td></tr>`);
+src\components\SignaturePreview.tsx:65:    rows.push(`<tr><td style="font-family:${font},sans-serif;font-size:12px;color:#444444;font-weight:600;padding-bottom:4px;">${esc(sig.company_name)}</td></tr>`);
+src\components\SignaturePreview.tsx:69:  if (sig.phone) contactParts.push(`<a href="tel:${esc(sig.phone)}" style="color:#555555;text-decoration:none;">${esc(sig.phone)}</a>`);
+src\components\SignaturePreview.tsx:70:  if (sig.mobile) contactParts.push(`<a href="tel:${esc(sig.mobile)}" style="color:#555555;text-decoration:none;">${esc(sig.mobile)}</a>`);
+src\components\SignaturePreview.tsx:72:    rows.push(`<tr><td style="font-family:${font},sans-serif;font-size:12px;color:#555555;padding-bottom:2px;">${contactParts.join(' &nbsp;|&nbsp; ')}</td></tr>`);
+src\components\SignaturePreview.tsx:85:    rows.push(`<tr><td style="font-family:${font},sans-serif;font-size:11px;color:#777777;padding-top:4px;">${addrHtml}</td></tr>`);
+src\components\SignaturePreview.tsx:94:  const color = sig.primary_color || '#0080ff';
+src\components\SignaturePreview.tsx:101:<table cellpadding="0" cellspacing="0" border="0" style="font-family:${font},sans-serif;font-size:13px;color:#333333;">
+src\components\SignaturePreview.tsx:123:  const color = sig.primary_color || '#0080ff';
+src\components\SignaturePreview.tsx:134:<table cellpadding="0" cellspacing="0" border="0" style="font-family:${font},sans-serif;font-size:13px;color:#333333;text-align:center;">
+src\components\SignaturePreview.tsx:152:  const color = sig.primary_color || '#0080ff';
+src\components\SignaturePreview.tsx:162:  if (sig.phone) contact.push(`<a href="tel:${esc(sig.phone)}" style="color:#555;text-decoration:none;">${esc(sig.phone)}</a>`);
+src\components\SignaturePreview.tsx:163:  if (sig.mobile) contact.push(`<a href="tel:${esc(sig.mobile)}" style="color:#555;text-decoration:none;">${esc(sig.mobile)}</a>`);
+src\components\SignaturePreview.tsx:183:<table cellpadding="0" cellspacing="0" border="0" style="font-family:${font},sans-serif;font-size:12px;color:#333333;">
+src\components\SignaturePreview.tsx:189:          ${line2 ? `<tr><td style="padding-bottom:3px;color:#555555;">${line2}</td></tr>` : ''}
+src\components\SignaturePreview.tsx:190:          ${sig.office_address ? `<tr><td style="font-size:10px;color:#888888;padding-bottom:3px;">${esc(sig.office_address).replace(/\n/g, ', ')}</td></tr>` : ''}
+src\components\SignaturePreview.tsx:200:  const color = sig.primary_color || '#0080ff';
+src\components\SignaturePreview.tsx:219:      `<a href="${esc(s.url)}" style="display:inline-block;width:22px;height:22px;line-height:22px;text-align:center;background:${color};color:#ffffff;border-radius:50%;font-size:10px;font-weight:bold;text-decoration:none;margin-right:4px;">${esc(s.label)}</a>`
+src\components\SignaturePreview.tsx:225:<table cellpadding="0" cellspacing="0" border="0" style="font-family:${font},sans-serif;font-size:13px;color:#333333;">
+src\components\SignaturePreview.tsx:240:          ${sig.job_title ? `<tr><td style="font-family:${font},sans-serif;font-size:12px;color:#666666;padding-bottom:1px;">${esc(sig.job_title)}${sig.department ? ` &bull; ${esc(sig.department)}` : ''}</td></tr>` : ''}
+src\components\SignaturePreview.tsx:241:          ${sig.company_name ? `<tr><td style="font-family:${font},sans-serif;font-size:12px;color:#444444;font-weight:600;padding-bottom:6px;">${esc(sig.company_name)}</td></tr>` : ''}
+src\components\SignaturePreview.tsx:242:          <tr><td style="border-top:1px solid #e0e0e0;padding-top:6px;">
+src\components\SignaturePreview.tsx:245:                sig.phone ? `<a href="tel:${esc(sig.phone)}" style="color:#555;text-decoration:none;">${esc(sig.phone)}</a>` : null,
+src\components\SignaturePreview.tsx:246:                sig.mobile ? `<a href="tel:${esc(sig.mobile)}" style="color:#555;text-decoration:none;">${esc(sig.mobile)}</a>` : null,
+src\components\SignaturePreview.tsx:250:              ${sig.office_address ? `<tr><td style="font-size:10px;color:#888888;padding-top:4px;">${esc(sig.office_address).replace(/\n/g, '<br/>')}</td></tr>` : ''}
+src\components\SignaturePreview.tsx:267:<table cellpadding="0" cellspacing="0" border="0" style="margin-top:16px;border-top:1px solid #e0e0e0;width:100%;">
+src\components\SignaturePreview.tsx:270:      <td style="padding-top:10px;font-family:${font},sans-serif;font-size:9px;color:#999999;line-height:1.4;max-width:600px;">
+src\components\SignaturePreview.tsx:304:      className="border rounded-md p-4 bg-white overflow-auto min-h-[80px]"
+src\components\ToolbarSearch.tsx:14:        className="h-9 rounded border-white/20 bg-white/10 pl-9 text-[13.5px] text-current placeholder:text-current/45 focus-visible:ring-1 focus-visible:ring-white/25"
+src\stories\card.stories.tsx:101:            <span className="flex h-2 w-2 translate-y-1 rounded-full bg-sky-500" />
+src\stories\card.stories.tsx:113:            <span className="flex h-2 w-2 translate-y-1 rounded-full bg-sky-500" />
+src\stories\card.stories.tsx:125:            <span className="flex h-2 w-2 translate-y-1 rounded-full bg-sky-500" />
+src\pages\ResetPassword.tsx:52:          background: `linear-gradient(to bottom right, var(--login-bg-1, #eff6ff), var(--login-bg-2, #dcfce7), var(--login-bg-1, #eff6ff))`,
+src\pages\ResetPassword.tsx:111:          background: `linear-gradient(to bottom right, var(--login-bg-1, #eff6ff), var(--login-bg-2, #dcfce7), var(--login-bg-1, #eff6ff))`,
+src\pages\ResetPassword.tsx:122:            <CheckCircle className="h-12 w-12 text-green-500" />
+src\pages\ResetPassword.tsx:139:        background: `linear-gradient(to bottom right, var(--login-bg-1, #eff6ff), var(--login-bg-2, #dcfce7), var(--login-bg-1, #eff6ff))`,
+src\pages\ResetPassword.tsx:206:                  className={passwordError ? "border-red-500 focus-visible:ring-red-500" : ""}
+src\pages\ResetPassword.tsx:223:                <p className="text-sm text-red-500 font-medium">{passwordError}</p>
+src\pages\ResetPassword.tsx:232:                background: `linear-gradient(to right, var(--login-button-bg-1, #3b82f6), var(--login-button-bg-2, #22c55e))`,
+src\components\ThemeCustomizer.tsx:32:  primary: "#0080ff",
+src\components\ThemeCustomizer.tsx:33:  secondary: "#10b981",
+src\components\ThemeCustomizer.tsx:34:  accent: "#10b981",
+src\components\ThemeCustomizer.tsx:35:  background: "#ffffff",
+src\components\ThemeCustomizer.tsx:36:  foreground: "#001a33",
+src\components\ThemeCustomizer.tsx:37:  headerBg: "#ffffff",
+src\components\ThemeCustomizer.tsx:38:  headerText: "#001a33",
+src\components\ThemeCustomizer.tsx:39:  sidebarBg: "#ffffff",
+src\components\ThemeCustomizer.tsx:40:  sidebarText: "#001a33",
+src\components\ThemeCustomizer.tsx:41:  articleCardBg: "#ffffff",
+src\components\ThemeCustomizer.tsx:42:  articleCardBorder: "#e5e7eb",
+src\components\ThemeCustomizer.tsx:43:  loginBg1: "#eff6ff",
+src\components\ThemeCustomizer.tsx:44:  loginBg2: "#dcfce7",
+src\components\ThemeCustomizer.tsx:45:  loginCardBorder: "#bfdbfe",
+src\components\ThemeCustomizer.tsx:46:  loginButtonBg1: "#2563eb",
+src\components\ThemeCustomizer.tsx:47:  loginButtonBg2: "#16a34a",
+src\components\ThemeCustomizer.tsx:48:  loginTitleColor1: "#2563eb",
+src\components\ThemeCustomizer.tsx:49:  loginTitleColor2: "#16a34a",
+src\components\ThemeCustomizer.tsx:54:  primary: "#4a5242",
+src\components\ThemeCustomizer.tsx:55:  secondary: "#7c9885",
+src\components\ThemeCustomizer.tsx:56:  accent: "#b8934d",
+src\components\ThemeCustomizer.tsx:57:  background: "#f5f4ef",
+src\components\ThemeCustomizer.tsx:58:  foreground: "#1c1c1a",
+src\components\ThemeCustomizer.tsx:59:  headerBg: "#4a5242",
+src\components\ThemeCustomizer.tsx:60:  headerText: "#f5f4ef",
+src\components\ThemeCustomizer.tsx:61:  sidebarBg: "#ffffff",
+src\components\ThemeCustomizer.tsx:62:  sidebarText: "#1c1c1a",
+src\components\ThemeCustomizer.tsx:63:  articleCardBg: "#ffffff",
+src\components\ThemeCustomizer.tsx:64:  articleCardBorder: "#e3e1d8",
+src\components\ThemeCustomizer.tsx:65:  loginBg1: "#4a5242",
+src\components\ThemeCustomizer.tsx:66:  loginBg2: "#f5f4ef",
+src\components\ThemeCustomizer.tsx:67:  loginCardBorder: "#e3e1d8",
+src\components\ThemeCustomizer.tsx:68:  loginButtonBg1: "#4a5242",
+src\components\ThemeCustomizer.tsx:69:  loginButtonBg2: "#4a5242",
+src\components\ThemeCustomizer.tsx:70:  loginTitleColor1: "#f5f4ef",
+src\components\ThemeCustomizer.tsx:71:  loginTitleColor2: "#f5f4ef",
+src\components\ThemeCustomizer.tsx:77:  if (!result) return "#000000";
+src\components\ThemeCustomizer.tsx:82:  return luminance > 0.5 ? "#000000" : "#ffffff";
+src\components\ThemeCustomizer.tsx:202:        ...defaultColors, primary: "#9333ea", secondary: "#ec4899", accent: "#ec4899", foreground: "#1e1b4b",
+src\components\ThemeCustomizer.tsx:203:        headerBg: "#581c87", headerText: "#ffffff", sidebarBg: "#f5f3ff", sidebarText: "#1e1b4b",
+src\components\ThemeCustomizer.tsx:204:        loginBg1: "#f5f3ff", loginBg2: "#fdf2f8", loginCardBorder: "#d8b4fe",
+src\components\ThemeCustomizer.tsx:205:        loginButtonBg1: "#9333ea", loginButtonBg2: "#ec4899", loginTitleColor1: "#9333ea", loginTitleColor2: "#ec4899",
+src\components\ThemeCustomizer.tsx:211:        ...defaultColors, primary: "#f97316", secondary: "#eab308", accent: "#eab308", foreground: "#431407",
+src\components\ThemeCustomizer.tsx:212:        headerBg: "#9a3412", headerText: "#ffffff", sidebarBg: "#fff7ed", sidebarText: "#431407",
+src\components\ThemeCustomizer.tsx:213:        loginBg1: "#fff7ed", loginBg2: "#fefce8", loginCardBorder: "#fdba74",
+src\components\ThemeCustomizer.tsx:214:        loginButtonBg1: "#f97316", loginButtonBg2: "#eab308", loginTitleColor1: "#f97316", loginTitleColor2: "#eab308",
+src\components\ThemeCustomizer.tsx:220:        ...defaultColors, primary: "#14b8a6", secondary: "#06b6d4", accent: "#06b6d4", foreground: "#042f2e",
+src\components\ThemeCustomizer.tsx:221:        headerBg: "#115e59", headerText: "#ffffff", sidebarBg: "#f0fdfa", sidebarText: "#042f2e",
+src\components\ThemeCustomizer.tsx:222:        loginBg1: "#f0fdfa", loginBg2: "#ecfeff", loginCardBorder: "#5eead4",
+src\components\ThemeCustomizer.tsx:223:        loginButtonBg1: "#14b8a6", loginButtonBg2: "#06b6d4", loginTitleColor1: "#14b8a6", loginTitleColor2: "#06b6d4",
+src\components\ThemeCustomizer.tsx:229:        ...defaultColors, primary: "#3b82f6", secondary: "#6366f1", accent: "#8b5cf6",
+src\components\ThemeCustomizer.tsx:230:        foreground: "#e2e8f0", background: "#0f172a",
+src\components\ThemeCustomizer.tsx:231:        headerBg: "#1e293b", headerText: "#e2e8f0", sidebarBg: "#1e293b", sidebarText: "#e2e8f0",
+src\components\ThemeCustomizer.tsx:232:        articleCardBg: "#1e293b", articleCardBorder: "#334155",
+src\components\ThemeCustomizer.tsx:233:        loginBg1: "#0f172a", loginBg2: "#1e293b", loginCardBorder: "#334155",
+src\components\ThemeCustomizer.tsx:234:        loginButtonBg1: "#3b82f6", loginButtonBg2: "#6366f1", loginTitleColor1: "#60a5fa", loginTitleColor2: "#818cf8",
+src\components\ThemeCustomizer.tsx:240:        ...defaultColors, primary: "#f43f5e", secondary: "#fb7185", accent: "#ff6b9d", foreground: "#4c0519",
+src\components\ThemeCustomizer.tsx:241:        headerBg: "#9f1239", headerText: "#ffffff", sidebarBg: "#fff1f2", sidebarText: "#4c0519",
+src\components\ThemeCustomizer.tsx:242:        loginBg1: "#fff1f2", loginBg2: "#ffe4e6", loginCardBorder: "#fda4af",
+src\components\ThemeCustomizer.tsx:243:        loginButtonBg1: "#f43f5e", loginButtonBg2: "#fb7185", loginTitleColor1: "#f43f5e", loginTitleColor2: "#fb7185",
+src\components\ThemeCustomizer.tsx:249:        ...defaultColors, primary: "#10b981", secondary: "#84cc16", accent: "#84cc16", foreground: "#064e3b",
+src\components\ThemeCustomizer.tsx:250:        headerBg: "#047857", headerText: "#ffffff", sidebarBg: "#ecfdf5", sidebarText: "#064e3b",
+src\components\ThemeCustomizer.tsx:251:        loginBg1: "#ecfdf5", loginBg2: "#f7fee7", loginCardBorder: "#6ee7b7",
+src\components\ThemeCustomizer.tsx:252:        loginButtonBg1: "#10b981", loginButtonBg2: "#84cc16", loginTitleColor1: "#10b981", loginTitleColor2: "#84cc16",
+src\components\ThemeCustomizer.tsx:258:        ...defaultColors, primary: "#6366f1", secondary: "#8b5cf6", accent: "#a855f7", foreground: "#312e81",
+src\components\ThemeCustomizer.tsx:259:        headerBg: "#4338ca", headerText: "#ffffff", sidebarBg: "#eef2ff", sidebarText: "#312e81",
+src\components\ThemeCustomizer.tsx:260:        loginBg1: "#eef2ff", loginBg2: "#f5f3ff", loginCardBorder: "#a5b4fc",
+src\components\ThemeCustomizer.tsx:261:        loginButtonBg1: "#6366f1", loginButtonBg2: "#8b5cf6", loginTitleColor1: "#6366f1", loginTitleColor2: "#8b5cf6",
+src\components\ThemeCustomizer.tsx:267:        ...defaultColors, primary: "#f59e0b", secondary: "#ef4444", accent: "#fb923c", foreground: "#451a03",
+src\components\ThemeCustomizer.tsx:268:        headerBg: "#b45309", headerText: "#ffffff", sidebarBg: "#fffbeb", sidebarText: "#451a03",
+src\components\ThemeCustomizer.tsx:269:        loginBg1: "#fffbeb", loginBg2: "#fef2f2", loginCardBorder: "#fcd34d",
+src\components\ThemeCustomizer.tsx:270:        loginButtonBg1: "#f59e0b", loginButtonBg2: "#ef4444", loginTitleColor1: "#f59e0b", loginTitleColor2: "#ef4444",
+src\components\ThemeCustomizer.tsx:276:        ...defaultColors, primary: "#0ea5e9", secondary: "#3b82f6", accent: "#60a5fa", foreground: "#0c4a6e",
+src\components\ThemeCustomizer.tsx:277:        headerBg: "#0369a1", headerText: "#ffffff", sidebarBg: "#f0f9ff", sidebarText: "#0c4a6e",
+src\components\ThemeCustomizer.tsx:278:        loginBg1: "#f0f9ff", loginBg2: "#eff6ff", loginCardBorder: "#7dd3fc",
+src\components\ThemeCustomizer.tsx:279:        loginButtonBg1: "#0ea5e9", loginButtonBg2: "#3b82f6", loginTitleColor1: "#0ea5e9", loginTitleColor2: "#3b82f6",
+src\components\ThemeCustomizer.tsx:285:        ...defaultColors, primary: "#475569", secondary: "#64748b", accent: "#94a3b8",
+src\components\ThemeCustomizer.tsx:286:        foreground: "#e2e8f0", background: "#1e293b",
+src\components\ThemeCustomizer.tsx:287:        headerBg: "#334155", headerText: "#f1f5f9", sidebarBg: "#334155", sidebarText: "#f1f5f9",
+src\components\ThemeCustomizer.tsx:288:        articleCardBg: "#334155", articleCardBorder: "#475569",
+src\components\ThemeCustomizer.tsx:289:        loginBg1: "#1e293b", loginBg2: "#334155", loginCardBorder: "#475569",
+src\components\ThemeCustomizer.tsx:290:        loginButtonBg1: "#475569", loginButtonBg2: "#64748b", loginTitleColor1: "#94a3b8", loginTitleColor2: "#cbd5e1",
+src\components\ThemeCustomizer.tsx:296:        ...defaultColors, primary: "#7c3aed", secondary: "#d946ef", accent: "#e879f9", foreground: "#3b0764",
+src\components\ThemeCustomizer.tsx:297:        headerBg: "#6b21a8", headerText: "#ffffff", sidebarBg: "#faf5ff", sidebarText: "#3b0764",
+src\components\ThemeCustomizer.tsx:298:        loginBg1: "#faf5ff", loginBg2: "#fdf4ff", loginCardBorder: "#c084fc",
+src\components\ThemeCustomizer.tsx:299:        loginButtonBg1: "#7c3aed", loginButtonBg2: "#d946ef", loginTitleColor1: "#7c3aed", loginTitleColor2: "#d946ef",
+src\components\ThemeCustomizer.tsx:305:        ...defaultColors, primary: "#2dd4bf", secondary: "#5eead4", accent: "#14b8a6", foreground: "#134e4a",
+src\components\ThemeCustomizer.tsx:306:        headerBg: "#0f766e", headerText: "#ffffff", sidebarBg: "#f0fdfa", sidebarText: "#134e4a",
+src\components\ThemeCustomizer.tsx:307:        loginBg1: "#f0fdfa", loginBg2: "#ccfbf1", loginCardBorder: "#5eead4",
+src\components\ThemeCustomizer.tsx:308:        loginButtonBg1: "#2dd4bf", loginButtonBg2: "#5eead4", loginTitleColor1: "#2dd4bf", loginTitleColor2: "#14b8a6",
+src\components\ThemeCustomizer.tsx:414:              <div className="w-8 h-8 rounded bg-white/20" />
+src\stories\checkbox.stories.tsx:23:        <p className="text-sm text-slate-500 dark:text-slate-400">
+src\stories\input.stories.tsx:39:      <p className="text-sm text-slate-500">Enter your email address.</p>
+src\stories\context-menu.stories.tsx:29:      <ContextMenuTrigger className="flex h-[150px] w-[300px] items-center justify-center rounded-md border border-dashed border-slate-200 text-sm dark:border-slate-700">
+src\components\ui\alert-dialog.tsx:19:      "fixed inset-0 z-50 bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+src\stories\collapsible.stories.tsx:33:      <div className="rounded-md border border-slate-200 px-4 py-3 font-mono text-sm dark:border-slate-700">
+src\stories\collapsible.stories.tsx:37:        <div className="rounded-md border border-slate-200 px-4 py-3 font-mono text-sm dark:border-slate-700">
+src\stories\collapsible.stories.tsx:40:        <div className="rounded-md border border-slate-200 px-4 py-3 font-mono text-sm dark:border-slate-700">
+src\stories\collapsible.stories.tsx:65:      <div className="rounded-md border border-slate-200 px-4 py-3 font-mono text-sm dark:border-slate-700">
+src\stories\collapsible.stories.tsx:69:        <div className="rounded-md border border-slate-200 px-4 py-3 font-mono text-sm dark:border-slate-700">
+src\stories\collapsible.stories.tsx:72:        <div className="rounded-md border border-slate-200 px-4 py-3 font-mono text-sm dark:border-slate-700">
+src\components\SideNavigation.tsx:144:      className={`h-full flex flex-col border-r border-[#e3e1d8] transition-all duration-300 ${collapsed ? "w-16" : "w-[340px]"}`}
+src\components\SideNavigation.tsx:166:          className={`h-7 w-7 rounded text-muted-foreground hover:bg-[#e5eae3] hover:text-primary ${collapsed ? "mx-auto" : ""}`}
+src\components\SideNavigation.tsx:191:                    className="mb-1 flex h-8 w-8 cursor-pointer items-center justify-center rounded bg-[#e5eae3] text-primary"
+src\components\SideNavigation.tsx:215:                  <AccordionTrigger className={`rounded px-3 py-2.5 text-left hover:no-underline hover:bg-[#e5eae3] [&>svg]:h-3 [&>svg]:w-3 [&>svg]:text-muted-foreground ${index === 2 ? "bg-[#e5eae3] text-primary" : ""}`}>
+src\components\SideNavigation.tsx:229:                            className="h-auto w-full justify-start rounded py-1.5 pr-2 text-sm font-normal hover:bg-[#e5eae3]"
+src\components\ui\dialog.tsx:22:      "fixed inset-0 z-50 bg-black/80  data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+src\stories\hover-card.stories.tsx:39:              <span className="text-xs text-slate-500 dark:text-slate-400">
+src\stories\tabs.stories.tsx:28:        <p className="text-sm text-slate-500 dark:text-slate-400">
+src\stories\tabs.stories.tsx:46:        <p className="text-sm text-slate-500 dark:text-slate-400">
+src\stories\popover.stories.tsx:34:            <p className="text-sm text-slate-500 dark:text-slate-400">
+src\stories\textarea.stories.tsx:44:      <p className="text-sm text-slate-500">
+src\components\ui\drawer.tsx:29:    className={cn("fixed inset-0 z-50 bg-black/80", className)}
+src\stories\separator.stories.tsx:17:        <p className="text-sm text-slate-500 dark:text-slate-400">
+src\components\ui\sheet.tsx:22:      "fixed inset-0 z-50 bg-black/80  data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+src\stories\scroll-area.stories.tsx:17:    <ScrollArea className="h-72 w-48 rounded-md border border-slate-100 dark:border-slate-700">
+src\components\ui\toast.tsx:78:      "absolute right-1 top-1 rounded-md p-1 text-foreground/50 opacity-0 transition-opacity hover:text-foreground focus:opacity-100 focus:outline-none focus:ring-1 group-hover:opacity-100 group-[.destructive]:text-red-300 group-[.destructive]:hover:text-red-50 group-[.destructive]:focus:ring-red-400 group-[.destructive]:focus:ring-offset-red-600",

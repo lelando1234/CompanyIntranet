@@ -1,3 +1,4 @@
+import { getThemePrimaryHex, emailColors } from "@/lib/theme-colors";
 import React from 'react';
 import type { CreateSignatureData } from '@/lib/api';
 
@@ -58,18 +59,18 @@ function buildTextRows(sig: Partial<CreateSignatureData>, color: string, font: s
 
   const titleParts = [sig.job_title, sig.department].filter(Boolean);
   if (titleParts.length > 0) {
-    rows.push(`<tr><td style="font-family:${font},sans-serif;font-size:12px;color:#666666;padding-bottom:2px;">${titleParts.map(esc).join(' &bull; ')}</td></tr>`);
+    rows.push(`<tr><td style="font-family:${font},sans-serif;font-size:12px;color:${emailColors.title};padding-bottom:2px;">${titleParts.map(esc).join(' &bull; ')}</td></tr>`);
   }
 
   if (sig.company_name) {
-    rows.push(`<tr><td style="font-family:${font},sans-serif;font-size:12px;color:#444444;font-weight:600;padding-bottom:4px;">${esc(sig.company_name)}</td></tr>`);
+    rows.push(`<tr><td style="font-family:${font},sans-serif;font-size:12px;color:${emailColors.company};font-weight:600;padding-bottom:4px;">${esc(sig.company_name)}</td></tr>`);
   }
 
   const contactParts: string[] = [];
-  if (sig.phone) contactParts.push(`<a href="tel:${esc(sig.phone)}" style="color:#555555;text-decoration:none;">${esc(sig.phone)}</a>`);
-  if (sig.mobile) contactParts.push(`<a href="tel:${esc(sig.mobile)}" style="color:#555555;text-decoration:none;">${esc(sig.mobile)}</a>`);
+  if (sig.phone) contactParts.push(`<a href="tel:${esc(sig.phone)}" style="color:${emailColors.contact};text-decoration:none;">${esc(sig.phone)}</a>`);
+  if (sig.mobile) contactParts.push(`<a href="tel:${esc(sig.mobile)}" style="color:${emailColors.contact};text-decoration:none;">${esc(sig.mobile)}</a>`);
   if (contactParts.length > 0) {
-    rows.push(`<tr><td style="font-family:${font},sans-serif;font-size:12px;color:#555555;padding-bottom:2px;">${contactParts.join(' &nbsp;|&nbsp; ')}</td></tr>`);
+    rows.push(`<tr><td style="font-family:${font},sans-serif;font-size:12px;color:${emailColors.contact};padding-bottom:2px;">${contactParts.join(' &nbsp;|&nbsp; ')}</td></tr>`);
   }
 
   if (sig.email) {
@@ -82,7 +83,7 @@ function buildTextRows(sig: Partial<CreateSignatureData>, color: string, font: s
 
   if (sig.office_address) {
     const addrHtml = esc(sig.office_address).replace(/\n/g, '<br/>');
-    rows.push(`<tr><td style="font-family:${font},sans-serif;font-size:11px;color:#777777;padding-top:4px;">${addrHtml}</td></tr>`);
+    rows.push(`<tr><td style="font-family:${font},sans-serif;font-size:11px;color:${emailColors.address};padding-top:4px;">${addrHtml}</td></tr>`);
   }
 
   return rows.join('');
@@ -91,14 +92,14 @@ function buildTextRows(sig: Partial<CreateSignatureData>, color: string, font: s
 // ─── Template Builders ────────────────────────────────────────────────────────
 
 function buildHorizontal(sig: Partial<CreateSignatureData>, avatarUrl?: string, logoUrl?: string): string {
-  const color = sig.primary_color || '#0080ff';
+  const color = sig.primary_color || getThemePrimaryHex();
   const font = sig.font_family || 'Arial';
   const photo = buildPhotoBlock(avatarUrl, !!sig.show_profile_photo);
   const logo = buildLogoBlock(logoUrl, !!sig.show_company_logo);
   const hasImages = photo || logo;
 
   return `
-<table cellpadding="0" cellspacing="0" border="0" style="font-family:${font},sans-serif;font-size:13px;color:#333333;">
+<table cellpadding="0" cellspacing="0" border="0" style="font-family:${font},sans-serif;font-size:13px;color:${emailColors.foreground};">
   <tbody>
     <tr>
       ${hasImages ? `
@@ -120,7 +121,7 @@ function buildHorizontal(sig: Partial<CreateSignatureData>, avatarUrl?: string, 
 }
 
 function buildVertical(sig: Partial<CreateSignatureData>, avatarUrl?: string, logoUrl?: string): string {
-  const color = sig.primary_color || '#0080ff';
+  const color = sig.primary_color || getThemePrimaryHex();
   const font = sig.font_family || 'Arial';
   const photo = buildPhotoBlock(avatarUrl, !!sig.show_profile_photo, 80);
   const logo = buildLogoBlock(logoUrl, !!sig.show_company_logo);
@@ -131,7 +132,7 @@ function buildVertical(sig: Partial<CreateSignatureData>, avatarUrl?: string, lo
     .replace(/<td style="/g, '<td style="text-align:center;');
 
   return `
-<table cellpadding="0" cellspacing="0" border="0" style="font-family:${font},sans-serif;font-size:13px;color:#333333;text-align:center;">
+<table cellpadding="0" cellspacing="0" border="0" style="font-family:${font},sans-serif;font-size:13px;color:${emailColors.foreground};text-align:center;">
   <tbody>
     ${photo ? `<tr><td style="text-align:center;padding-bottom:4px;">${photo.replace('display:block', 'display:inline-block')}</td></tr>` : ''}
     ${logo ? `<tr><td style="text-align:center;padding-bottom:8px;">${logo.replace('display:block', 'display:inline-block')}</td></tr>` : ''}
@@ -149,7 +150,7 @@ function buildVertical(sig: Partial<CreateSignatureData>, avatarUrl?: string, lo
 }
 
 function buildCompact(sig: Partial<CreateSignatureData>): string {
-  const color = sig.primary_color || '#0080ff';
+  const color = sig.primary_color || getThemePrimaryHex();
   const font = sig.font_family || 'Arial';
 
   const parts: string[] = [];
@@ -159,8 +160,8 @@ function buildCompact(sig: Partial<CreateSignatureData>): string {
   const line1 = parts.join(' &nbsp;&bull;&nbsp; ');
 
   const contact: string[] = [];
-  if (sig.phone) contact.push(`<a href="tel:${esc(sig.phone)}" style="color:#555;text-decoration:none;">${esc(sig.phone)}</a>`);
-  if (sig.mobile) contact.push(`<a href="tel:${esc(sig.mobile)}" style="color:#555;text-decoration:none;">${esc(sig.mobile)}</a>`);
+  if (sig.phone) contact.push(`<a href="tel:${esc(sig.phone)}" style="color:${emailColors.contact};text-decoration:none;">${esc(sig.phone)}</a>`);
+  if (sig.mobile) contact.push(`<a href="tel:${esc(sig.mobile)}" style="color:${emailColors.contact};text-decoration:none;">${esc(sig.mobile)}</a>`);
   if (sig.email) contact.push(`<a href="mailto:${esc(sig.email)}" style="color:${color};text-decoration:none;">${esc(sig.email)}</a>`);
   if (sig.website_url) contact.push(`<a href="${esc(sig.website_url)}" style="color:${color};text-decoration:none;">${esc(sig.website_url)}</a>`);
   const line2 = contact.join(' &nbsp;|&nbsp; ');
@@ -180,14 +181,14 @@ function buildCompact(sig: Partial<CreateSignatureData>): string {
     .join('');
 
   return `
-<table cellpadding="0" cellspacing="0" border="0" style="font-family:${font},sans-serif;font-size:12px;color:#333333;">
+<table cellpadding="0" cellspacing="0" border="0" style="font-family:${font},sans-serif;font-size:12px;color:${emailColors.foreground};">
   <tbody>
     <tr>
       <td style="border-left:3px solid ${color};padding-left:10px;vertical-align:top;">
         <table cellpadding="0" cellspacing="0" border="0"><tbody>
           ${line1 ? `<tr><td style="padding-bottom:3px;">${line1}</td></tr>` : ''}
-          ${line2 ? `<tr><td style="padding-bottom:3px;color:#555555;">${line2}</td></tr>` : ''}
-          ${sig.office_address ? `<tr><td style="font-size:10px;color:#888888;padding-bottom:3px;">${esc(sig.office_address).replace(/\n/g, ', ')}</td></tr>` : ''}
+          ${line2 ? `<tr><td style="padding-bottom:3px;color:${emailColors.contact};">${line2}</td></tr>` : ''}
+          ${sig.office_address ? `<tr><td style="font-size:10px;color:${emailColors.muted};padding-bottom:3px;">${esc(sig.office_address).replace(/\n/g, ', ')}</td></tr>` : ''}
           ${socialLine ? `<tr><td style="padding-top:4px;">${socialLine}</td></tr>` : ''}
         </tbody></table>
       </td>
@@ -197,7 +198,7 @@ function buildCompact(sig: Partial<CreateSignatureData>): string {
 }
 
 function buildModern(sig: Partial<CreateSignatureData>, avatarUrl?: string, logoUrl?: string): string {
-  const color = sig.primary_color || '#0080ff';
+  const color = sig.primary_color || getThemePrimaryHex();
   const font = sig.font_family || 'Arial';
   const photo = buildPhotoBlock(avatarUrl, !!sig.show_profile_photo, 68);
   const logo = buildLogoBlock(logoUrl, !!sig.show_company_logo);
@@ -216,13 +217,13 @@ function buildModern(sig: Partial<CreateSignatureData>, avatarUrl?: string, logo
 
     if (socials.length === 0) return '';
     const icons = socials.map(s =>
-      `<a href="${esc(s.url)}" style="display:inline-block;width:22px;height:22px;line-height:22px;text-align:center;background:${color};color:#ffffff;border-radius:50%;font-size:10px;font-weight:bold;text-decoration:none;margin-right:4px;">${esc(s.label)}</a>`
+      `<a href="${esc(s.url)}" style="display:inline-block;width:22px;height:22px;line-height:22px;text-align:center;background:${color};color:${emailColors.onPrimary};border-radius:50%;font-size:10px;font-weight:bold;text-decoration:none;margin-right:4px;">${esc(s.label)}</a>`
     ).join('');
     return `<tr><td style="padding-top:8px;">${icons}</td></tr>`;
   })();
 
   return `
-<table cellpadding="0" cellspacing="0" border="0" style="font-family:${font},sans-serif;font-size:13px;color:#333333;">
+<table cellpadding="0" cellspacing="0" border="0" style="font-family:${font},sans-serif;font-size:13px;color:${emailColors.foreground};">
   <tbody>
     <tr>
       <td style="width:4px;background:${color};border-radius:2px;">&nbsp;</td>
@@ -237,17 +238,17 @@ function buildModern(sig: Partial<CreateSignatureData>, avatarUrl?: string, logo
       <td style="vertical-align:top;">
         <table cellpadding="0" cellspacing="0" border="0"><tbody>
           ${sig.full_name ? `<tr><td style="font-family:${font},sans-serif;font-size:16px;font-weight:bold;color:${color};padding-bottom:2px;">${esc(sig.full_name)}</td></tr>` : ''}
-          ${sig.job_title ? `<tr><td style="font-family:${font},sans-serif;font-size:12px;color:#666666;padding-bottom:1px;">${esc(sig.job_title)}${sig.department ? ` &bull; ${esc(sig.department)}` : ''}</td></tr>` : ''}
-          ${sig.company_name ? `<tr><td style="font-family:${font},sans-serif;font-size:12px;color:#444444;font-weight:600;padding-bottom:6px;">${esc(sig.company_name)}</td></tr>` : ''}
-          <tr><td style="border-top:1px solid #e0e0e0;padding-top:6px;">
+          ${sig.job_title ? `<tr><td style="font-family:${font},sans-serif;font-size:12px;color:${emailColors.title};padding-bottom:1px;">${esc(sig.job_title)}${sig.department ? ` &bull; ${esc(sig.department)}` : ''}</td></tr>` : ''}
+          ${sig.company_name ? `<tr><td style="font-family:${font},sans-serif;font-size:12px;color:${emailColors.company};font-weight:600;padding-bottom:6px;">${esc(sig.company_name)}</td></tr>` : ''}
+          <tr><td style="border-top:1px solid ${emailColors.border};padding-top:6px;">
             <table cellpadding="0" cellspacing="0" border="0"><tbody>
               ${[
-                sig.phone ? `<a href="tel:${esc(sig.phone)}" style="color:#555;text-decoration:none;">${esc(sig.phone)}</a>` : null,
-                sig.mobile ? `<a href="tel:${esc(sig.mobile)}" style="color:#555;text-decoration:none;">${esc(sig.mobile)}</a>` : null,
+                sig.phone ? `<a href="tel:${esc(sig.phone)}" style="color:${emailColors.contact};text-decoration:none;">${esc(sig.phone)}</a>` : null,
+                sig.mobile ? `<a href="tel:${esc(sig.mobile)}" style="color:${emailColors.contact};text-decoration:none;">${esc(sig.mobile)}</a>` : null,
                 sig.email ? `<a href="mailto:${esc(sig.email)}" style="color:${color};text-decoration:none;">${esc(sig.email)}</a>` : null,
                 sig.website_url ? `<a href="${esc(sig.website_url)}" style="color:${color};text-decoration:none;">${esc(sig.website_url)}</a>` : null,
               ].filter(Boolean).map(c => `<tr><td style="font-size:12px;padding-bottom:2px;">${c}</td></tr>`).join('')}
-              ${sig.office_address ? `<tr><td style="font-size:10px;color:#888888;padding-top:4px;">${esc(sig.office_address).replace(/\n/g, '<br/>')}</td></tr>` : ''}
+              ${sig.office_address ? `<tr><td style="font-size:10px;color:${emailColors.muted};padding-top:4px;">${esc(sig.office_address).replace(/\n/g, '<br/>')}</td></tr>` : ''}
             </tbody></table>
           </td></tr>
           ${socialLinks}
@@ -264,10 +265,10 @@ function buildDisclaimer(text: string | null | undefined, font: string): string 
   if (!text?.trim()) return '';
   const escaped = esc(text).replace(/\n/g, '<br/>');
   return `
-<table cellpadding="0" cellspacing="0" border="0" style="margin-top:16px;border-top:1px solid #e0e0e0;width:100%;">
+<table cellpadding="0" cellspacing="0" border="0" style="margin-top:16px;border-top:1px solid ${emailColors.border};width:100%;">
   <tbody>
     <tr>
-      <td style="padding-top:10px;font-family:${font},sans-serif;font-size:9px;color:#999999;line-height:1.4;max-width:600px;">
+      <td style="padding-top:10px;font-family:${font},sans-serif;font-size:9px;color:${emailColors.disclaimer};line-height:1.4;max-width:600px;">
         ${escaped}
       </td>
     </tr>
@@ -301,7 +302,7 @@ const SignaturePreview: React.FC<SignaturePreviewProps> = ({ signature, userAvat
   const html = generateSignatureHTML(signature, userAvatarUrl, companyLogoUrl, disclaimerText);
   return (
     <div
-      className="border rounded-md p-4 bg-white overflow-auto min-h-[80px]"
+      className="border rounded-md p-4 bg-card overflow-auto min-h-[80px]"
       dangerouslySetInnerHTML={{ __html: html }}
     />
   );

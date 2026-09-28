@@ -18,6 +18,9 @@ module.exports = {
     },
     extend: {
       colors: {
+        success: "hsl(var(--success))",
+        overlay: "hsl(var(--overlay))",
+        "header-foreground": "hsl(var(--header-foreground))",
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

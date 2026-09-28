@@ -31,9 +31,9 @@ function SettingsLoader({ children }: { children: React.ReactNode }) {
           case b: h = ((r - g) / d + 4) / 6; break;
         }
       }
-      h = Math.round(h * 360);
-      s = Math.round(s * 100);
-      l = Math.round(l * 100);
+      h = Number((h * 360).toFixed(6));
+      s = Number((s * 100).toFixed(6));
+      l = Number((l * 100).toFixed(6));
       return `${h} ${s}% ${l}%`;
     };
 
@@ -45,7 +45,10 @@ function SettingsLoader({ children }: { children: React.ReactNode }) {
       if (palette.background) root.style.setProperty("--background", hexToHSL(palette.background));
       if (palette.foreground) root.style.setProperty("--foreground", hexToHSL(palette.foreground));
       if (palette.headerBg) root.style.setProperty("--header-bg", palette.headerBg);
-      if (palette.headerText) root.style.setProperty("--header-text", palette.headerText);
+      if (palette.headerText) {
+        root.style.setProperty("--header-text", palette.headerText);
+        root.style.setProperty("--header-foreground", hexToHSL(palette.headerText));
+      }
       if (palette.sidebarBg) root.style.setProperty("--sidebar-bg", palette.sidebarBg);
       if (palette.sidebarText) root.style.setProperty("--sidebar-text", palette.sidebarText);
       if (palette.articleCardBg) root.style.setProperty("--article-card-bg", palette.articleCardBg);

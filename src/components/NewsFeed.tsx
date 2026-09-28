@@ -46,12 +46,11 @@ interface NewsArticle {
 interface NewsFeedProps {
   articles?: NewsArticle[];
   useApi?: boolean;
-  externalSearchTerm?: string;
 }
 
 const ARTICLES_PER_PAGE = 4;
 
-const NewsFeed = ({ articles = [], useApi = false, externalSearchTerm = "" }: NewsFeedProps) => {
+const NewsFeed = ({ articles = [], useApi = false }: NewsFeedProps) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [expandedArticles, setExpandedArticles] = useState<string[]>([]);
@@ -84,18 +83,6 @@ const NewsFeed = ({ articles = [], useApi = false, externalSearchTerm = "" }: Ne
       }
     };
   }, [searchTerm]);
-
-  // Sync external search term from parent (e.g., Dashboard header search)
-  // Use a ref to avoid dependency loop with searchTerm
-  const prevExternalSearchRef = useRef(externalSearchTerm);
-  useEffect(() => {
-    if (externalSearchTerm !== prevExternalSearchRef.current) {
-      prevExternalSearchRef.current = externalSearchTerm;
-      if (externalSearchTerm !== searchTerm) {
-        setSearchTerm(externalSearchTerm);
-      }
-    }
-  }, [externalSearchTerm]);
 
   // Map category name to ID for API calls
   const getCategoryIdByName = useCallback((name: string): string | undefined => {
@@ -340,15 +327,14 @@ const NewsFeed = ({ articles = [], useApi = false, externalSearchTerm = "" }: Ne
     <div className="w-full bg-transparent">
       <div className="mb-6">
         <div className="mb-2 flex items-center gap-2">
-          <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Company News</span>
+          <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+            {new Date().toLocaleDateString("en-ZA", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+          </span>
           {loading && !initialLoad && (
             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
           )}
         </div>
-        <h1 className="mb-1.5 font-serif text-2xl font-medium leading-tight text-[#14302b]">Company News</h1>
-        <p className="text-[13.5px] text-muted-foreground">
-          Stay updated with the latest company announcements and news
-        </p>
+        <h1 className="mb-1.5 text-2xl font-medium leading-tight text-primary">Company News</h1>
       </div>
 
       <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center">
@@ -356,7 +342,7 @@ const NewsFeed = ({ articles = [], useApi = false, externalSearchTerm = "" }: Ne
           <Search className="absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search news..."
-            className="h-[38px] rounded border-[#e3e1d8] bg-[#fdfdfb] pl-9 text-[13.5px] placeholder:text-[#a8a79c] focus-visible:ring-1 focus-visible:ring-[#7c9885]"
+            className="h-[38px] rounded border-border bg-card pl-9 text-[13.5px] placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-secondary"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -376,8 +362,8 @@ const NewsFeed = ({ articles = [], useApi = false, externalSearchTerm = "" }: Ne
               onClick={() => setSelectedCategory(category)}
               className={`h-8 whitespace-nowrap rounded-full border px-3.5 text-[12.5px] font-semibold shadow-none ${
                 selectedCategory === category
-                  ? "border-[#1b4332] bg-[#1b4332] text-[#f5f4ef] hover:bg-[#1b4332]/95"
-                  : "border-[#e3e1d8] bg-[#fdfdfb] text-[#1c1c1a] hover:border-[#7c9885] hover:bg-[#fdfdfb]"
+                  ? "border-primary bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground"
+                  : "border-border bg-card text-foreground hover:border-secondary hover:bg-card hover:text-foreground"
               }`}
             >
               {category.charAt(0).toUpperCase() + category.slice(1)}
@@ -387,7 +373,7 @@ const NewsFeed = ({ articles = [], useApi = false, externalSearchTerm = "" }: Ne
       </div>
 
       {filteredArticles.length === 0 ? (
-        <Card className="w-full rounded border-[#e3e1d8] bg-[#fdfdfb] shadow-none">
+        <Card className="w-full rounded border-border bg-card shadow-none">
           <CardContent className="pt-6 text-center">
             <p>No news articles found. Try adjusting your search or filters.</p>
           </CardContent>
@@ -400,7 +386,15 @@ const NewsFeed = ({ articles = [], useApi = false, externalSearchTerm = "" }: Ne
             return (
               <Card
                 key={article.id}
-                className="w-full rounded border shadow-none transition-colors hover:border-[#7c9885]"
+                className="w-full cursor-pointer rounded border shadow-none transition-colors hover:border-secondary"
+                onClick={(event) => {
+                  if (event.defaultPrevented) return;
+                  const target = event.target as Element;
+                  if (target.closest('a, button, input, textarea, select, label, summary, video, audio, iframe, [role="button"], [contenteditable="true"]')) return;
+                  const selection = window.getSelection();
+                  if (selection && !selection.isCollapsed && selection.anchorNode && event.currentTarget.contains(selection.anchorNode)) return;
+                  toggleArticleExpansion(article.id);
+                }}
                 style={{
                   backgroundColor: 'var(--article-card-bg, hsl(var(--card)))',
                   borderColor: 'var(--article-card-border, hsl(var(--border)))',
@@ -409,7 +403,7 @@ const NewsFeed = ({ articles = [], useApi = false, externalSearchTerm = "" }: Ne
                 <CardHeader className="px-6 py-5 pb-3">
                   <div className="flex justify-between gap-5">
                     <div className="min-w-0">
-                      <CardTitle className="text-base font-semibold leading-tight text-[#1c1c1a]">{article.title}</CardTitle>
+                      <CardTitle className="text-base font-semibold leading-tight text-foreground">{article.title}</CardTitle>
                       <CardDescription className="mt-1 font-mono text-[11px] tracking-[0.04em] text-muted-foreground">
                         {new Date(article.date).toLocaleDateString("en-US", {
                           year: "numeric",
@@ -418,7 +412,7 @@ const NewsFeed = ({ articles = [], useApi = false, externalSearchTerm = "" }: Ne
                         })}
                       </CardDescription>
                     </div>
-                    <Badge className="h-6 shrink-0 rounded-full bg-[#e5eae3] px-3 py-0 text-[11.5px] font-bold text-[#1b4332] shadow-none hover:bg-[#e5eae3]">{article.category}</Badge>
+                    <Badge className="h-6 shrink-0 rounded-full bg-secondary/15 px-3 py-0 text-[11.5px] font-bold text-primary shadow-none hover:bg-secondary/15">{article.category}</Badge>
                   </div>
                 </CardHeader>
 
@@ -429,7 +423,7 @@ const NewsFeed = ({ articles = [], useApi = false, externalSearchTerm = "" }: Ne
                       dangerouslySetInnerHTML={{ __html: article.content }}
                     />
                   ) : (
-                    <p className="text-[13.5px] leading-6 text-[#3a3b35]">{article.previewText}</p>
+                    <p className="text-[13.5px] leading-6 text-muted-foreground">{article.previewText}</p>
                   )}
                   
                   {/* Attachments */}
@@ -450,7 +444,7 @@ const NewsFeed = ({ articles = [], useApi = false, externalSearchTerm = "" }: Ne
                                 }}
                                 className="flex items-center gap-2 px-3 py-1.5 bg-muted border rounded-md text-sm hover:bg-muted/80 transition-colors"
                               >
-                                <FileText className="h-3 w-3 text-red-600" />
+                                <FileText className="h-3 w-3 text-destructive" />
                                 <span className="truncate max-w-[150px]">{attachment.name}</span>
                               </button>
                             );
@@ -481,8 +475,9 @@ const NewsFeed = ({ articles = [], useApi = false, externalSearchTerm = "" }: Ne
                   <Button
                     variant="ghost"
                     size="sm"
+                    aria-expanded={isExpanded}
                     onClick={() => toggleArticleExpansion(article.id)}
-                    className="flex h-auto items-center gap-1 px-0 py-0 text-[12.5px] font-semibold text-[#2d5a47] hover:bg-transparent hover:text-[#14302b]"
+                    className="flex h-auto items-center gap-1 px-0 py-0 text-[12.5px] font-semibold text-primary hover:bg-transparent hover:text-primary"
                   >
                     {isExpanded ? (
                       <>
@@ -518,7 +513,7 @@ const NewsFeed = ({ articles = [], useApi = false, externalSearchTerm = "" }: Ne
             {Array.from({ length: useApi ? totalPages : clientTotalPages }, (_, i) => i + 1).map((page) => (
               <Button
                 key={page}
-                variant={currentPage === page ? "default" : "outline"}
+                selected={currentPage === page} variant={currentPage === page ? "default" : "outline"}
                 size="sm"
                 onClick={() => goToPage(page)}
                 className="w-8 h-8 p-0"

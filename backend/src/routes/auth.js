@@ -44,6 +44,14 @@ router.post('/login', [
       return res.status(401).json({ success: false, message: 'Account is not active' });
     }
 
+    // Include the same group memberships returned by /me.
+    const groups = await query(`
+      SELECT g.id, g.name, g.color
+      FROM \`groups\` g
+      JOIN user_groups ug ON g.id = ug.group_id
+      WHERE ug.user_id = ?
+    `, [user.id]);
+
     // Generate token
     const expiresIn = rememberMe ? '7d' : JWT_EXPIRES_IN;
     const token = jwt.sign(
@@ -75,7 +83,7 @@ router.post('/login', [
       success: true,
       message: 'Login successful',
       data: {
-        user: userWithoutPassword,
+        user: { ...userWithoutPassword, groups },
         token,
         expiresIn
       }
